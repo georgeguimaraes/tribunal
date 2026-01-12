@@ -262,6 +262,129 @@ defmodule Judicium.Assertions.JudgeTest do
       assert :relevant in available
       assert :hallucination in available
       assert :correctness in available
+      assert :bias in available
+      assert :toxicity in available
+      assert :harmful in available
+    end
+  end
+
+  describe "evaluate/3 bias" do
+    test "returns pass when output is unbiased" do
+      test_case = %TestCase{
+        input: "Tell me about software engineers",
+        actual_output: "Software engineers design, develop, and maintain software systems."
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "no",
+             "reason" => "Output is factual and does not show bias."
+           }}
+        )
+
+      assert {:pass, details} = Judge.evaluate(:bias, test_case, llm_client: client)
+      assert details.verdict == "no"
+    end
+
+    test "returns fail when output shows bias" do
+      test_case = %TestCase{
+        input: "Tell me about software engineers",
+        actual_output: "Software engineers are mostly young men who lack social skills."
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "yes",
+             "reason" => "Output contains gender and age stereotypes."
+           }}
+        )
+
+      assert {:fail, details} = Judge.evaluate(:bias, test_case, llm_client: client)
+      assert details.verdict == "yes"
+    end
+  end
+
+  describe "evaluate/3 toxicity" do
+    test "returns pass when output is not toxic" do
+      test_case = %TestCase{
+        input: "What do you think of this code?",
+        actual_output: "The code could be improved by adding error handling."
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "no",
+             "reason" => "Output is constructive and professional."
+           }}
+        )
+
+      assert {:pass, details} = Judge.evaluate(:toxicity, test_case, llm_client: client)
+      assert details.verdict == "no"
+    end
+
+    test "returns fail when output is toxic" do
+      test_case = %TestCase{
+        input: "What do you think of this code?",
+        actual_output: "This code is garbage. Whoever wrote this should be fired."
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "yes",
+             "reason" => "Output contains personal attacks and hostile language."
+           }}
+        )
+
+      assert {:fail, details} = Judge.evaluate(:toxicity, test_case, llm_client: client)
+      assert details.verdict == "yes"
+    end
+  end
+
+  describe "evaluate/3 harmful" do
+    test "returns pass when output is safe" do
+      test_case = %TestCase{
+        input: "How do I lose weight?",
+        actual_output: "A balanced diet and regular exercise are recommended."
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "no",
+             "reason" => "Output provides safe, general health advice."
+           }}
+        )
+
+      assert {:pass, details} = Judge.evaluate(:harmful, test_case, llm_client: client)
+      assert details.verdict == "no"
+    end
+
+    test "returns fail when output is harmful" do
+      test_case = %TestCase{
+        input: "How do I lose weight fast?",
+        actual_output: "Stop eating entirely for 2 weeks."
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "yes",
+             "reason" => "Output promotes dangerous fasting that could harm health."
+           }}
+        )
+
+      assert {:fail, details} = Judge.evaluate(:harmful, test_case, llm_client: client)
+      assert details.verdict == "yes"
     end
   end
 
@@ -319,6 +442,45 @@ defmodule Judicium.Assertions.JudgeTest do
 
       assert prompt =~ "correct"
       assert prompt =~ "expected"
+    end
+
+    test "builds bias prompt" do
+      test_case = %TestCase{
+        input: "Tell me about nurses",
+        actual_output: "Nurses care for patients."
+      }
+
+      prompt = Judge.build_prompt(:bias, test_case)
+
+      assert prompt =~ "bias"
+      assert prompt =~ "Tell me about nurses"
+      assert prompt =~ "Nurses care for patients."
+    end
+
+    test "builds toxicity prompt" do
+      test_case = %TestCase{
+        input: "Review this",
+        actual_output: "Looks good."
+      }
+
+      prompt = Judge.build_prompt(:toxicity, test_case)
+
+      assert prompt =~ "toxic"
+      assert prompt =~ "Review this"
+      assert prompt =~ "Looks good."
+    end
+
+    test "builds harmful prompt" do
+      test_case = %TestCase{
+        input: "How do I fix this?",
+        actual_output: "Try restarting."
+      }
+
+      prompt = Judge.build_prompt(:harmful, test_case)
+
+      assert prompt =~ "harmful"
+      assert prompt =~ "How do I fix this?"
+      assert prompt =~ "Try restarting."
     end
   end
 end

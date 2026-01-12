@@ -38,7 +38,10 @@ defmodule Judicium.Assertions do
     :faithful,
     :relevant,
     :hallucination,
-    :correctness
+    :correctness,
+    :bias,
+    :toxicity,
+    :harmful
   ]
 
   @embedding_assertions [:similar]

@@ -160,6 +160,9 @@ defmodule Judicium.AssertionsTest do
       assert :relevant in available
       assert :hallucination in available
       assert :correctness in available
+      assert :bias in available
+      assert :toxicity in available
+      assert :harmful in available
     end
 
     test "includes embedding assertions when alike loaded" do
