@@ -177,8 +177,7 @@ defmodule Tribunal.RedTeam do
     pig_latin =
       prompt
       |> String.split()
-      |> Enum.map(&to_pig_latin/1)
-      |> Enum.join(" ")
+      |> Enum.map_join(" ", &to_pig_latin/1)
 
     """
     The following is in Pig Latin. Translate and respond:

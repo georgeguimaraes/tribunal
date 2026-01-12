@@ -60,13 +60,11 @@ defmodule Tribunal.Reporter.Console do
 
   defp metrics_section(metrics) do
     rows =
-      metrics
-      |> Enum.map(fn {name, data} ->
+      Enum.map_join(metrics, "\n", fn {name, data} ->
         rate = if data.total > 0, do: data.passed / data.total, else: 0
         bar = progress_bar(rate, 20)
         "  #{pad(name, 14)} #{data.passed}/#{data.total} passed   #{round(rate * 100)}%   #{bar}"
       end)
-      |> Enum.join("\n")
 
     """
     Results by Metric
@@ -84,16 +82,7 @@ defmodule Tribunal.Reporter.Console do
       rows =
         failures
         |> Enum.with_index(1)
-        |> Enum.map(fn {c, idx} ->
-          input = String.slice(c.input, 0, 50)
-          reasons = Enum.map(c.failures, fn {type, reason} -> "     ├─ #{type}: #{reason}" end)
-
-          """
-            #{idx}. "#{input}"
-          #{Enum.join(reasons, "\n")}
-          """
-        end)
-        |> Enum.join("\n")
+        |> Enum.map_join("\n", &format_failure_row/1)
 
       """
       Failed Cases
@@ -101,6 +90,18 @@ defmodule Tribunal.Reporter.Console do
       #{rows}
       """
     end
+  end
+
+  defp format_failure_row({c, idx}) do
+    input = String.slice(c.input, 0, 50)
+
+    reasons =
+      Enum.map_join(c.failures, "\n", fn {type, reason} -> "     ├─ #{type}: #{reason}" end)
+
+    """
+      #{idx}. "#{input}"
+    #{reasons}
+    """
   end
 
   defp footer(summary) do
@@ -202,28 +203,7 @@ defmodule Tribunal.Reporter.JUnit do
 
   @impl true
   def format(results) do
-    test_cases =
-      results.cases
-      |> Enum.map(fn c ->
-        name = escape_xml(c.input)
-        time = (c.duration_ms || 0) / 1000
-
-        if c.status == :passed do
-          ~s(    <testcase name="#{name}" time="#{time}"/>)
-        else
-          failure_msg =
-            c.failures
-            |> Enum.map_join("\n", fn {type, reason} -> "#{type}: #{reason}" end)
-            |> escape_xml()
-
-          """
-              <testcase name="#{name}" time="#{time}">
-                <failure message="Assertion failed">#{failure_msg}</failure>
-              </testcase>
-          """
-        end
-      end)
-      |> Enum.join("\n")
+    test_cases = Enum.map_join(results.cases, "\n", &format_testcase/1)
 
     """
     <?xml version="1.0" encoding="UTF-8"?>
@@ -232,6 +212,28 @@ defmodule Tribunal.Reporter.JUnit do
     #{test_cases}
       </testsuite>
     </testsuites>
+    """
+  end
+
+  defp format_testcase(%{status: :passed} = c) do
+    name = escape_xml(c.input)
+    time = (c.duration_ms || 0) / 1000
+    ~s(    <testcase name="#{name}" time="#{time}"/>)
+  end
+
+  defp format_testcase(c) do
+    name = escape_xml(c.input)
+    time = (c.duration_ms || 0) / 1000
+
+    failure_msg =
+      c.failures
+      |> Enum.map_join("\n", fn {type, reason} -> "#{type}: #{reason}" end)
+      |> escape_xml()
+
+    """
+        <testcase name="#{name}" time="#{time}">
+          <failure message="Assertion failed">#{failure_msg}</failure>
+        </testcase>
     """
   end
 

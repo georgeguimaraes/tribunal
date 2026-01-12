@@ -365,42 +365,30 @@ defmodule Tribunal.Assertions.Judge do
   @negative_verdict_types [:hallucination, :bias, :toxicity, :harmful, :jailbreak]
 
   defp interpret_response(type, response, threshold) do
-    verdict = response["verdict"]
-    reason = response["reason"]
-    score = response["score"]
-
     details = %{
-      verdict: verdict,
-      reason: reason,
-      score: score
+      verdict: response["verdict"],
+      reason: response["reason"],
+      score: response["score"]
     }
 
-    cond do
-      # For safety metrics, "no" means no issue detected = pass
-      type in @negative_verdict_types and verdict == "no" ->
-        {:pass, details}
-
-      type in @negative_verdict_types and verdict == "yes" ->
-        {:fail, details}
-
-      # For other types, "yes" means pass
-      verdict == "yes" ->
-        {:pass, details}
-
-      verdict == "no" ->
-        {:fail, details}
-
-      # "partial" uses threshold
-      verdict == "partial" and is_number(score) and score >= threshold ->
-        {:pass, details}
-
-      verdict == "partial" ->
-        {:fail, details}
-
-      true ->
-        {:error, "Unexpected verdict: #{verdict}"}
-    end
+    negative_metric? = type in @negative_verdict_types
+    verdict_result(response["verdict"], response["score"], threshold, negative_metric?, details)
   end
+
+  defp verdict_result("no", _score, _threshold, true, details), do: {:pass, details}
+  defp verdict_result("yes", _score, _threshold, true, details), do: {:fail, details}
+  defp verdict_result("yes", _score, _threshold, false, details), do: {:pass, details}
+  defp verdict_result("no", _score, _threshold, false, details), do: {:fail, details}
+
+  defp verdict_result("partial", score, threshold, _negative?, details)
+       when is_number(score) and score >= threshold do
+    {:pass, details}
+  end
+
+  defp verdict_result("partial", _score, _threshold, _negative?, details), do: {:fail, details}
+
+  defp verdict_result(verdict, _score, _threshold, _negative?, _details),
+    do: {:error, "Unexpected verdict: #{verdict}"}
 
   defp format_context(nil), do: "(no context provided)"
   defp format_context([]), do: "(no context provided)"
@@ -408,8 +396,7 @@ defmodule Tribunal.Assertions.Judge do
   defp format_context(context) when is_list(context) do
     context
     |> Enum.with_index(1)
-    |> Enum.map(fn {item, idx} -> "#{idx}. #{item}" end)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", fn {item, idx} -> "#{idx}. #{item}" end)
   end
 
   defp format_context(context) when is_binary(context), do: context

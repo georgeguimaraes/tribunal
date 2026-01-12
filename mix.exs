@@ -38,7 +38,8 @@ defmodule Tribunal.MixProject do
       {:alike, "~> 0.1", optional: true},
 
       # Dev
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 

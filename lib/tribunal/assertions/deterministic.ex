@@ -318,33 +318,32 @@ defmodule Tribunal.Assertions.Deterministic do
   defp levenshtein_distance(s1, s2) do
     s1_chars = String.graphemes(s1)
     s2_chars = String.graphemes(s2)
-    s1_len = length(s1_chars)
-    s2_len = length(s2_chars)
+    compute_levenshtein(s1_chars, s2_chars)
+  end
 
-    if s1_len == 0 do
-      s2_len
-    else
-      if s2_len == 0 do
-        s1_len
-      else
-        # Build the matrix
-        row = 0..s2_len |> Enum.to_list()
+  defp compute_levenshtein([], s2_chars), do: length(s2_chars)
+  defp compute_levenshtein(s1_chars, []), do: length(s1_chars)
 
-        Enum.reduce(Enum.with_index(s1_chars), row, fn {c1, i}, prev_row ->
-          Enum.reduce(Enum.with_index(s2_chars), {[i + 1], i}, fn {c2, j}, {curr, diag} ->
-            cost = if c1 == c2, do: 0, else: 1
-            left = hd(curr) + 1
-            up = Enum.at(prev_row, j + 1) + 1
-            diagonal = diag + cost
-            new_val = min(min(left, up), diagonal)
-            new_diag = Enum.at(prev_row, j + 1)
-            {[new_val | curr], new_diag}
-          end)
-          |> elem(0)
-          |> Enum.reverse()
-        end)
-        |> List.last()
-      end
-    end
+  defp compute_levenshtein(s1_chars, s2_chars) do
+    row = Enum.to_list(0..length(s2_chars))
+
+    s1_chars
+    |> Enum.with_index()
+    |> Enum.reduce(row, fn {c1, i}, prev_row ->
+      build_row(c1, i, s2_chars, prev_row)
+    end)
+    |> List.last()
+  end
+
+  defp build_row(c1, i, s2_chars, prev_row) do
+    s2_chars
+    |> Enum.with_index()
+    |> Enum.reduce({[i + 1], i}, fn {c2, j}, {curr, diag} ->
+      cost = if c1 == c2, do: 0, else: 1
+      new_val = min(min(hd(curr) + 1, Enum.at(prev_row, j + 1) + 1), diag + cost)
+      {[new_val | curr], Enum.at(prev_row, j + 1)}
+    end)
+    |> elem(0)
+    |> Enum.reverse()
   end
 end
