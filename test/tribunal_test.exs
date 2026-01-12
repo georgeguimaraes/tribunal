@@ -1,7 +1,7 @@
-defmodule JudiciumTest do
+defmodule TribunalTest do
   use ExUnit.Case, async: true
 
-  alias Judicium.TestCase
+  alias Tribunal.TestCase
 
   describe "evaluate/2" do
     test "evaluates assertions against test case" do
@@ -15,7 +15,7 @@ defmodule JudiciumTest do
         {:not_contains, [value: "no returns"]}
       ]
 
-      results = Judicium.evaluate(test_case, assertions)
+      results = Tribunal.evaluate(test_case, assertions)
 
       assert {:pass, _} = results[:contains]
       assert {:pass, _} = results[:not_contains]
@@ -28,7 +28,7 @@ defmodule JudiciumTest do
       }
 
       assertions = [{:contains, [value: "foo"]}]
-      results = Judicium.evaluate(test_case, assertions)
+      results = Tribunal.evaluate(test_case, assertions)
 
       assert {:fail, details} = results[:contains]
       assert details[:missing] == ["foo"]
@@ -37,7 +37,7 @@ defmodule JudiciumTest do
 
   describe "available_assertions/0" do
     test "returns deterministic assertions" do
-      available = Judicium.available_assertions()
+      available = Tribunal.available_assertions()
 
       assert :contains in available
       assert :regex in available
@@ -45,7 +45,7 @@ defmodule JudiciumTest do
     end
 
     test "includes judge assertions when req_llm loaded" do
-      available = Judicium.available_assertions()
+      available = Tribunal.available_assertions()
 
       # req_llm is in deps, so judge assertions should be available
       assert :faithful in available
@@ -55,7 +55,7 @@ defmodule JudiciumTest do
 
   describe "test_case/1" do
     test "creates a test case" do
-      tc = Judicium.test_case(input: "Hello", actual_output: "Hi")
+      tc = Tribunal.test_case(input: "Hello", actual_output: "Hi")
 
       assert tc.input == "Hello"
       assert tc.actual_output == "Hi"

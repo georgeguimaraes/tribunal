@@ -1,7 +1,7 @@
-defmodule Judicium.AssertionsTest do
+defmodule Tribunal.AssertionsTest do
   use ExUnit.Case, async: true
 
-  alias Judicium.{Assertions, TestCase}
+  alias Tribunal.{Assertions, TestCase}
 
   describe "evaluate/3" do
     test "evaluates deterministic assertion" do

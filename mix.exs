@@ -1,17 +1,17 @@
-defmodule Judicium.MixProject do
+defmodule Tribunal.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/georgeguimaraes/judicium"
+  @source_url "https://github.com/georgeguimaraes/tribunal"
 
   def project do
     [
-      app: :judicium,
+      app: :tribunal,
       version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      name: "Judicium",
+      name: "Tribunal",
       description: "LLM evaluation framework for Elixir",
       package: package(),
       docs: docs(),
@@ -22,7 +22,7 @@ defmodule Judicium.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Judicium.Application, []}
+      mod: {Tribunal.Application, []}
     ]
   end
 
@@ -51,9 +51,45 @@ defmodule Judicium.MixProject do
 
   defp docs do
     [
-      main: "Judicium",
+      main: "Tribunal",
       source_ref: "v#{@version}",
-      extras: ["README.md"]
+      extras: [
+        "README.md",
+        "guides/getting-started.md",
+        "guides/exunit-integration.md",
+        "guides/assertions.md",
+        "guides/llm-as-judge.md",
+        "guides/datasets.md",
+        "guides/red-team-testing.md",
+        "guides/reporters.md"
+      ],
+      groups_for_extras: [
+        Guides: ~r/guides\/.*/
+      ],
+      groups_for_modules: [
+        Core: [
+          Tribunal,
+          Tribunal.TestCase,
+          Tribunal.Assertions
+        ],
+        "Assertion Types": [
+          Tribunal.Assertions.Deterministic,
+          Tribunal.Assertions.Judge,
+          Tribunal.Assertions.Embedding
+        ],
+        Testing: [
+          Tribunal.EvalCase,
+          Tribunal.Dataset,
+          Tribunal.RedTeam
+        ],
+        Reporters: [
+          Tribunal.Reporter,
+          Tribunal.Reporter.Console,
+          Tribunal.Reporter.JSON,
+          Tribunal.Reporter.GitHub,
+          Tribunal.Reporter.JUnit
+        ]
+      ]
     ]
   end
 end

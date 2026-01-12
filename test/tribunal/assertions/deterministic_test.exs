@@ -1,7 +1,7 @@
-defmodule Judicium.Assertions.DeterministicTest do
+defmodule Tribunal.Assertions.DeterministicTest do
   use ExUnit.Case, async: true
 
-  alias Judicium.Assertions.Deterministic
+  alias Tribunal.Assertions.Deterministic
 
   describe "contains" do
     test "passes when substring found" do

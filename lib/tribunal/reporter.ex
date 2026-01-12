@@ -1,4 +1,4 @@
-defmodule Judicium.Reporter do
+defmodule Tribunal.Reporter do
   @moduledoc """
   Behaviour for eval result reporters.
   """
@@ -18,12 +18,12 @@ defmodule Judicium.Reporter do
   @callback format(results()) :: String.t()
 end
 
-defmodule Judicium.Reporter.Console do
+defmodule Tribunal.Reporter.Console do
   @moduledoc """
   Pretty console output for eval results.
   """
 
-  @behaviour Judicium.Reporter
+  @behaviour Tribunal.Reporter
 
   @impl true
   def format(results) do
@@ -40,7 +40,7 @@ defmodule Judicium.Reporter.Console do
   defp header do
     """
 
-    Judicium LLM Evaluation
+    Tribunal LLM Evaluation
     ═══════════════════════════════════════════════════════════════
     """
   end
@@ -127,12 +127,12 @@ defmodule Judicium.Reporter.Console do
   defp format_duration(ms), do: "#{Float.round(ms / 1000, 1)}s"
 end
 
-defmodule Judicium.Reporter.JSON do
+defmodule Tribunal.Reporter.JSON do
   @moduledoc """
   JSON output for CI/machine consumption.
   """
 
-  @behaviour Judicium.Reporter
+  @behaviour Tribunal.Reporter
 
   @impl true
   def format(results) do
@@ -168,12 +168,12 @@ defmodule Judicium.Reporter.JSON do
   defp convert_for_json(data), do: data
 end
 
-defmodule Judicium.Reporter.GitHub do
+defmodule Tribunal.Reporter.GitHub do
   @moduledoc """
   GitHub Actions annotations format.
   """
 
-  @behaviour Judicium.Reporter
+  @behaviour Tribunal.Reporter
 
   @impl true
   def format(results) do
@@ -186,19 +186,19 @@ defmodule Judicium.Reporter.GitHub do
       end)
 
     summary =
-      "::notice::Judicium: #{results.summary.passed}/#{results.summary.total} passed (#{round(results.summary.pass_rate * 100)}%)"
+      "::notice::Tribunal: #{results.summary.passed}/#{results.summary.total} passed (#{round(results.summary.pass_rate * 100)}%)"
 
     (annotations ++ [summary])
     |> Enum.join("\n")
   end
 end
 
-defmodule Judicium.Reporter.JUnit do
+defmodule Tribunal.Reporter.JUnit do
   @moduledoc """
   JUnit XML format for CI tools.
   """
 
-  @behaviour Judicium.Reporter
+  @behaviour Tribunal.Reporter
 
   @impl true
   def format(results) do
@@ -227,7 +227,7 @@ defmodule Judicium.Reporter.JUnit do
 
     """
     <?xml version="1.0" encoding="UTF-8"?>
-    <testsuites name="Judicium" tests="#{results.summary.total}" failures="#{results.summary.failed}" time="#{results.summary.duration_ms / 1000}">
+    <testsuites name="Tribunal" tests="#{results.summary.total}" failures="#{results.summary.failed}" time="#{results.summary.duration_ms / 1000}">
       <testsuite name="eval" tests="#{results.summary.total}" failures="#{results.summary.failed}">
     #{test_cases}
       </testsuite>

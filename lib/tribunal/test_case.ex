@@ -1,4 +1,4 @@
-defmodule Judicium.TestCase do
+defmodule Tribunal.TestCase do
   @moduledoc """
   Represents a single evaluation test case.
 
@@ -13,7 +13,7 @@ defmodule Judicium.TestCase do
 
   ## Example
 
-      test_case = %Judicium.TestCase{
+      test_case = %Tribunal.TestCase{
         input: "What's the return policy?",
         actual_output: "You can return items within 30 days.",
         context: ["Returns accepted within 30 days with receipt."],
@@ -44,8 +44,8 @@ defmodule Judicium.TestCase do
 
   ## Examples
 
-      Judicium.TestCase.new(input: "Hello", actual_output: "Hi there!")
-      Judicium.TestCase.new(%{"input" => "Hello", "actual_output" => "Hi!"})
+      Tribunal.TestCase.new(input: "Hello", actual_output: "Hi there!")
+      Tribunal.TestCase.new(%{"input" => "Hello", "actual_output" => "Hi!"})
   """
   def new(attrs) when is_map(attrs) do
     attrs = normalize_keys(attrs)

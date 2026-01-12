@@ -1,4 +1,4 @@
-defmodule Judicium.Assertions do
+defmodule Tribunal.Assertions do
   @moduledoc """
   Assertion evaluation engine.
 
@@ -8,8 +8,8 @@ defmodule Judicium.Assertions do
   - Embedding (requires alike): `similar`
   """
 
-  alias Judicium.Assertions.Deterministic
-  alias Judicium.TestCase
+  alias Tribunal.Assertions.Deterministic
+  alias Tribunal.TestCase
 
   @deterministic_assertions [
     :contains,
@@ -41,7 +41,8 @@ defmodule Judicium.Assertions do
     :correctness,
     :bias,
     :toxicity,
-    :harmful
+    :harmful,
+    :jailbreak
   ]
 
   @embedding_assertions [:similar]
@@ -125,7 +126,7 @@ defmodule Judicium.Assertions do
       """
     end
 
-    Judicium.Assertions.Judge.evaluate(type, test_case, opts)
+    Tribunal.Assertions.Judge.evaluate(type, test_case, opts)
   end
 
   defp evaluate_embedding(_type, test_case, opts) do
@@ -138,6 +139,6 @@ defmodule Judicium.Assertions do
       """
     end
 
-    Judicium.Assertions.Embedding.evaluate(test_case, opts)
+    Tribunal.Assertions.Embedding.evaluate(test_case, opts)
   end
 end

@@ -1,8 +1,8 @@
-defmodule Judicium do
+defmodule Tribunal do
   @moduledoc """
   LLM evaluation framework for Elixir.
 
-  Judicium (Latin: "judgment") provides tools for evaluating LLM outputs,
+  Tribunal provides tools for evaluating LLM outputs,
   detecting hallucinations, and measuring response quality.
 
   ## Quick Start
@@ -11,7 +11,7 @@ defmodule Judicium do
 
       defmodule MyApp.RAGEvalTest do
         use ExUnit.Case
-        use Judicium.EvalCase
+        use Tribunal.EvalCase
 
         @moduletag :eval
 
@@ -37,7 +37,7 @@ defmodule Judicium do
         }
       ]
 
-  Then run: `mix judicium.eval`
+  Then run: `mix tribunal.eval`
 
   ## Assertion Types
 
@@ -70,7 +70,7 @@ defmodule Judicium do
 
       def deps do
         [
-          {:judicium, "~> 0.1"},
+          {:tribunal, "~> 0.1"},
 
           # Optional: LLM-as-judge metrics
           {:req_llm, "~> 1.2"},
@@ -81,14 +81,14 @@ defmodule Judicium do
       end
   """
 
-  alias Judicium.{Assertions, TestCase}
+  alias Tribunal.{Assertions, TestCase}
 
   @doc """
   Evaluates a test case against assertions.
 
   ## Examples
 
-      test_case = %Judicium.TestCase{
+      test_case = %Tribunal.TestCase{
         input: "What's the return policy?",
         actual_output: "Returns within 30 days.",
         context: ["Return policy: 30 days with receipt."]
@@ -99,7 +99,7 @@ defmodule Judicium do
         {:faithful, [threshold: 0.8]}
       ]
 
-      Judicium.evaluate(test_case, assertions)
+      Tribunal.evaluate(test_case, assertions)
       #=> %{contains: {:pass, ...}, faithful: {:pass, ...}}
   """
   def evaluate(%TestCase{} = test_case, assertions) when is_list(assertions) do
@@ -122,7 +122,7 @@ defmodule Judicium do
 
   ## Examples
 
-      Judicium.test_case(
+      Tribunal.test_case(
         input: "What's the price?",
         actual_output: "The price is $29.99.",
         context: ["Product costs $29.99"]

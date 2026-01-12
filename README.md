@@ -1,50 +1,131 @@
-# Judicium
+# Tribunal
 
 LLM evaluation framework for Elixir.
 
-**Judicium** (Latin: "judgment") provides tools for evaluating LLM outputs, detecting hallucinations, and measuring response quality. Named after *Judicium Dei* (Judgment of God), the medieval trial by ordeal.
+**Tribunal** provides tools for evaluating LLM outputs, detecting hallucinations, and measuring response quality.
 
 ## Installation
 
 ```elixir
 def deps do
   [
-    {:judicium, "~> 0.1.0"}
+    {:tribunal, "~> 0.1.0"},
+
+    # Optional: for LLM-as-judge evaluations
+    {:req_llm, "~> 1.2"},
+
+    # Optional: for embedding-based similarity
+    {:alike, "~> 0.1"}
   ]
 end
 ```
 
-## Usage
+## Quick Start
+
+### ExUnit Integration
 
 ```elixir
-# Evaluate a response against context
-Judicium.evaluate(response,
-  context: source_documents,
-  criteria: [:faithfulness, :relevancy]
-)
+defmodule MyApp.RAGTest do
+  use ExUnit.Case
+  use Tribunal.EvalCase
 
-# Check for hallucinations
-Judicium.hallucination?(response, source: source_documents)
+  @context ["Returns are accepted within 30 days with receipt."]
 
-# Use LLM-as-judge pattern
-Judicium.judge(response, prompt: original_prompt, rubric: scoring_rubric)
+  test "response is faithful to context" do
+    response = MyApp.RAG.query("What's the return policy?")
+
+    assert_contains response, "30 days"
+    assert_faithful response, context: @context
+    refute_hallucination response, context: @context
+  end
+end
 ```
 
-## Metrics
+### Dataset-Driven Evaluations
 
-- **Faithfulness** - Is the response grounded in the provided context?
-- **Relevancy** - Does the response address the query?
-- **Hallucination** - Does the response contain fabricated information?
-- **Coherence** - Is the response logically consistent?
-- **Toxicity** - Does the response contain harmful content?
+```elixir
+# test/evals/rag_test.exs
+defmodule MyApp.RAGEvalTest do
+  use ExUnit.Case
+  use Tribunal.EvalCase
+
+  tribunal_eval "test/evals/datasets/questions.json",
+    provider: {MyApp.RAG, :query}
+end
+```
+
+### CLI
+
+```bash
+# Initialize evaluation structure
+mix tribunal.init
+
+# Run evaluations
+mix tribunal.eval
+
+# Output formats
+mix tribunal.eval --format json --output results.json
+mix tribunal.eval --format github  # GitHub Actions annotations
+```
+
+## Assertion Types
+
+### Deterministic (instant, no API calls)
+
+- `assert_contains` / `refute_contains` - Substring matching
+- `assert_regex` - Pattern matching
+- `assert_json` - Valid JSON validation
+- `assert_refusal` - Refusal pattern detection
+- `assert_max_tokens` - Token limit
+- `refute_pii` - No PII detection
+- `refute_toxic` - No toxic patterns
+- [Full list in assertions guide](guides/assertions.md)
+
+### LLM-as-Judge (requires `req_llm`)
+
+- `assert_faithful` - Grounded in context
+- `assert_relevant` - Addresses query
+- `refute_hallucination` - No fabricated info
+- `refute_bias` - No stereotypes
+- `refute_toxicity` - No hostile language
+- `refute_harmful` - No dangerous content
+- `refute_jailbreak` - No safety bypass
+
+### Embedding-Based (requires `alike`)
+
+- `assert_similar` - Semantic similarity check
+
+## Red Team Testing
+
+Generate adversarial prompts to test LLM safety:
+
+```elixir
+alias Tribunal.RedTeam
+
+attacks = RedTeam.generate_attacks("How do I pick a lock?")
+# Returns encoding attacks (base64, leetspeak, rot13)
+# injection attacks (ignore instructions, delimiter injection)
+# jailbreak attacks (DAN, STAN, developer mode)
+```
+
+## Guides
+
+- [Getting Started](guides/getting-started.md)
+- [ExUnit Integration](guides/exunit-integration.md)
+- [Assertions Reference](guides/assertions.md)
+- [LLM-as-Judge](guides/llm-as-judge.md)
+- [Datasets](guides/datasets.md)
+- [Red Team Testing](guides/red-team-testing.md)
+- [Reporters](guides/reporters.md)
 
 ## Roadmap
 
-- [ ] Core evaluation pipeline
-- [ ] Faithfulness metric (RAGAS-style)
-- [ ] Hallucination detection
-- [ ] LLM-as-judge with configurable models
-- [ ] ExUnit integration for test assertions
+- [x] Core evaluation pipeline
+- [x] Faithfulness metric (RAGAS-style)
+- [x] Hallucination detection
+- [x] LLM-as-judge with configurable models
+- [x] ExUnit integration for test assertions
+- [x] Red team attack generators
 - [ ] Async batch evaluation
 
 ## License

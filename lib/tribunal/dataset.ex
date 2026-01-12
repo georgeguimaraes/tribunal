@@ -1,4 +1,4 @@
-defmodule Judicium.Dataset do
+defmodule Tribunal.Dataset do
   @moduledoc """
   Loads evaluation datasets from JSON or YAML files.
 
@@ -34,7 +34,7 @@ defmodule Judicium.Dataset do
             threshold: 0.8
   """
 
-  alias Judicium.TestCase
+  alias Tribunal.TestCase
 
   @doc """
   Loads a dataset from a file path.

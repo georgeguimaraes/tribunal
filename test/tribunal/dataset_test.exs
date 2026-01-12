@@ -1,11 +1,11 @@
-defmodule Judicium.DatasetTest do
+defmodule Tribunal.DatasetTest do
   use ExUnit.Case, async: false
 
-  alias Judicium.Dataset
+  alias Tribunal.Dataset
 
   setup do
     fixtures_path =
-      Path.join(System.tmp_dir!(), "judicium_dataset_test_#{:rand.uniform(100_000)}")
+      Path.join(System.tmp_dir!(), "tribunal_dataset_test_#{:rand.uniform(100_000)}")
 
     File.mkdir_p!(fixtures_path)
 

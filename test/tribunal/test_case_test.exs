@@ -1,7 +1,7 @@
-defmodule Judicium.TestCaseTest do
+defmodule Tribunal.TestCaseTest do
   use ExUnit.Case, async: true
 
-  alias Judicium.TestCase
+  alias Tribunal.TestCase
 
   describe "new/1" do
     test "creates from keyword list" do

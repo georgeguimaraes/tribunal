@@ -1,4 +1,4 @@
-defmodule Judicium.Assertions.Deterministic do
+defmodule Tribunal.Assertions.Deterministic do
   @moduledoc """
   Deterministic assertions that don't require LLM calls.
 

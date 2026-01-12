@@ -1,11 +1,11 @@
-defmodule Mix.Tasks.Judicium.Eval do
+defmodule Mix.Tasks.Tribunal.Eval do
   @shortdoc "Run LLM evaluations"
   @moduledoc """
   Runs LLM evaluations from dataset files.
 
   ## Usage
 
-      mix judicium.eval [options] [files...]
+      mix tribunal.eval [options] [files...]
 
   ## Options
 
@@ -16,16 +16,16 @@ defmodule Mix.Tasks.Judicium.Eval do
   ## Examples
 
       # Run all evals in default location
-      mix judicium.eval
+      mix tribunal.eval
 
       # Run specific dataset
-      mix judicium.eval test/evals/datasets/questions.json
+      mix tribunal.eval test/evals/datasets/questions.json
 
       # Output JSON for CI
-      mix judicium.eval --format json --output results.json
+      mix tribunal.eval --format json --output results.json
 
       # GitHub Actions annotations
-      mix judicium.eval --format github
+      mix tribunal.eval --format github
   """
 
   use Mix.Task
@@ -98,7 +98,7 @@ defmodule Mix.Tasks.Judicium.Eval do
   defp load_and_run(path, provider) do
     Mix.shell().info("Loading #{path}...")
 
-    cases = Judicium.Dataset.load_with_assertions!(path)
+    cases = Tribunal.Dataset.load_with_assertions!(path)
 
     Enum.map(cases, fn {test_case, assertions} ->
       run_case(test_case, assertions, provider)
@@ -112,14 +112,14 @@ defmodule Mix.Tasks.Judicium.Eval do
       if provider do
         {mod, fun} = provider
         output = apply(mod, fun, [test_case.input])
-        Judicium.TestCase.with_output(test_case, output)
+        Tribunal.TestCase.with_output(test_case, output)
       else
         test_case
       end
 
     results =
       if test_case.actual_output do
-        Judicium.Assertions.evaluate_all(assertions, test_case)
+        Tribunal.Assertions.evaluate_all(assertions, test_case)
       else
         %{}
       end
@@ -180,21 +180,21 @@ defmodule Mix.Tasks.Judicium.Eval do
     |> Map.new()
   end
 
-  defp format_results(results, "console"), do: Judicium.Reporter.Console.format(results)
-  defp format_results(results, "json"), do: Judicium.Reporter.JSON.format(results)
-  defp format_results(results, "github"), do: Judicium.Reporter.GitHub.format(results)
-  defp format_results(results, "junit"), do: Judicium.Reporter.JUnit.format(results)
+  defp format_results(results, "console"), do: Tribunal.Reporter.Console.format(results)
+  defp format_results(results, "json"), do: Tribunal.Reporter.JSON.format(results)
+  defp format_results(results, "github"), do: Tribunal.Reporter.GitHub.format(results)
+  defp format_results(results, "junit"), do: Tribunal.Reporter.JUnit.format(results)
   defp format_results(_, format), do: Mix.raise("Unknown format: #{format}")
 end
 
-defmodule Mix.Tasks.Judicium.Init do
+defmodule Mix.Tasks.Tribunal.Init do
   @shortdoc "Initialize eval directory structure"
   @moduledoc """
   Creates the eval directory structure with example files.
 
   ## Usage
 
-      mix judicium.init
+      mix tribunal.init
   """
 
   use Mix.Task
@@ -216,7 +216,7 @@ defmodule Mix.Tasks.Judicium.Init do
             ├── example.json
             └── example.yaml
 
-    Run evals with: mix judicium.eval
+    Run evals with: mix tribunal.eval
     """)
   end
 

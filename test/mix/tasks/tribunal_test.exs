@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.JudiciumTest do
+defmodule Mix.Tasks.TribunalTest do
   use ExUnit.Case, async: true
 
   import ExUnit.CaptureIO
@@ -36,9 +36,9 @@ defmodule Mix.Tasks.JudiciumTest do
     :ok
   end
 
-  describe "Mix.Tasks.Judicium.Eval" do
+  describe "Mix.Tasks.Tribunal.Eval" do
     test "has moduledoc with usage info" do
-      {:docs_v1, _, _, _, %{"en" => moduledoc}, _, _} = Code.fetch_docs(Mix.Tasks.Judicium.Eval)
+      {:docs_v1, _, _, _, %{"en" => moduledoc}, _, _} = Code.fetch_docs(Mix.Tasks.Tribunal.Eval)
 
       assert moduledoc =~ "--format"
       assert moduledoc =~ "console"
@@ -51,15 +51,15 @@ defmodule Mix.Tasks.JudiciumTest do
     end
 
     test "module implements Mix.Task behaviour" do
-      behaviours = Mix.Tasks.Judicium.Eval.__info__(:attributes)[:behaviour] || []
+      behaviours = Mix.Tasks.Tribunal.Eval.__info__(:attributes)[:behaviour] || []
       assert Mix.Task in behaviours
     end
   end
 
-  describe "Mix.Tasks.Judicium.Init" do
+  describe "Mix.Tasks.Tribunal.Init" do
     test "creates directory structure" do
       # Use a temp directory
-      tmp_dir = Path.join(System.tmp_dir!(), "judicium_test_#{:rand.uniform(10000)}")
+      tmp_dir = Path.join(System.tmp_dir!(), "tribunal_test_#{:rand.uniform(10000)}")
       File.mkdir_p!(tmp_dir)
 
       try do
@@ -69,7 +69,7 @@ defmodule Mix.Tasks.JudiciumTest do
 
         output =
           capture_io(fn ->
-            Mix.Tasks.Judicium.Init.run([])
+            Mix.Tasks.Tribunal.Init.run([])
           end)
 
         assert output =~ "Created test/evals/"
@@ -96,7 +96,7 @@ defmodule Mix.Tasks.JudiciumTest do
     end
 
     test "does not overwrite existing files" do
-      tmp_dir = Path.join(System.tmp_dir!(), "judicium_test_#{:rand.uniform(10000)}")
+      tmp_dir = Path.join(System.tmp_dir!(), "tribunal_test_#{:rand.uniform(10000)}")
       File.mkdir_p!(tmp_dir)
 
       try do
@@ -108,7 +108,7 @@ defmodule Mix.Tasks.JudiciumTest do
         File.write!("test/evals/datasets/example.json", "existing content")
 
         capture_io(fn ->
-          Mix.Tasks.Judicium.Init.run([])
+          Mix.Tasks.Tribunal.Init.run([])
         end)
 
         # Original file should be preserved

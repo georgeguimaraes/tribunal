@@ -1,7 +1,7 @@
-defmodule Judicium.ReporterTest do
+defmodule Tribunal.ReporterTest do
   use ExUnit.Case, async: true
 
-  alias Judicium.Reporter.{Console, JSON, GitHub, JUnit}
+  alias Tribunal.Reporter.{Console, JSON, GitHub, JUnit}
 
   @sample_results %{
     summary: %{
@@ -43,7 +43,7 @@ defmodule Judicium.ReporterTest do
   describe "Console.format/1" do
     test "includes header" do
       output = Console.format(@sample_results)
-      assert output =~ "Judicium LLM Evaluation"
+      assert output =~ "Tribunal LLM Evaluation"
     end
 
     test "includes summary stats" do
@@ -116,7 +116,7 @@ defmodule Judicium.ReporterTest do
 
     test "outputs notice with summary" do
       output = GitHub.format(@sample_results)
-      assert output =~ "::notice::Judicium: 8/10 passed (80%)"
+      assert output =~ "::notice::Tribunal: 8/10 passed (80%)"
     end
 
     test "includes failure reasons" do
