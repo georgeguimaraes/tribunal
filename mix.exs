@@ -44,6 +44,7 @@ defmodule Tribunal.MixProject do
 
   defp package do
     [
+      maintainers: ["George Guimarães"],
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url}
     ]
