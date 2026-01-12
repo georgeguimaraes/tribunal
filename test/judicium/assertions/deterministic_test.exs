@@ -144,4 +144,169 @@ defmodule Judicium.Assertions.DeterministicTest do
       assert reason =~ "No latency"
     end
   end
+
+  describe "starts_with" do
+    test "passes when output starts with value" do
+      assert {:pass, %{prefix: "Hello"}} =
+               Deterministic.evaluate(:starts_with, "Hello world", value: "Hello")
+    end
+
+    test "fails when output does not start with value" do
+      assert {:fail, %{expected: "Goodbye"}} =
+               Deterministic.evaluate(:starts_with, "Hello world", value: "Goodbye")
+    end
+  end
+
+  describe "ends_with" do
+    test "passes when output ends with value" do
+      assert {:pass, %{suffix: "world"}} =
+               Deterministic.evaluate(:ends_with, "Hello world", value: "world")
+    end
+
+    test "fails when output does not end with value" do
+      assert {:fail, %{expected: "universe"}} =
+               Deterministic.evaluate(:ends_with, "Hello world", value: "universe")
+    end
+  end
+
+  describe "equals" do
+    test "passes when output exactly matches" do
+      assert {:pass, %{}} = Deterministic.evaluate(:equals, "exact match", value: "exact match")
+    end
+
+    test "fails when output differs" do
+      assert {:fail, %{expected: "foo", actual: "bar"}} =
+               Deterministic.evaluate(:equals, "bar", value: "foo")
+    end
+  end
+
+  describe "min_length" do
+    test "passes when output meets minimum length" do
+      assert {:pass, %{length: 11, min: 5}} =
+               Deterministic.evaluate(:min_length, "Hello world", value: 5)
+    end
+
+    test "fails when output is too short" do
+      assert {:fail, %{length: 2, min: 10}} =
+               Deterministic.evaluate(:min_length, "Hi", value: 10)
+    end
+  end
+
+  describe "max_length" do
+    test "passes when output is under max length" do
+      assert {:pass, %{length: 11, max: 100}} =
+               Deterministic.evaluate(:max_length, "Hello world", value: 100)
+    end
+
+    test "fails when output exceeds max length" do
+      assert {:fail, %{length: 11, max: 5}} =
+               Deterministic.evaluate(:max_length, "Hello world", value: 5)
+    end
+  end
+
+  describe "word_count" do
+    test "passes when word count is within range" do
+      assert {:pass, %{word_count: 2}} =
+               Deterministic.evaluate(:word_count, "Hello world", min: 1, max: 10)
+    end
+
+    test "fails when word count is below minimum" do
+      assert {:fail, %{word_count: 1, min: 5}} =
+               Deterministic.evaluate(:word_count, "Hello", min: 5)
+    end
+
+    test "fails when word count exceeds maximum" do
+      assert {:fail, %{word_count: 5, max: 2}} =
+               Deterministic.evaluate(:word_count, "one two three four five", max: 2)
+    end
+  end
+
+  describe "no_pii" do
+    test "passes when no PII detected" do
+      assert {:pass, %{}} = Deterministic.evaluate(:no_pii, "The weather is nice today.", [])
+    end
+
+    test "fails when email detected" do
+      assert {:fail, %{pii_type: :email}} =
+               Deterministic.evaluate(:no_pii, "Contact me at john@example.com", [])
+    end
+
+    test "fails when phone number detected" do
+      assert {:fail, %{pii_type: :phone}} =
+               Deterministic.evaluate(:no_pii, "Call me at 555-123-4567", [])
+    end
+
+    test "fails when SSN detected" do
+      assert {:fail, %{pii_type: :ssn}} =
+               Deterministic.evaluate(:no_pii, "SSN: 123-45-6789", [])
+    end
+
+    test "fails when credit card detected" do
+      assert {:fail, %{pii_type: :credit_card}} =
+               Deterministic.evaluate(:no_pii, "Card: 4111-1111-1111-1111", [])
+    end
+  end
+
+  describe "no_toxic" do
+    test "passes with clean text" do
+      assert {:pass, %{}} = Deterministic.evaluate(:no_toxic, "Have a great day!", [])
+    end
+
+    test "fails with profanity" do
+      # Using mild example that should be caught
+      assert {:fail, %{reason: reason}} =
+               Deterministic.evaluate(:no_toxic, "You are such an idiot and a moron", [])
+
+      assert reason =~ "toxic"
+    end
+
+    test "passes with technical terms that might look bad" do
+      # "kill" in technical context should pass
+      assert {:pass, %{}} =
+               Deterministic.evaluate(:no_toxic, "Kill the process with SIGTERM", [])
+    end
+  end
+
+  describe "is_url" do
+    test "passes with valid URL" do
+      assert {:pass, %{url: "https://example.com"}} =
+               Deterministic.evaluate(:is_url, "https://example.com", [])
+    end
+
+    test "fails with invalid URL" do
+      assert {:fail, %{reason: reason}} =
+               Deterministic.evaluate(:is_url, "not a url at all", [])
+
+      assert reason =~ "not a valid URL"
+    end
+  end
+
+  describe "is_email" do
+    test "passes with valid email" do
+      assert {:pass, %{email: "test@example.com"}} =
+               Deterministic.evaluate(:is_email, "test@example.com", [])
+    end
+
+    test "fails with invalid email" do
+      assert {:fail, %{}} = Deterministic.evaluate(:is_email, "not-an-email", [])
+    end
+  end
+
+  describe "levenshtein" do
+    test "passes when edit distance is within threshold" do
+      # "hello" vs "hallo" = 1 edit
+      assert {:pass, %{distance: 1}} =
+               Deterministic.evaluate(:levenshtein, "hallo", value: "hello", max_distance: 2)
+    end
+
+    test "fails when edit distance exceeds threshold" do
+      assert {:fail, %{distance: distance, max_distance: 1}} =
+               Deterministic.evaluate(:levenshtein, "completely different",
+                 value: "hello",
+                 max_distance: 1
+               )
+
+      assert distance > 1
+    end
+  end
 end

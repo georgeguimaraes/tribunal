@@ -138,6 +138,18 @@ defmodule Judicium.AssertionsTest do
       assert :is_refusal in available
       assert :max_tokens in available
       assert :latency_ms in available
+      # New assertions
+      assert :starts_with in available
+      assert :ends_with in available
+      assert :equals in available
+      assert :min_length in available
+      assert :max_length in available
+      assert :word_count in available
+      assert :no_pii in available
+      assert :no_toxic in available
+      assert :is_url in available
+      assert :is_email in available
+      assert :levenshtein in available
     end
 
     test "includes judge assertions when req_llm loaded" do

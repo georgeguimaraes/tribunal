@@ -20,7 +20,18 @@ defmodule Judicium.Assertions do
     :is_json,
     :is_refusal,
     :max_tokens,
-    :latency_ms
+    :latency_ms,
+    :starts_with,
+    :ends_with,
+    :equals,
+    :min_length,
+    :max_length,
+    :word_count,
+    :no_pii,
+    :no_toxic,
+    :is_url,
+    :is_email,
+    :levenshtein
   ]
 
   @judge_assertions [

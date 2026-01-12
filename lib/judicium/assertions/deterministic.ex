@@ -168,4 +168,183 @@ defmodule Judicium.Assertions.Deterministic do
          %{latency_ms: actual, max: max, reason: "Latency #{actual}ms exceeds max #{max}ms"}}
     end
   end
+
+  def evaluate(:starts_with, output, opts) do
+    prefix = opts[:value]
+
+    if String.starts_with?(output, prefix) do
+      {:pass, %{prefix: prefix}}
+    else
+      {:fail, %{expected: prefix, reason: "Output does not start with: #{prefix}"}}
+    end
+  end
+
+  def evaluate(:ends_with, output, opts) do
+    suffix = opts[:value]
+
+    if String.ends_with?(output, suffix) do
+      {:pass, %{suffix: suffix}}
+    else
+      {:fail, %{expected: suffix, reason: "Output does not end with: #{suffix}"}}
+    end
+  end
+
+  def evaluate(:equals, output, opts) do
+    expected = opts[:value]
+
+    if output == expected do
+      {:pass, %{}}
+    else
+      {:fail, %{expected: expected, actual: output, reason: "Output does not match expected"}}
+    end
+  end
+
+  def evaluate(:min_length, output, opts) do
+    min = opts[:value] || opts[:min]
+    length = String.length(output)
+
+    if length >= min do
+      {:pass, %{length: length, min: min}}
+    else
+      {:fail, %{length: length, min: min, reason: "Output length #{length} below minimum #{min}"}}
+    end
+  end
+
+  def evaluate(:max_length, output, opts) do
+    max = opts[:value] || opts[:max]
+    length = String.length(output)
+
+    if length <= max do
+      {:pass, %{length: length, max: max}}
+    else
+      {:fail,
+       %{length: length, max: max, reason: "Output length #{length} exceeds maximum #{max}"}}
+    end
+  end
+
+  def evaluate(:word_count, output, opts) do
+    min = opts[:min] || 0
+    max = opts[:max] || :infinity
+
+    words = output |> String.split(~r/\s+/, trim: true)
+    count = length(words)
+
+    cond do
+      count < min ->
+        {:fail,
+         %{word_count: count, min: min, reason: "Word count #{count} below minimum #{min}"}}
+
+      max != :infinity and count > max ->
+        {:fail,
+         %{word_count: count, max: max, reason: "Word count #{count} exceeds maximum #{max}"}}
+
+      true ->
+        {:pass, %{word_count: count}}
+    end
+  end
+
+  def evaluate(:no_pii, output, _opts) do
+    pii_patterns = [
+      {:email, ~r/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/},
+      {:phone, ~r/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/},
+      {:ssn, ~r/\b\d{3}-\d{2}-\d{4}\b/},
+      {:credit_card, ~r/\b(?:\d{4}[-\s]?){3}\d{4}\b/}
+    ]
+
+    case Enum.find(pii_patterns, fn {_type, pattern} -> Regex.match?(pattern, output) end) do
+      nil ->
+        {:pass, %{}}
+
+      {pii_type, _pattern} ->
+        {:fail, %{pii_type: pii_type, reason: "PII detected: #{pii_type}"}}
+    end
+  end
+
+  def evaluate(:no_toxic, output, _opts) do
+    # Basic toxicity patterns: personal attacks and slurs
+    # Excludes technical terms like "kill process"
+    toxic_patterns = [
+      ~r/\b(?:idiot|moron|stupid|dumb)\b/i,
+      ~r/\byou(?:'re| are) (?:an? )?(?:idiot|moron|stupid|dumb)/i,
+      ~r/\b(?:hate|kill|die)\s+(?:you|yourself)\b/i
+    ]
+
+    if Enum.any?(toxic_patterns, &Regex.match?(&1, output)) do
+      {:fail, %{reason: "Output contains toxic content"}}
+    else
+      {:pass, %{}}
+    end
+  end
+
+  def evaluate(:is_url, output, _opts) do
+    url = String.trim(output)
+
+    if Regex.match?(~r/^https?:\/\/[^\s]+$/, url) do
+      {:pass, %{url: url}}
+    else
+      {:fail, %{reason: "Output is not a valid URL"}}
+    end
+  end
+
+  def evaluate(:is_email, output, _opts) do
+    email = String.trim(output)
+
+    if Regex.match?(~r/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, email) do
+      {:pass, %{email: email}}
+    else
+      {:fail, %{reason: "Output is not a valid email"}}
+    end
+  end
+
+  def evaluate(:levenshtein, output, opts) do
+    target = opts[:value]
+    max_distance = opts[:max_distance] || 3
+
+    distance = levenshtein_distance(output, target)
+
+    if distance <= max_distance do
+      {:pass, %{distance: distance, max_distance: max_distance}}
+    else
+      {:fail,
+       %{
+         distance: distance,
+         max_distance: max_distance,
+         reason: "Edit distance #{distance} exceeds max #{max_distance}"
+       }}
+    end
+  end
+
+  # Levenshtein distance algorithm
+  defp levenshtein_distance(s1, s2) do
+    s1_chars = String.graphemes(s1)
+    s2_chars = String.graphemes(s2)
+    s1_len = length(s1_chars)
+    s2_len = length(s2_chars)
+
+    if s1_len == 0 do
+      s2_len
+    else
+      if s2_len == 0 do
+        s1_len
+      else
+        # Build the matrix
+        row = 0..s2_len |> Enum.to_list()
+
+        Enum.reduce(Enum.with_index(s1_chars), row, fn {c1, i}, prev_row ->
+          Enum.reduce(Enum.with_index(s2_chars), {[i + 1], i}, fn {c2, j}, {curr, diag} ->
+            cost = if c1 == c2, do: 0, else: 1
+            left = hd(curr) + 1
+            up = Enum.at(prev_row, j + 1) + 1
+            diagonal = diag + cost
+            new_val = min(min(left, up), diagonal)
+            new_diag = Enum.at(prev_row, j + 1)
+            {[new_val | curr], new_diag}
+          end)
+          |> elem(0)
+          |> Enum.reverse()
+        end)
+        |> List.last()
+      end
+    end
+  end
 end
