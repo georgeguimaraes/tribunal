@@ -1,0 +1,324 @@
+defmodule Judicium.Assertions.JudgeTest do
+  use ExUnit.Case, async: true
+
+  alias Judicium.Assertions.Judge
+  alias Judicium.TestCase
+
+  defp mock_client(response) do
+    fn _model, _messages, _opts -> response end
+  end
+
+  describe "evaluate/3 faithful" do
+    test "returns pass when output is faithful to context" do
+      test_case = %TestCase{
+        input: "What is the return policy?",
+        actual_output: "You can return items within 30 days with a receipt.",
+        context: ["Returns are accepted within 30 days of purchase with a valid receipt."]
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "yes",
+             "reason" =>
+               "Output accurately reflects the context about 30-day returns with receipt."
+           }}
+        )
+
+      assert {:pass, details} = Judge.evaluate(:faithful, test_case, llm_client: client)
+      assert details.verdict == "yes"
+    end
+
+    test "returns fail when output contradicts context" do
+      test_case = %TestCase{
+        input: "What is the return policy?",
+        actual_output: "You can return items anytime, no questions asked.",
+        context: ["Returns are accepted within 30 days of purchase with a valid receipt."]
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "no",
+             "reason" =>
+               "Output claims unlimited returns but context specifies 30-day limit with receipt."
+           }}
+        )
+
+      assert {:fail, details} = Judge.evaluate(:faithful, test_case, llm_client: client)
+      assert details.verdict == "no"
+      assert details.reason =~ "30-day"
+    end
+
+    test "requires context" do
+      test_case = %TestCase{
+        input: "What is the return policy?",
+        actual_output: "You can return items within 30 days."
+      }
+
+      assert {:error, reason} = Judge.evaluate(:faithful, test_case, [])
+      assert reason =~ "context"
+    end
+  end
+
+  describe "evaluate/3 relevant" do
+    test "returns pass when output answers the question" do
+      test_case = %TestCase{
+        input: "What are the store hours?",
+        actual_output: "We are open Monday through Friday from 9am to 5pm."
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "yes",
+             "reason" => "Output directly answers the question about store hours."
+           }}
+        )
+
+      assert {:pass, details} = Judge.evaluate(:relevant, test_case, llm_client: client)
+      assert details.verdict == "yes"
+    end
+
+    test "returns fail when output is off-topic" do
+      test_case = %TestCase{
+        input: "What are the store hours?",
+        actual_output: "We have the best prices in town!"
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "no",
+             "reason" =>
+               "Output discusses prices but doesn't answer the question about store hours."
+           }}
+        )
+
+      assert {:fail, details} = Judge.evaluate(:relevant, test_case, llm_client: client)
+      assert details.verdict == "no"
+    end
+  end
+
+  describe "evaluate/3 hallucination" do
+    test "returns pass when no hallucination detected" do
+      test_case = %TestCase{
+        input: "What is the capital of France?",
+        actual_output: "The capital of France is Paris.",
+        context: ["France is a country in Western Europe. Its capital city is Paris."]
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "no",
+             "reason" => "All claims in the output are supported by the context."
+           }}
+        )
+
+      # For hallucination, "no" means no hallucination = pass
+      assert {:pass, details} = Judge.evaluate(:hallucination, test_case, llm_client: client)
+      assert details.verdict == "no"
+    end
+
+    test "returns fail when hallucination detected" do
+      test_case = %TestCase{
+        input: "What is the capital of France?",
+        actual_output: "The capital of France is Paris, which was founded in 250 BC.",
+        context: ["France is a country in Western Europe. Its capital city is Paris."]
+      }
+
+      client =
+        mock_client(
+          {:ok,
+           %{
+             "verdict" => "yes",
+             "reason" => "The founding date of 250 BC is not mentioned in the context."
+           }}
+        )
+
+      # For hallucination, "yes" means hallucination detected = fail
+      assert {:fail, details} = Judge.evaluate(:hallucination, test_case, llm_client: client)
+      assert details.verdict == "yes"
+    end
+
+    test "requires context" do
+      test_case = %TestCase{
+        input: "What is the capital of France?",
+        actual_output: "The capital of France is Paris."
+      }
+
+      assert {:error, reason} = Judge.evaluate(:hallucination, test_case, [])
+      assert reason =~ "context"
+    end
+  end
+
+  describe "evaluate/3 correctness" do
+    test "returns pass when output matches expected" do
+      test_case = %TestCase{
+        input: "What is 2 + 2?",
+        actual_output: "The answer is 4.",
+        expected_output: "4"
+      }
+
+      client =
+        mock_client(
+          {:ok, %{"verdict" => "yes", "reason" => "Output correctly states the answer is 4."}}
+        )
+
+      assert {:pass, details} = Judge.evaluate(:correctness, test_case, llm_client: client)
+      assert details.verdict == "yes"
+    end
+
+    test "returns fail when output differs from expected" do
+      test_case = %TestCase{
+        input: "What is 2 + 2?",
+        actual_output: "The answer is 5.",
+        expected_output: "4"
+      }
+
+      client =
+        mock_client(
+          {:ok, %{"verdict" => "no", "reason" => "Output says 5 but expected answer is 4."}}
+        )
+
+      assert {:fail, details} = Judge.evaluate(:correctness, test_case, llm_client: client)
+      assert details.verdict == "no"
+    end
+
+    test "requires expected_output" do
+      test_case = %TestCase{
+        input: "What is 2 + 2?",
+        actual_output: "The answer is 4."
+      }
+
+      assert {:error, reason} = Judge.evaluate(:correctness, test_case, [])
+      assert reason =~ "expected"
+    end
+  end
+
+  describe "evaluate/3 options" do
+    test "handles LLM errors gracefully" do
+      test_case = %TestCase{
+        input: "Test",
+        actual_output: "Output"
+      }
+
+      client = mock_client({:error, "API rate limit exceeded"})
+
+      assert {:error, reason} = Judge.evaluate(:relevant, test_case, llm_client: client)
+      assert reason =~ "rate limit"
+    end
+
+    test "uses custom model from options" do
+      test_case = %TestCase{
+        input: "Test",
+        actual_output: "Output"
+      }
+
+      client = fn model, _messages, _opts ->
+        if model == "openai:gpt-4o" do
+          {:ok, %{"verdict" => "yes", "reason" => "Custom model used"}}
+        else
+          {:error, "Wrong model: #{model}"}
+        end
+      end
+
+      assert {:pass, _} =
+               Judge.evaluate(:relevant, test_case, model: "openai:gpt-4o", llm_client: client)
+    end
+
+    test "uses threshold option for scoring" do
+      test_case = %TestCase{
+        input: "Test",
+        actual_output: "Output",
+        context: ["Context"]
+      }
+
+      client =
+        mock_client(
+          {:ok, %{"verdict" => "partial", "score" => 0.7, "reason" => "Partially faithful"}}
+        )
+
+      # With default threshold (0.8), should fail
+      assert {:fail, details} = Judge.evaluate(:faithful, test_case, llm_client: client)
+      assert details.score == 0.7
+
+      # With lower threshold, should pass
+      assert {:pass, _} = Judge.evaluate(:faithful, test_case, threshold: 0.6, llm_client: client)
+    end
+  end
+
+  describe "available/0" do
+    test "returns list of judge assertions" do
+      available = Judge.available()
+
+      assert :faithful in available
+      assert :relevant in available
+      assert :hallucination in available
+      assert :correctness in available
+    end
+  end
+
+  describe "build_prompt/2" do
+    test "builds faithful prompt with context" do
+      test_case = %TestCase{
+        input: "What is the return policy?",
+        actual_output: "Returns within 30 days.",
+        context: ["30 day return policy with receipt."]
+      }
+
+      prompt = Judge.build_prompt(:faithful, test_case)
+
+      assert prompt =~ "faithful"
+      assert prompt =~ "context"
+      assert prompt =~ "What is the return policy?"
+      assert prompt =~ "Returns within 30 days."
+      assert prompt =~ "30 day return policy"
+    end
+
+    test "builds relevant prompt" do
+      test_case = %TestCase{
+        input: "What are the hours?",
+        actual_output: "9am to 5pm."
+      }
+
+      prompt = Judge.build_prompt(:relevant, test_case)
+
+      assert prompt =~ "relevant"
+      assert prompt =~ "What are the hours?"
+      assert prompt =~ "9am to 5pm."
+    end
+
+    test "builds hallucination prompt with context" do
+      test_case = %TestCase{
+        input: "Question",
+        actual_output: "Answer",
+        context: ["Source"]
+      }
+
+      prompt = Judge.build_prompt(:hallucination, test_case)
+
+      assert prompt =~ "hallucination"
+      assert prompt =~ "Source"
+    end
+
+    test "builds correctness prompt with expected output" do
+      test_case = %TestCase{
+        input: "What is 2+2?",
+        actual_output: "4",
+        expected_output: "4"
+      }
+
+      prompt = Judge.build_prompt(:correctness, test_case)
+
+      assert prompt =~ "correct"
+      assert prompt =~ "expected"
+    end
+  end
+end

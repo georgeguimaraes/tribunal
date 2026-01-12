@@ -8,7 +8,7 @@ defmodule Judicium.MixProject do
     [
       app: :judicium,
       version: @version,
-      elixir: "~> 1.15",
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "Judicium",
@@ -28,6 +28,16 @@ defmodule Judicium.MixProject do
 
   defp deps do
     [
+      # Required: YAML parsing for configs/datasets
+      {:yaml_elixir, "~> 2.11"},
+
+      # Optional: LLM-as-judge metrics
+      {:req_llm, "~> 1.2", optional: true},
+
+      # Optional: embedding similarity
+      {:alike, "~> 0.1", optional: true},
+
+      # Dev
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end

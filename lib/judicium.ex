@@ -5,81 +5,130 @@ defmodule Judicium do
   Judicium (Latin: "judgment") provides tools for evaluating LLM outputs,
   detecting hallucinations, and measuring response quality.
 
-  ## Usage
+  ## Quick Start
 
-      # Evaluate a response against expected criteria
-      Judicium.evaluate(response, context: context, criteria: [:faithfulness, :relevancy])
+  ### In Tests (ExUnit)
 
-      # Check for hallucinations
-      Judicium.hallucination?(response, source: source_documents)
+      defmodule MyApp.RAGEvalTest do
+        use ExUnit.Case
+        use Judicium.EvalCase
 
-      # Use LLM-as-judge pattern
-      Judicium.judge(response, prompt: prompt, rubric: rubric)
+        @moduletag :eval
 
-  ## Metrics
+        test "response is grounded in context" do
+          response = MyApp.RAG.query("What's the return policy?")
 
-  Judicium supports common LLM evaluation metrics:
+          assert_contains response, "30 days"
+          assert_faithful response, context: @docs, threshold: 0.8
+        end
+      end
 
-  - **Faithfulness** - Is the response grounded in the provided context?
-  - **Relevancy** - Does the response address the query?
-  - **Hallucination** - Does the response contain fabricated information?
-  - **Coherence** - Is the response logically consistent?
-  - **Toxicity** - Does the response contain harmful content?
+  ### Dataset-Driven Evals
 
+      # test/evals/datasets/questions.json
+      [
+        {
+          "input": "What's the return policy?",
+          "context": "Returns within 30 days with receipt.",
+          "expected": {
+            "contains": ["30 days"],
+            "faithful": {"threshold": 0.8}
+          }
+        }
+      ]
+
+  Then run: `mix judicium.eval`
+
+  ## Assertion Types
+
+  ### Deterministic (no LLM, instant)
+
+  - `contains` - Output includes substring(s)
+  - `not_contains` - Output excludes substring(s)
+  - `contains_any` - Output includes at least one
+  - `contains_all` - Output includes all
+  - `regex` - Output matches pattern
+  - `is_json` - Output is valid JSON
+  - `is_refusal` - Output is a refusal
+  - `max_tokens` - Output under token limit
+  - `latency_ms` - Response within time limit
+
+  ### LLM-as-Judge (requires `req_llm`)
+
+  - `faithful` - Response grounded in context
+  - `relevant` - Response addresses query
+  - `hallucination` - Response contains fabricated info
+  - `coherent` - Response is logically consistent
+  - `toxicity` - Response contains harmful content
+  - `rubric` - Custom evaluation criteria
+
+  ### Embedding (requires `alike`)
+
+  - `similar` - Semantic similarity to golden answer
+
+  ## Installation
+
+      def deps do
+        [
+          {:judicium, "~> 0.1"},
+
+          # Optional: LLM-as-judge metrics
+          {:req_llm, "~> 1.2"},
+
+          # Optional: embedding similarity
+          {:alike, "~> 0.4"}
+        ]
+      end
   """
+
+  alias Judicium.{Assertions, TestCase}
 
   @doc """
-  Evaluates an LLM response against specified criteria.
+  Evaluates a test case against assertions.
 
-  ## Options
+  ## Examples
 
-  - `:context` - Source documents or context the response should be grounded in
-  - `:query` - The original query/prompt
-  - `:criteria` - List of metrics to evaluate (default: all)
-  - `:judge` - LLM to use for evaluation (default: configured default)
+      test_case = %Judicium.TestCase{
+        input: "What's the return policy?",
+        actual_output: "Returns within 30 days.",
+        context: ["Return policy: 30 days with receipt."]
+      }
 
+      assertions = [
+        {:contains, [value: "30 days"]},
+        {:faithful, [threshold: 0.8]}
+      ]
+
+      Judicium.evaluate(test_case, assertions)
+      #=> %{contains: {:pass, ...}, faithful: {:pass, ...}}
   """
-  def evaluate(response, opts \\ []) do
-    # TODO: Implement evaluation logic
-    %{
-      response: response,
-      opts: opts,
-      verdict: :pending
-    }
+  def evaluate(%TestCase{} = test_case, assertions) when is_list(assertions) do
+    Assertions.evaluate_all(assertions, test_case)
+  end
+
+  def evaluate(%TestCase{} = test_case, assertions) when is_map(assertions) do
+    Assertions.evaluate_all(assertions, test_case)
   end
 
   @doc """
-  Checks if a response contains hallucinations.
-
-  Returns `true` if the response contains information not grounded
-  in the provided source material.
-
+  Returns available assertion types based on loaded dependencies.
   """
-  def hallucination?(response, opts \\ []) do
-    # TODO: Implement hallucination detection
-    _ = {response, opts}
-    false
+  def available_assertions do
+    Assertions.available()
   end
 
   @doc """
-  Uses an LLM to judge a response against a rubric.
+  Creates a new test case.
 
-  This implements the "LLM-as-judge" pattern where another LLM
-  evaluates the quality of a response.
+  ## Examples
 
-  ## Options
-
-  - `:prompt` - The original prompt that generated the response
-  - `:rubric` - Scoring criteria for the judge
-  - `:model` - LLM to use as judge
-
+      Judicium.test_case(
+        input: "What's the price?",
+        actual_output: "The price is $29.99.",
+        context: ["Product costs $29.99"]
+      )
   """
-  def judge(response, opts \\ []) do
-    # TODO: Implement LLM-as-judge
-    %{
-      response: response,
-      opts: opts,
-      score: :pending
-    }
+  def test_case(attrs) do
+    TestCase.new(attrs)
   end
 end
