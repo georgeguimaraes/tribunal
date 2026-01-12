@@ -26,7 +26,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:pass, details} = Judge.evaluate(:faithful, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:faithful, test_case, llm: client)
       assert details.verdict == "yes"
     end
 
@@ -47,7 +47,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:faithful, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:faithful, test_case, llm: client)
       assert details.verdict == "no"
       assert details.reason =~ "30-day"
     end
@@ -79,7 +79,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:pass, details} = Judge.evaluate(:relevant, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:relevant, test_case, llm: client)
       assert details.verdict == "yes"
     end
 
@@ -99,7 +99,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:relevant, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:relevant, test_case, llm: client)
       assert details.verdict == "no"
     end
   end
@@ -122,7 +122,7 @@ defmodule Tribunal.Assertions.JudgeTest do
         )
 
       # For hallucination, "no" means no hallucination = pass
-      assert {:pass, details} = Judge.evaluate(:hallucination, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:hallucination, test_case, llm: client)
       assert details.verdict == "no"
     end
 
@@ -143,7 +143,7 @@ defmodule Tribunal.Assertions.JudgeTest do
         )
 
       # For hallucination, "yes" means hallucination detected = fail
-      assert {:fail, details} = Judge.evaluate(:hallucination, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:hallucination, test_case, llm: client)
       assert details.verdict == "yes"
     end
 
@@ -171,7 +171,7 @@ defmodule Tribunal.Assertions.JudgeTest do
           {:ok, %{"verdict" => "yes", "reason" => "Output correctly states the answer is 4."}}
         )
 
-      assert {:pass, details} = Judge.evaluate(:correctness, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:correctness, test_case, llm: client)
       assert details.verdict == "yes"
     end
 
@@ -187,7 +187,7 @@ defmodule Tribunal.Assertions.JudgeTest do
           {:ok, %{"verdict" => "no", "reason" => "Output says 5 but expected answer is 4."}}
         )
 
-      assert {:fail, details} = Judge.evaluate(:correctness, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:correctness, test_case, llm: client)
       assert details.verdict == "no"
     end
 
@@ -211,7 +211,7 @@ defmodule Tribunal.Assertions.JudgeTest do
 
       client = mock_client({:error, "API rate limit exceeded"})
 
-      assert {:error, reason} = Judge.evaluate(:relevant, test_case, llm_client: client)
+      assert {:error, reason} = Judge.evaluate(:relevant, test_case, llm: client)
       assert reason =~ "rate limit"
     end
 
@@ -230,7 +230,7 @@ defmodule Tribunal.Assertions.JudgeTest do
       end
 
       assert {:pass, _} =
-               Judge.evaluate(:relevant, test_case, model: "openai:gpt-4o", llm_client: client)
+               Judge.evaluate(:relevant, test_case, model: "openai:gpt-4o", llm: client)
     end
 
     test "uses threshold option for scoring" do
@@ -246,11 +246,11 @@ defmodule Tribunal.Assertions.JudgeTest do
         )
 
       # With default threshold (0.8), should fail
-      assert {:fail, details} = Judge.evaluate(:faithful, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:faithful, test_case, llm: client)
       assert details.score == 0.7
 
       # With lower threshold, should pass
-      assert {:pass, _} = Judge.evaluate(:faithful, test_case, threshold: 0.6, llm_client: client)
+      assert {:pass, _} = Judge.evaluate(:faithful, test_case, threshold: 0.6, llm: client)
     end
   end
 
@@ -285,7 +285,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:pass, details} = Judge.evaluate(:bias, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:bias, test_case, llm: client)
       assert details.verdict == "no"
     end
 
@@ -304,7 +304,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:bias, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:bias, test_case, llm: client)
       assert details.verdict == "yes"
     end
   end
@@ -325,7 +325,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:pass, details} = Judge.evaluate(:toxicity, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:toxicity, test_case, llm: client)
       assert details.verdict == "no"
     end
 
@@ -344,7 +344,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:toxicity, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:toxicity, test_case, llm: client)
       assert details.verdict == "yes"
     end
   end
@@ -365,7 +365,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:pass, details} = Judge.evaluate(:harmful, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:harmful, test_case, llm: client)
       assert details.verdict == "no"
     end
 
@@ -384,7 +384,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:harmful, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:harmful, test_case, llm: client)
       assert details.verdict == "yes"
     end
   end
@@ -405,7 +405,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:pass, details} = Judge.evaluate(:jailbreak, test_case, llm_client: client)
+      assert {:pass, details} = Judge.evaluate(:jailbreak, test_case, llm: client)
       assert details.verdict == "no"
     end
 
@@ -424,7 +424,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:jailbreak, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:jailbreak, test_case, llm: client)
       assert details.verdict == "yes"
       assert details.reason =~ "DAN"
     end
@@ -444,7 +444,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:jailbreak, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:jailbreak, test_case, llm: client)
       assert details.verdict == "yes"
     end
 
@@ -463,7 +463,7 @@ defmodule Tribunal.Assertions.JudgeTest do
            }}
         )
 
-      assert {:fail, details} = Judge.evaluate(:jailbreak, test_case, llm_client: client)
+      assert {:fail, details} = Judge.evaluate(:jailbreak, test_case, llm: client)
       assert details.verdict == "yes"
     end
   end

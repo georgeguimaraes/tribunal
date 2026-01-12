@@ -104,14 +104,17 @@ defmodule Tribunal.EvalCase.Assertions do
   @doc """
   Logs verbose output for judge assertions.
 
-  When `verbose: true` is passed to a judge assertion, this logs
-  the score, verdict, and reasoning regardless of pass/fail status.
+  Verbose mode is enabled when:
+  - `verbose: true` is passed to the assertion, OR
+  - `config :tribunal, verbose: true` is set in config
 
   Uses Logger.info for passes and Logger.warning for failures,
   which integrates properly with ExUnit's output capture.
   """
   def print_verbose(assertion_type, result, opts) do
-    if opts[:verbose] do
+    verbose = Keyword.get(opts, :verbose, Application.get_env(:tribunal, :verbose, false))
+
+    if verbose do
       case result do
         {:pass, details} ->
           Logger.info(format_verbose(:pass, assertion_type, details))

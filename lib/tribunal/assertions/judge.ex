@@ -295,7 +295,7 @@ defmodule Tribunal.Assertions.Judge do
   defp validate_requirements(_type, _test_case), do: :ok
 
   defp run_judge(type, test_case, opts) do
-    model = opts[:model] || Application.get_env(:tribunal, :judge_model, @default_model)
+    model = opts[:model] || Application.get_env(:tribunal, :llm, @default_model)
     threshold = opts[:threshold] || @default_threshold
     prompt = build_prompt(type, test_case)
 
@@ -328,13 +328,13 @@ defmodule Tribunal.Assertions.Judge do
   end
 
   defp call_llm(model, messages, opts) do
-    # Allow injecting client for tests via opts[:llm_client]
-    case opts[:llm_client] do
+    # Allow injecting custom LLM for tests via opts[:llm]
+    case opts[:llm] do
       nil ->
         call_req_llm(model, messages, opts)
 
-      client_fn when is_function(client_fn, 3) ->
-        client_fn.(model, messages, opts)
+      llm_fn when is_function(llm_fn, 3) ->
+        llm_fn.(model, messages, opts)
     end
   end
 

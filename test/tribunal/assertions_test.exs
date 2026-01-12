@@ -112,7 +112,7 @@ defmodule Tribunal.AssertionsTest do
 
       client = mock_client({:ok, %{"verdict" => "yes", "reason" => "Matches", "score" => 1.0}})
 
-      assert {:pass, _} = Assertions.evaluate(:faithful, test_case, llm_client: client)
+      assert {:pass, _} = Assertions.evaluate(:faithful, test_case, llm: client)
     end
 
     test "evaluates relevant assertion via Judge module" do
@@ -123,7 +123,7 @@ defmodule Tribunal.AssertionsTest do
 
       client = mock_client({:ok, %{"verdict" => "yes", "reason" => "Relevant", "score" => 1.0}})
 
-      assert {:pass, _} = Assertions.evaluate(:relevant, test_case, llm_client: client)
+      assert {:pass, _} = Assertions.evaluate(:relevant, test_case, llm: client)
     end
   end
 

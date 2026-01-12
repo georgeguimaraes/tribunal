@@ -265,7 +265,7 @@ test "faithful assertion" do
 
   assert_faithful "Response text",
     context: ["Context"],
-    llm_client: client
+    llm: client
 end
 ```
 
