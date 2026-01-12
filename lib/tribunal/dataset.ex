@@ -133,25 +133,14 @@ defmodule Tribunal.Dataset do
     end)
   end
 
-  defp normalize_type(type) when is_binary(type), do: String.to_existing_atom(type)
+  defp normalize_type(type) when is_binary(type), do: String.to_atom(type)
   defp normalize_type(type) when is_atom(type), do: type
 
   defp normalize_opts(opts) when is_map(opts) do
     Enum.map(opts, fn
-      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
+      {k, v} when is_binary(k) -> {String.to_atom(k), v}
       {k, v} when is_atom(k) -> {k, v}
     end)
-  rescue
-    ArgumentError ->
-      Enum.map(opts, fn
-        {"threshold", v} -> {:threshold, v}
-        {"value", v} -> {:value, v}
-        {"values", v} -> {:values, v}
-        {"max", v} -> {:max, v}
-        {"pattern", v} -> {:pattern, v}
-        {k, v} when is_binary(k) -> {String.to_atom(k), v}
-        {k, v} -> {k, v}
-      end)
   end
 
   defp normalize_opts(opts) when is_list(opts), do: opts
