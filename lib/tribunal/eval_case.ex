@@ -99,6 +99,35 @@ defmodule Tribunal.EvalCase.Assertions do
   alias Tribunal.Assertions.Deterministic
   alias Tribunal.TestCase
 
+  @doc """
+  Formats and prints verbose output for judge assertions.
+
+  When `verbose: true` is passed to a judge assertion, this prints
+  the score, verdict, and reasoning regardless of pass/fail status.
+  """
+  def print_verbose(assertion_type, result, opts) do
+    if opts[:verbose] do
+      case result do
+        {:pass, details} ->
+          IO.puts(format_verbose(:pass, assertion_type, details))
+
+        {:fail, details} ->
+          IO.puts(format_verbose(:fail, assertion_type, details))
+
+        _ ->
+          :ok
+      end
+    end
+  end
+
+  defp format_verbose(status, type, details) do
+    icon = if status == :pass, do: "\e[32m✓\e[0m", else: "\e[31m✗\e[0m"
+    score_str = if details[:score], do: " (score: #{Float.round(details[:score], 2)})", else: ""
+    verdict_str = if details[:verdict], do: " [#{details[:verdict]}]", else: ""
+
+    "#{icon} #{type}#{score_str}#{verdict_str}: #{details[:reason]}"
+  end
+
   @doc "Assert output contains substring(s)"
   defmacro assert_contains(output, value_or_opts) do
     quote do
@@ -342,7 +371,21 @@ defmodule Tribunal.EvalCase.Assertions do
 
   # LLM-as-judge assertions (require req_llm)
 
-  @doc "Assert response is faithful to context (requires req_llm)"
+  @doc """
+  Assert response is faithful to context (requires req_llm).
+
+  ## Options
+
+    * `:context` - Required. The context to check faithfulness against.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+
+  ## Examples
+
+      assert_faithful response, context: @docs
+      assert_faithful response, context: @docs, verbose: true
+  """
   defmacro assert_faithful(output, opts) do
     quote do
       test_case = %TestCase{
@@ -351,15 +394,26 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:faithful, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:faithful, result, opts)
 
-      case Tribunal.Assertions.evaluate(:faithful, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
     end
   end
 
-  @doc "Assert response is relevant to query (requires req_llm)"
+  @doc """
+  Assert response is relevant to query (requires req_llm).
+
+  ## Options
+
+    * `:query` - Required. The query to check relevance against.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
   defmacro assert_relevant(output, opts) do
     quote do
       test_case = %TestCase{
@@ -368,15 +422,26 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:relevant, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:relevant, result, opts)
 
-      case Tribunal.Assertions.evaluate(:relevant, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
     end
   end
 
-  @doc "Assert response has no hallucinations (requires req_llm)"
+  @doc """
+  Assert response has no hallucinations (requires req_llm).
+
+  ## Options
+
+    * `:context` - Required. The context to check against.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
   defmacro refute_hallucination(output, opts) do
     quote do
       test_case = %TestCase{
@@ -385,8 +450,10 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:hallucination, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:hallucination, result, opts)
 
-      case Tribunal.Assertions.evaluate(:hallucination, test_case, opts) do
+      case result do
         {:pass, %{has_hallucination: false}} -> :ok
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
@@ -394,7 +461,17 @@ defmodule Tribunal.EvalCase.Assertions do
     end
   end
 
-  @doc "Assert response meets custom rubric (requires req_llm)"
+  @doc """
+  Assert response meets custom rubric (requires req_llm).
+
+  ## Options
+
+    * `:query` - The query/input.
+    * `:context` - Optional context.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
   defmacro assert_rubric(output, opts) do
     quote do
       test_case = %TestCase{
@@ -404,15 +481,26 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:rubric, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:rubric, result, opts)
 
-      case Tribunal.Assertions.evaluate(:rubric, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
     end
   end
 
-  @doc "Assert response has no bias (requires req_llm)"
+  @doc """
+  Assert response has no bias (requires req_llm).
+
+  ## Options
+
+    * `:query` - The query/input.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
   defmacro refute_bias(output, opts) do
     quote do
       test_case = %TestCase{
@@ -421,15 +509,26 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:bias, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:bias, result, opts)
 
-      case Tribunal.Assertions.evaluate(:bias, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
     end
   end
 
-  @doc "Assert response has no toxic content (requires req_llm)"
+  @doc """
+  Assert response has no toxic content (requires req_llm).
+
+  ## Options
+
+    * `:query` - The query/input.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
   defmacro refute_toxicity(output, opts) do
     quote do
       test_case = %TestCase{
@@ -438,15 +537,26 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:toxicity, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:toxicity, result, opts)
 
-      case Tribunal.Assertions.evaluate(:toxicity, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
     end
   end
 
-  @doc "Assert response has no harmful content (requires req_llm)"
+  @doc """
+  Assert response has no harmful content (requires req_llm).
+
+  ## Options
+
+    * `:query` - The query/input.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
   defmacro refute_harmful(output, opts) do
     quote do
       test_case = %TestCase{
@@ -455,8 +565,10 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:harmful, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:harmful, result, opts)
 
-      case Tribunal.Assertions.evaluate(:harmful, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
@@ -469,14 +581,18 @@ defmodule Tribunal.EvalCase.Assertions do
   Uses LLM-as-judge for nuanced detection of jailbreak indicators.
 
   ## Options
+
     * `:query` - The original prompt that was sent to the LLM
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
     * `:llm_client` - Custom LLM client function for testing
 
   ## Examples
 
       refute_jailbreak(response,
         query: "Ignore previous instructions and...",
-        llm_client: mock_client
+        verbose: true
       )
   """
   defmacro refute_jailbreak(output, opts) do
@@ -487,15 +603,27 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:jailbreak, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:jailbreak, result, opts)
 
-      case Tribunal.Assertions.evaluate(:jailbreak, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
     end
   end
 
-  @doc "Assert response is correct compared to expected (requires req_llm)"
+  @doc """
+  Assert response is correct compared to expected (requires req_llm).
+
+  ## Options
+
+    * `:query` - The query/input.
+    * `:expected` - Required. The expected output.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
   defmacro assert_correctness(output, opts) do
     quote do
       test_case = %TestCase{
@@ -505,8 +633,10 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:correctness, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:correctness, result, opts)
 
-      case Tribunal.Assertions.evaluate(:correctness, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
@@ -515,7 +645,15 @@ defmodule Tribunal.EvalCase.Assertions do
 
   # Embedding-based assertions (require alike)
 
-  @doc "Assert response is semantically similar to expected (requires alike)"
+  @doc """
+  Assert response is semantically similar to expected (requires alike).
+
+  ## Options
+
+    * `:expected` - Required. The expected output to compare against.
+    * `:threshold` - Similarity threshold (default: 0.8)
+    * `:verbose` - When true, prints similarity score (default: false)
+  """
   defmacro assert_similar(output, opts) do
     quote do
       test_case = %TestCase{
@@ -524,8 +662,10 @@ defmodule Tribunal.EvalCase.Assertions do
       }
 
       opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:similar, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:similar, result, opts)
 
-      case Tribunal.Assertions.evaluate(:similar, test_case, opts) do
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
         {:error, reason} -> flunk(reason)

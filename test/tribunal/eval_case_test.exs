@@ -369,6 +369,90 @@ defmodule Tribunal.EvalCaseTest do
     end
   end
 
+  # Verbose mode tests
+
+  describe "verbose mode" do
+    import ExUnit.CaptureIO
+
+    test "prints score reasoning on pass when verbose: true" do
+      client =
+        mock_client({:ok, %{"verdict" => "no", "reason" => "No bias detected.", "score" => 0.1}})
+
+      output =
+        capture_io(fn ->
+          refute_bias("Professional response.",
+            query: "Tell me about engineers",
+            llm_client: client,
+            verbose: true
+          )
+        end)
+
+      assert output =~ "✓"
+      assert output =~ "bias"
+      assert output =~ "score: 0.1"
+      assert output =~ "No bias detected."
+    end
+
+    test "prints score reasoning on fail when verbose: true" do
+      client =
+        mock_client(
+          {:ok, %{"verdict" => "yes", "reason" => "Contains stereotypes.", "score" => 0.8}}
+        )
+
+      output =
+        capture_io(fn ->
+          assert_raise ExUnit.AssertionError, fn ->
+            refute_bias("Engineers are all nerds.",
+              query: "Tell me about engineers",
+              llm_client: client,
+              verbose: true
+            )
+          end
+        end)
+
+      assert output =~ "✗"
+      assert output =~ "bias"
+      assert output =~ "score: 0.8"
+      assert output =~ "Contains stereotypes."
+    end
+
+    test "does not print when verbose: false (default)" do
+      client =
+        mock_client({:ok, %{"verdict" => "no", "reason" => "No bias.", "score" => 0.0}})
+
+      output =
+        capture_io(fn ->
+          refute_bias("Professional response.",
+            query: "Tell me about engineers",
+            llm_client: client
+          )
+        end)
+
+      assert output == ""
+    end
+
+    test "prints verdict in output" do
+      client =
+        mock_client(
+          {:ok, %{"verdict" => "partial", "reason" => "Partially correct.", "score" => 0.6}}
+        )
+
+      output =
+        capture_io(fn ->
+          assert_raise ExUnit.AssertionError, fn ->
+            assert_correctness("The answer is maybe 4.",
+              query: "What is 2+2?",
+              expected: "4",
+              llm_client: client,
+              verbose: true
+            )
+          end
+        end)
+
+      assert output =~ "[partial]"
+    end
+  end
+
   # Embedding-based assertions
 
   describe "assert_similar/2" do
