@@ -1,6 +1,8 @@
 defmodule Mix.Tasks.TribunalTest do
   use ExUnit.Case, async: true
 
+  alias Mix.Tasks.Tribunal.{Eval, Init}
+
   import ExUnit.CaptureIO
 
   @fixtures_path "test/fixtures/evals"
@@ -36,9 +38,9 @@ defmodule Mix.Tasks.TribunalTest do
     :ok
   end
 
-  describe "Mix.Tasks.Tribunal.Eval" do
+  describe "Eval" do
     test "has moduledoc with usage info" do
-      {:docs_v1, _, _, _, %{"en" => moduledoc}, _, _} = Code.fetch_docs(Mix.Tasks.Tribunal.Eval)
+      {:docs_v1, _, _, _, %{"en" => moduledoc}, _, _} = Code.fetch_docs(Eval)
 
       assert moduledoc =~ "--format"
       assert moduledoc =~ "console"
@@ -51,12 +53,12 @@ defmodule Mix.Tasks.TribunalTest do
     end
 
     test "module implements Mix.Task behaviour" do
-      behaviours = Mix.Tasks.Tribunal.Eval.__info__(:attributes)[:behaviour] || []
+      behaviours = Eval.__info__(:attributes)[:behaviour] || []
       assert Mix.Task in behaviours
     end
   end
 
-  describe "Mix.Tasks.Tribunal.Init" do
+  describe "Init" do
     test "creates directory structure" do
       # Use a temp directory
       tmp_dir = Path.join(System.tmp_dir!(), "tribunal_test_#{:rand.uniform(10000)}")
@@ -69,7 +71,7 @@ defmodule Mix.Tasks.TribunalTest do
 
         output =
           capture_io(fn ->
-            Mix.Tasks.Tribunal.Init.run([])
+            Init.run([])
           end)
 
         assert output =~ "Created test/evals/"
@@ -108,7 +110,7 @@ defmodule Mix.Tasks.TribunalTest do
         File.write!("test/evals/datasets/example.json", "existing content")
 
         capture_io(fn ->
-          Mix.Tasks.Tribunal.Init.run([])
+          Init.run([])
         end)
 
         # Original file should be preserved

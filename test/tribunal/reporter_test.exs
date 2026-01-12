@@ -1,7 +1,7 @@
 defmodule Tribunal.ReporterTest do
   use ExUnit.Case, async: true
 
-  alias Tribunal.Reporter.{Console, JSON, GitHub, JUnit}
+  alias Tribunal.Reporter.{Console, GitHub, JSON, JUnit}
 
   @sample_results %{
     summary: %{

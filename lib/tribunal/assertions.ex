@@ -8,7 +8,7 @@ defmodule Tribunal.Assertions do
   - Embedding (requires alike): `similar`
   """
 
-  alias Tribunal.Assertions.Deterministic
+  alias Tribunal.Assertions.{Deterministic, Embedding, Judge}
   alias Tribunal.TestCase
 
   @deterministic_assertions [
@@ -126,7 +126,7 @@ defmodule Tribunal.Assertions do
       """
     end
 
-    Tribunal.Assertions.Judge.evaluate(type, test_case, opts)
+    Judge.evaluate(type, test_case, opts)
   end
 
   defp evaluate_embedding(_type, test_case, opts) do
@@ -139,6 +139,6 @@ defmodule Tribunal.Assertions do
       """
     end
 
-    Tribunal.Assertions.Embedding.evaluate(test_case, opts)
+    Embedding.evaluate(test_case, opts)
   end
 end

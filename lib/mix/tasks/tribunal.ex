@@ -30,6 +30,8 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
   use Mix.Task
 
+  alias Tribunal.Reporter.{Console, GitHub, JSON, JUnit}
+
   @default_paths ["test/evals/**/*.json", "test/evals/**/*.yaml", "test/evals/**/*.yml"]
 
   @impl Mix.Task
@@ -180,10 +182,10 @@ defmodule Mix.Tasks.Tribunal.Eval do
     |> Map.new()
   end
 
-  defp format_results(results, "console"), do: Tribunal.Reporter.Console.format(results)
-  defp format_results(results, "json"), do: Tribunal.Reporter.JSON.format(results)
-  defp format_results(results, "github"), do: Tribunal.Reporter.GitHub.format(results)
-  defp format_results(results, "junit"), do: Tribunal.Reporter.JUnit.format(results)
+  defp format_results(results, "console"), do: Console.format(results)
+  defp format_results(results, "json"), do: JSON.format(results)
+  defp format_results(results, "github"), do: GitHub.format(results)
+  defp format_results(results, "junit"), do: JUnit.format(results)
   defp format_results(_, format), do: Mix.raise("Unknown format: #{format}")
 end
 
