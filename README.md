@@ -68,6 +68,36 @@ mix tribunal.eval --format json --output results.json
 mix tribunal.eval --format github  # GitHub Actions annotations
 ```
 
+```
+Tribunal LLM Evaluation
+═══════════════════════════════════════════════════════════════
+
+Summary
+───────────────────────────────────────────────────────────────
+  Total:     12 test cases
+  Passed:    10 (83%)
+  Failed:    2
+  Duration:  1.4s
+
+Results by Metric
+───────────────────────────────────────────────────────────────
+  faithful       8/8 passed    100%  ████████████████████
+  relevant       6/8 passed    75%   ███████████████░░░░░
+  contains       10/10 passed  100%  ████████████████████
+  no_pii         4/4 passed    100%  ████████████████████
+
+Failed Cases
+───────────────────────────────────────────────────────────────
+  1. "What is the return policy for electronics?"
+     ├─ relevant: Response discusses refunds but doesn't address return policy
+
+  2. "Can I return opened software?"
+     ├─ relevant: Response is generic, doesn't mention software-specific policy
+
+───────────────────────────────────────────────────────────────
+❌ FAILED
+```
+
 ## Assertion Types
 
 ### Deterministic (instant, no API calls)
