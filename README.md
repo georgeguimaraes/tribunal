@@ -4,6 +4,9 @@ LLM evaluation framework for Elixir.
 
 **Tribunal** provides tools for evaluating LLM outputs, detecting hallucinations, and measuring response quality.
 
+> [!TIP]
+> See [tribunal-juror](https://github.com/georgeguimaraes/tribunal-juror) for an interactive Phoenix app to explore and test Tribunal's evaluation capabilities.
+
 ## Installation
 
 ```elixir
