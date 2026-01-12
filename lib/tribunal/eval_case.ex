@@ -96,23 +96,28 @@ defmodule Tribunal.EvalCase.Assertions do
   ExUnit-style assertion macros for LLM evaluation.
   """
 
+  require Logger
+
   alias Tribunal.Assertions.Deterministic
   alias Tribunal.TestCase
 
   @doc """
-  Formats and prints verbose output for judge assertions.
+  Logs verbose output for judge assertions.
 
-  When `verbose: true` is passed to a judge assertion, this prints
+  When `verbose: true` is passed to a judge assertion, this logs
   the score, verdict, and reasoning regardless of pass/fail status.
+
+  Uses Logger.info for passes and Logger.warning for failures,
+  which integrates properly with ExUnit's output capture.
   """
   def print_verbose(assertion_type, result, opts) do
     if opts[:verbose] do
       case result do
         {:pass, details} ->
-          IO.puts(format_verbose(:pass, assertion_type, details))
+          Logger.info(format_verbose(:pass, assertion_type, details))
 
         {:fail, details} ->
-          IO.puts(format_verbose(:fail, assertion_type, details))
+          Logger.warning(format_verbose(:fail, assertion_type, details))
 
         _ ->
           :ok
@@ -121,7 +126,7 @@ defmodule Tribunal.EvalCase.Assertions do
   end
 
   defp format_verbose(status, type, details) do
-    icon = if status == :pass, do: "\e[32m✓\e[0m", else: "\e[31m✗\e[0m"
+    icon = if status == :pass, do: "✓", else: "✗"
     score_str = if details[:score], do: " (score: #{Float.round(details[:score], 2)})", else: ""
     verdict_str = if details[:verdict], do: " [#{details[:verdict]}]", else: ""
 

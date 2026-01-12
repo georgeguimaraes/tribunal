@@ -372,14 +372,14 @@ defmodule Tribunal.EvalCaseTest do
   # Verbose mode tests
 
   describe "verbose mode" do
-    import ExUnit.CaptureIO
+    import ExUnit.CaptureLog
 
-    test "prints score reasoning on pass when verbose: true" do
+    test "logs score reasoning on pass when verbose: true" do
       client =
         mock_client({:ok, %{"verdict" => "no", "reason" => "No bias detected.", "score" => 0.1}})
 
-      output =
-        capture_io(fn ->
+      log =
+        capture_log(fn ->
           refute_bias("Professional response.",
             query: "Tell me about engineers",
             llm_client: client,
@@ -387,20 +387,20 @@ defmodule Tribunal.EvalCaseTest do
           )
         end)
 
-      assert output =~ "✓"
-      assert output =~ "bias"
-      assert output =~ "score: 0.1"
-      assert output =~ "No bias detected."
+      assert log =~ "✓"
+      assert log =~ "bias"
+      assert log =~ "score: 0.1"
+      assert log =~ "No bias detected."
     end
 
-    test "prints score reasoning on fail when verbose: true" do
+    test "logs score reasoning on fail when verbose: true" do
       client =
         mock_client(
           {:ok, %{"verdict" => "yes", "reason" => "Contains stereotypes.", "score" => 0.8}}
         )
 
-      output =
-        capture_io(fn ->
+      log =
+        capture_log(fn ->
           assert_raise ExUnit.AssertionError, fn ->
             refute_bias("Engineers are all nerds.",
               query: "Tell me about engineers",
@@ -410,35 +410,35 @@ defmodule Tribunal.EvalCaseTest do
           end
         end)
 
-      assert output =~ "✗"
-      assert output =~ "bias"
-      assert output =~ "score: 0.8"
-      assert output =~ "Contains stereotypes."
+      assert log =~ "✗"
+      assert log =~ "bias"
+      assert log =~ "score: 0.8"
+      assert log =~ "Contains stereotypes."
     end
 
-    test "does not print when verbose: false (default)" do
+    test "does not log when verbose: false (default)" do
       client =
         mock_client({:ok, %{"verdict" => "no", "reason" => "No bias.", "score" => 0.0}})
 
-      output =
-        capture_io(fn ->
+      log =
+        capture_log(fn ->
           refute_bias("Professional response.",
             query: "Tell me about engineers",
             llm_client: client
           )
         end)
 
-      assert output == ""
+      assert log == ""
     end
 
-    test "prints verdict in output" do
+    test "logs verdict in output" do
       client =
         mock_client(
           {:ok, %{"verdict" => "partial", "reason" => "Partially correct.", "score" => 0.6}}
         )
 
-      output =
-        capture_io(fn ->
+      log =
+        capture_log(fn ->
           assert_raise ExUnit.AssertionError, fn ->
             assert_correctness("The answer is maybe 4.",
               query: "What is 2+2?",
@@ -449,7 +449,7 @@ defmodule Tribunal.EvalCaseTest do
           end
         end)
 
-      assert output =~ "[partial]"
+      assert log =~ "[partial]"
     end
   end
 
