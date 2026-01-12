@@ -39,12 +39,13 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _build
-          key: ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'test/**/*.exs') }}
           restore-keys: |
-            ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-build-
+            ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-
       - name: Install dependencies
         run: mix deps.get
+      - name: Compile
+        run: mix compile
       - name: Check formatting
         run: mix format --check-formatted
       - name: Run tests
