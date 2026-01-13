@@ -21,6 +21,15 @@ Configure your LLM provider credentials as environment variables or in your appl
 
 ## Configuration
 
+### Application Config
+
+Set the default judge model in your application config:
+
+```elixir
+# config/config.exs or config/dev.exs
+config :tribunal, llm: "anthropic:claude-3-5-sonnet-latest"
+```
+
 ### Default Model
 
 The default judge model is `anthropic:claude-3-5-haiku-latest`. Override per assertion:
