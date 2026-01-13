@@ -6,8 +6,10 @@ Tribunal provides multiple output formats for evaluation results, suitable for d
 
 | Reporter | Use Case |
 |----------|----------|
-| Console | Local development, human-readable output |
+| Console | Local development, human-readable output with unicode |
+| Text | Plain ASCII output, no unicode (for limited terminals) |
 | JSON | Machine-readable, tooling integration |
+| HTML | Shareable reports, dashboards |
 | GitHub | GitHub Actions annotations |
 | JUnit | CI/CD systems (Jenkins, CircleCI, etc.) |
 
@@ -64,6 +66,43 @@ Input: How do I Y?
 ═══════════════════════════════════════════════════════════════════
 ```
 
+## Text Reporter
+
+Plain ASCII output without unicode characters. Use when your terminal or environment doesn't support unicode.
+
+```bash
+mix tribunal.eval --format text
+```
+
+Output:
+```
+Tribunal LLM Evaluation
+===================================================================
+
+Summary
+-------------------------------------------------------------------
+Total: 10 | Passed: 8 | Failed: 2 | Pass Rate: 80% | Duration: 1.5s
+
+Metrics by Assertion Type
+-------------------------------------------------------------------
+contains        5/5   100%  ####################
+faithful        3/5    60%  ############--------
+
+Failed Cases
+-------------------------------------------------------------------
+Input: How do I Y?
+  |- faithful: Not grounded
+
+-------------------------------------------------------------------
+FAILED
+```
+
+Key differences from Console:
+- Uses `===` and `---` instead of `═══` and `───`
+- Uses `#` and `-` for progress bars instead of `█` and `░`
+- Uses `PASSED`/`FAILED` instead of `✅`/`❌`
+- Uses `|-` instead of `├─` for failure trees
+
 ## JSON Reporter
 
 Machine-readable JSON output.
@@ -105,6 +144,34 @@ Output:
   ]
 }
 ```
+
+## HTML Reporter
+
+Self-contained HTML report with embedded CSS. Great for sharing results or building dashboards.
+
+```bash
+mix tribunal.eval --format html --output report.html
+```
+
+Features:
+- Self-contained (no external dependencies)
+- Color-coded metrics (green ≥90%, yellow ≥70%, red <70%)
+- Visual progress bars
+- Responsive design
+- Failed cases with details
+
+```elixir
+alias Tribunal.Reporter.HTML
+
+output = HTML.format(report)
+File.write!("report.html", output)
+```
+
+The HTML report includes:
+- Summary stats grid (total, passed, failed, pass rate, duration)
+- Metrics table with visual progress bars
+- Failed cases section with failure reasons
+- Overall pass/fail status banner
 
 ## GitHub Reporter
 
@@ -154,14 +221,20 @@ Output:
 Use reporters from the command line:
 
 ```bash
-# Console (default)
+# Console (default, with unicode)
 mix tribunal.eval
+
+# Text (plain ASCII, no unicode)
+mix tribunal.eval --format text
 
 # JSON
 mix tribunal.eval --format json
 
 # JSON to file
 mix tribunal.eval --format json --output results.json
+
+# HTML report
+mix tribunal.eval --format html --output report.html
 
 # GitHub Actions
 mix tribunal.eval --format github
@@ -264,7 +337,9 @@ report = %{
 
 # Output in desired format
 case System.get_env("OUTPUT_FORMAT", "console") do
+  "text" -> Reporter.Text.format(report)
   "json" -> Reporter.JSON.format(report)
+  "html" -> Reporter.HTML.format(report)
   "github" -> Reporter.GitHub.format(report)
   "junit" -> Reporter.JUnit.format(report)
   _ -> Reporter.Console.format(report)

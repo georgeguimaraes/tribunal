@@ -2,14 +2,14 @@
 
 Tribunal is an LLM evaluation framework for Elixir. It provides tools for evaluating LLM outputs, detecting hallucinations, and measuring response quality.
 
-## Two Evaluation Modes
+## Assertion Mode vs Evaluation Mode
 
 Tribunal offers two modes for different use cases:
 
-- **ExUnit Mode**: Hard assertions that fail immediately. Use for safety checks, CI gates, and critical requirements.
-- **Mix Task Mode**: Threshold-based evaluation with reporting. Use for benchmarking, baseline tracking, and model comparison.
+- **Assertion Mode** (ExUnit): Hard assertions that fail immediately. Use for safety checks, CI gates, and critical requirements.
+- **Evaluation Mode** (Mix Task): Threshold-based evaluation with reporting. Use for benchmarking, baseline tracking, and model comparison.
 
-See [Evaluation Modes](evaluation-modes.md) for detailed guidance on when to use each.
+See [Assertion vs Evaluation Mode](evaluation-modes.md) for detailed guidance on when to use each.
 
 ## Installation
 
@@ -81,7 +81,7 @@ This creates:
 - `test/evals/datasets/example.json`
 - `test/evals/datasets/example.yaml`
 
-## Run Evaluations (Mix Task Mode)
+## Evaluation Mode (Mix Task)
 
 Execute evaluations with configurable thresholds:
 
@@ -108,9 +108,9 @@ mix tribunal.eval --format json --output results.json
 mix tribunal.eval --format github
 ```
 
-## Using with ExUnit (Strict Mode)
+## Assertion Mode (ExUnit)
 
-ExUnit assertions fail immediately on any violation. Use for critical checks:
+Assertions fail immediately on any violation. Use for critical checks:
 
 ```elixir
 defmodule MyApp.RAGTest do

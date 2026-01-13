@@ -44,7 +44,9 @@ defmodule Mix.Tasks.TribunalTest do
 
       assert moduledoc =~ "--format"
       assert moduledoc =~ "console"
+      assert moduledoc =~ "text"
       assert moduledoc =~ "json"
+      assert moduledoc =~ "html"
       assert moduledoc =~ "junit"
       assert moduledoc =~ "github"
       assert moduledoc =~ "--provider"

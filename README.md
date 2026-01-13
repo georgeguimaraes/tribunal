@@ -7,18 +7,18 @@ LLM evaluation framework for Elixir.
 > [!TIP]
 > See [tribunal-juror](https://github.com/georgeguimaraes/tribunal-juror) for an interactive Phoenix app to explore and test Tribunal's evaluation capabilities.
 
-## Two Evaluation Modes
+## Assertion Mode vs Evaluation Mode
 
-Tribunal offers two distinct modes for different use cases:
+Tribunal offers two modes for different use cases:
 
-| Mode | Use Case | Failure Behavior |
-|------|----------|------------------|
-| **ExUnit** | Hard assertions, CI gates, safety checks | Fails immediately on any assertion failure |
-| **Mix Task** | Baseline tracking, benchmarking, model comparison | Configurable thresholds, reports pass rates |
+| Mode | Interface | Use Case | Failure Behavior |
+|------|-----------|----------|------------------|
+| **Assertion** | ExUnit | CI gates, safety checks | Fails immediately on any failure |
+| **Evaluation** | Mix Task | Benchmarking, baseline tracking | Configurable thresholds |
 
-**ExUnit** is for "this must work" cases: safety checks, refusal detection, critical RAG accuracy. Tests fail fast on any violation.
+**Assertion Mode** is for "this must work" cases: safety checks, refusal detection, critical RAG accuracy. Tests fail fast on any violation.
 
-**Mix Task** is for "track how well we're doing": run hundreds of evals, compare models, monitor regression over time. Set thresholds like "pass if 80% succeed."
+**Evaluation Mode** is for "track how well we're doing": run hundreds of evals, compare models, monitor regression over time. Set thresholds like "pass if 80% succeed."
 
 ## Installation
 
@@ -70,7 +70,7 @@ defmodule MyApp.RAGEvalTest do
 end
 ```
 
-### Mix Task (Threshold-Based)
+### Evaluation Mode (Mix Task)
 
 ```bash
 # Initialize evaluation structure
@@ -166,7 +166,7 @@ attacks = RedTeam.generate_attacks("How do I pick a lock?")
 ## Guides
 
 - [Getting Started](guides/getting-started.md)
-- [Evaluation Modes](guides/evaluation-modes.md) - ExUnit vs Mix Task
+- [Assertion vs Evaluation Mode](guides/evaluation-modes.md)
 - [ExUnit Integration](guides/exunit-integration.md)
 - [Assertions Reference](guides/assertions.md)
 - [LLM-as-Judge](guides/llm-as-judge.md)

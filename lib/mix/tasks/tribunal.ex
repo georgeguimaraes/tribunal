@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
   ## Options
 
-    * `--format` - Output format: console (default), json, github, junit
+    * `--format` - Output format: console (default), text, json, html, github, junit
     * `--output` - Write results to file instead of stdout
     * `--provider` - Module:function to call for each test case (e.g. MyApp.Agent:query)
     * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (always exit 0)
@@ -64,7 +64,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
   use Mix.Task
 
-  alias Tribunal.Reporter.{Console, GitHub, JSON, JUnit}
+  alias Tribunal.Reporter.{Console, GitHub, HTML, JSON, JUnit, Text}
 
   @default_paths ["test/evals/**/*.json", "test/evals/**/*.yaml", "test/evals/**/*.yml"]
 
@@ -245,7 +245,9 @@ defmodule Mix.Tasks.Tribunal.Eval do
   end
 
   defp format_results(results, "console"), do: Console.format(results)
+  defp format_results(results, "text"), do: Text.format(results)
   defp format_results(results, "json"), do: JSON.format(results)
+  defp format_results(results, "html"), do: HTML.format(results)
   defp format_results(results, "github"), do: GitHub.format(results)
   defp format_results(results, "junit"), do: JUnit.format(results)
   defp format_results(_, format), do: Mix.raise("Unknown format: #{format}")

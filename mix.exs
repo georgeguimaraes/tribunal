@@ -58,6 +58,7 @@ defmodule Tribunal.MixProject do
       extras: [
         "README.md",
         "guides/getting-started.md",
+        "guides/evaluation-modes.md",
         "guides/exunit-integration.md",
         "guides/assertions.md",
         "guides/llm-as-judge.md",
@@ -87,7 +88,9 @@ defmodule Tribunal.MixProject do
         Reporters: [
           Tribunal.Reporter,
           Tribunal.Reporter.Console,
+          Tribunal.Reporter.Text,
           Tribunal.Reporter.JSON,
+          Tribunal.Reporter.HTML,
           Tribunal.Reporter.GitHub,
           Tribunal.Reporter.JUnit
         ]
