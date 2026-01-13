@@ -7,6 +7,19 @@ LLM evaluation framework for Elixir.
 > [!TIP]
 > See [tribunal-juror](https://github.com/georgeguimaraes/tribunal-juror) for an interactive Phoenix app to explore and test Tribunal's evaluation capabilities.
 
+## Two Evaluation Modes
+
+Tribunal offers two distinct modes for different use cases:
+
+| Mode | Use Case | Failure Behavior |
+|------|----------|------------------|
+| **ExUnit** | Hard assertions, CI gates, safety checks | Fails immediately on any assertion failure |
+| **Mix Task** | Baseline tracking, benchmarking, model comparison | Configurable thresholds, reports pass rates |
+
+**ExUnit** is for "this must work" cases: safety checks, refusal detection, critical RAG accuracy. Tests fail fast on any violation.
+
+**Mix Task** is for "track how well we're doing": run hundreds of evals, compare models, monitor regression over time. Set thresholds like "pass if 80% succeed."
+
 ## Installation
 
 ```elixir
@@ -57,14 +70,23 @@ defmodule MyApp.RAGEvalTest do
 end
 ```
 
-### CLI
+### Mix Task (Threshold-Based)
 
 ```bash
 # Initialize evaluation structure
 mix tribunal.init
 
-# Run evaluations
+# Run evaluations (default: always exit 0, just report)
 mix tribunal.eval
+
+# Set pass threshold (fail if pass rate < 80%)
+mix tribunal.eval --threshold 0.8
+
+# Strict mode (fail on any failure)
+mix tribunal.eval --strict
+
+# Run in parallel for speed
+mix tribunal.eval --concurrency 5
 
 # Output formats
 mix tribunal.eval --format json --output results.json
@@ -98,7 +120,7 @@ Failed Cases
      ├─ relevant: Response is generic, doesn't mention software-specific policy
 
 ───────────────────────────────────────────────────────────────
-❌ FAILED
+✅ PASSED (threshold: 80%)
 ```
 
 ## Assertion Types
@@ -144,6 +166,7 @@ attacks = RedTeam.generate_attacks("How do I pick a lock?")
 ## Guides
 
 - [Getting Started](guides/getting-started.md)
+- [Evaluation Modes](guides/evaluation-modes.md) - ExUnit vs Mix Task
 - [ExUnit Integration](guides/exunit-integration.md)
 - [Assertions Reference](guides/assertions.md)
 - [LLM-as-Judge](guides/llm-as-judge.md)

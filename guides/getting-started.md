@@ -2,6 +2,15 @@
 
 Tribunal is an LLM evaluation framework for Elixir. It provides tools for evaluating LLM outputs, detecting hallucinations, and measuring response quality.
 
+## Two Evaluation Modes
+
+Tribunal offers two modes for different use cases:
+
+- **ExUnit Mode**: Hard assertions that fail immediately. Use for safety checks, CI gates, and critical requirements.
+- **Mix Task Mode**: Threshold-based evaluation with reporting. Use for benchmarking, baseline tracking, and model comparison.
+
+See [Evaluation Modes](evaluation-modes.md) for detailed guidance on when to use each.
+
 ## Installation
 
 Add `tribunal` to your dependencies in `mix.exs`:
@@ -72,16 +81,25 @@ This creates:
 - `test/evals/datasets/example.json`
 - `test/evals/datasets/example.yaml`
 
-## Run Evaluations
+## Run Evaluations (Mix Task Mode)
 
-Execute evaluations against your datasets:
+Execute evaluations with configurable thresholds:
 
 ```bash
-# Run all evals in test/evals/
+# Run all evals in test/evals/ (default: exit 0, just report)
 mix tribunal.eval
 
 # Run specific dataset
 mix tribunal.eval test/evals/datasets/questions.json
+
+# Set pass threshold (fail if pass rate < 80%)
+mix tribunal.eval --threshold 0.8
+
+# Strict mode (fail on any failure)
+mix tribunal.eval --strict
+
+# Run in parallel for speed
+mix tribunal.eval --concurrency 5
 
 # Output as JSON
 mix tribunal.eval --format json --output results.json
@@ -90,9 +108,9 @@ mix tribunal.eval --format json --output results.json
 mix tribunal.eval --format github
 ```
 
-## Using with ExUnit
+## Using with ExUnit (Strict Mode)
 
-Integrate evaluations into your test suite:
+ExUnit assertions fail immediately on any violation. Use for critical checks:
 
 ```elixir
 defmodule MyApp.RAGTest do
@@ -125,6 +143,7 @@ end
 
 ## Next Steps
 
+- [Evaluation Modes](evaluation-modes.md): Understand when to use ExUnit vs Mix Task
 - [ExUnit Integration](exunit-integration.md): Learn about all available assertion macros
 - [Assertions](assertions.md): Complete reference for deterministic, LLM-as-judge, and embedding assertions
 - [Datasets](datasets.md): Create and manage evaluation datasets

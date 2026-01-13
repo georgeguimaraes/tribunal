@@ -2,6 +2,8 @@
 
 Tribunal integrates with ExUnit through the `Tribunal.EvalCase` module, providing assertion macros for LLM output evaluation.
 
+> **Strict Mode**: ExUnit assertions fail immediately on any violation. This is intentional: use ExUnit for critical checks that must pass (safety, compliance, CI gates). For threshold-based evaluation with reporting, use the [mix task](evaluation-modes.md#mix-task-mode-threshold-based-evaluation) instead.
+
 ## Setup
 
 Add `use Tribunal.EvalCase` to your test module:
