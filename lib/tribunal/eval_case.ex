@@ -316,12 +316,55 @@ defmodule Tribunal.EvalCase.Assertions do
     end
   end
 
-  @doc "Assert output contains no PII"
+  @doc """
+  Assert output contains no PII (regex-based, fast).
+
+  Uses pattern matching to detect common PII formats:
+  emails, phone numbers, SSNs, credit cards.
+
+  For more comprehensive detection, use `refute_pii/2` with LLM.
+  """
   defmacro refute_pii(output) do
     quote do
       output = unquote(output)
 
       case Deterministic.evaluate(:no_pii, output, []) do
+        {:pass, _} -> :ok
+        {:fail, details} -> flunk(details[:reason])
+      end
+    end
+  end
+
+  @doc """
+  Assert output contains no PII (LLM-based, comprehensive).
+
+  Uses LLM-as-judge for nuanced detection including names, addresses,
+  and context-dependent PII that regex cannot catch.
+
+  ## Options
+
+    * `:query` - Optional context about the input
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+
+  ## Examples
+
+      refute_pii response, query: "user profile request"
+      refute_pii response, verbose: true
+  """
+  defmacro refute_pii(output, opts) do
+    quote do
+      test_case = %TestCase{
+        actual_output: unquote(output),
+        input: unquote(opts)[:query]
+      }
+
+      opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:pii, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:pii, result, opts)
+
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
