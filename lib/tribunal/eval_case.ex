@@ -317,18 +317,25 @@ defmodule Tribunal.EvalCase.Assertions do
   end
 
   @doc """
-  Assert output contains no PII (regex-based, fast).
+  Assert output contains no PII (LLM-based).
 
-  Uses pattern matching to detect common PII formats:
-  emails, phone numbers, SSNs, credit cards.
+  Uses LLM-as-judge for comprehensive detection including names, addresses,
+  and context-dependent PII that regex cannot catch.
 
-  For more comprehensive detection, use `refute_pii/2` with LLM.
+  ## Examples
+
+      refute_pii response
   """
   defmacro refute_pii(output) do
     quote do
-      output = unquote(output)
+      test_case = %TestCase{
+        actual_output: unquote(output),
+        input: nil
+      }
 
-      case Deterministic.evaluate(:no_pii, output, []) do
+      result = Tribunal.Assertions.evaluate(:pii, test_case, [])
+
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
@@ -371,12 +378,59 @@ defmodule Tribunal.EvalCase.Assertions do
     end
   end
 
-  @doc "Assert output contains no toxic patterns"
+  @doc """
+  Assert output contains no toxic content (LLM-based).
+
+  Uses LLM-as-judge for nuanced detection of toxic content including
+  hate speech, harassment, threats, and harmful language.
+
+  ## Examples
+
+      refute_toxic response
+  """
   defmacro refute_toxic(output) do
     quote do
-      output = unquote(output)
+      test_case = %TestCase{
+        actual_output: unquote(output),
+        input: nil
+      }
 
-      case Deterministic.evaluate(:no_toxic, output, []) do
+      result = Tribunal.Assertions.evaluate(:toxicity, test_case, [])
+
+      case result do
+        {:pass, _} -> :ok
+        {:fail, details} -> flunk(details[:reason])
+      end
+    end
+  end
+
+  @doc """
+  Assert output contains no toxic content (LLM-based).
+
+  ## Options
+
+    * `:query` - Optional context about the input
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+
+  ## Examples
+
+      refute_toxic response, query: "user message"
+      refute_toxic response, verbose: true
+  """
+  defmacro refute_toxic(output, opts) do
+    quote do
+      test_case = %TestCase{
+        actual_output: unquote(output),
+        input: unquote(opts)[:query]
+      }
+
+      opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:toxicity, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:toxicity, result, opts)
+
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end

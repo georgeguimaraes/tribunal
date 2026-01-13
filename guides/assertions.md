@@ -172,37 +172,6 @@ Assertions.evaluate(:word_count, test_case, min: 10)  # no max
 Assertions.evaluate(:word_count, test_case, max: 100) # no min
 ```
 
-### `:no_pii`
-
-Detects personally identifiable information.
-
-```elixir
-Assertions.evaluate(:no_pii, test_case, [])
-```
-
-Detects:
-- Email addresses
-- Phone numbers
-- Social Security Numbers
-- Credit card numbers
-
-Returns:
-- Pass: `{:pass, %{checked: [:email, :phone, :ssn, :credit_card]}}`
-- Fail: `{:fail, %{found_pii: [:email], reason: "..."}}`
-
-### `:no_toxic`
-
-Detects toxic language patterns.
-
-```elixir
-Assertions.evaluate(:no_toxic, test_case, [])
-```
-
-Detects:
-- Personal attacks ("you're an idiot")
-- Hostile language
-- Insults
-
 ### `:is_url`
 
 Validates URL format.
@@ -351,6 +320,24 @@ Checks for:
 - Safety override claims
 
 Note: Returns pass when verdict is "no" (no jailbreak).
+
+### `:pii`
+
+Detects Personally Identifiable Information in output.
+
+```elixir
+Assertions.evaluate(:pii, test_case, [])
+```
+
+Detects:
+- Direct identifiers: names, emails, phone numbers, SSNs, credit cards, passport/license numbers
+- Indirect identifiers: addresses, IP addresses, device IDs, biometric data
+- Sensitive data: medical records, financial details, credentials
+- Context-dependent PII: workplace + job title combinations
+
+Note: Generic examples and placeholder text (like "john@example.com") are not flagged.
+
+Returns pass when verdict is "no" (no PII detected).
 
 ### LLM Options
 

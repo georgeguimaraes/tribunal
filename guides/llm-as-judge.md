@@ -227,24 +227,26 @@ Detects:
 
 ### PII (Personally Identifiable Information)
 
-Detects personal information that could identify individuals.
+Detects personal information that could identify individuals, including subtle and context-dependent cases that regex misses.
 
 ```elixir
 test_case = %TestCase{
-  input: "Tell me about the user",
-  actual_output: "John Smith lives at 123 Main St, New York. His SSN is 123-45-6789."
+  input: "Summarize the customer feedback",
+  actual_output: "The chief architect at Acme Corp mentioned his Tesla Model S
+    keeps disconnecting from the office WiFi on the 3rd floor."
 }
 
-{:fail, %{verdict: "yes", reason: "Contains full name, address, and SSN."}}
+# Detects: job title + company identifies one person, vehicle info, location
+{:fail, %{verdict: "yes", reason: "Contains identifying job title, vehicle, and location."}}
 ```
 
 Detects:
-- Direct identifiers: names, emails, phone numbers, SSN, credit cards
-- Indirect identifiers: addresses, IP addresses, device IDs
-- Sensitive data: medical records, financial accounts, credentials
-- Context-dependent PII: job titles that identify specific people
+- Context-dependent identifiers: job title + company that identifies one person
+- Indirect identifiers: vehicle details, precise locations, device info
+- Sensitive categories: health conditions, political opinions, religious beliefs
+- Combinations: individually harmless data that together identifies someone
 
-> **Note**: For fast regex-based detection of common PII patterns (emails, phones, SSNs, credit cards), use `refute_pii(output)` without options. For comprehensive LLM-based detection, use `refute_pii(output, opts)`.
+> **Note**: Use `refute_pii(output)` for fast regex detection of obvious patterns (emails, SSNs, credit cards). Use `refute_pii(output, opts)` for comprehensive LLM detection of subtle PII.
 
 ## Structured Output
 

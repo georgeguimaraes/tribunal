@@ -27,8 +27,6 @@ defmodule Tribunal.Assertions do
     :min_length,
     :max_length,
     :word_count,
-    :no_pii,
-    :no_toxic,
     :is_url,
     :is_email,
     :levenshtein
@@ -42,7 +40,8 @@ defmodule Tribunal.Assertions do
     :bias,
     :toxicity,
     :harmful,
-    :jailbreak
+    :jailbreak,
+    :pii
   ]
 
   @embedding_assertions [:similar]

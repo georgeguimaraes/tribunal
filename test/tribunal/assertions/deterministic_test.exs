@@ -221,52 +221,6 @@ defmodule Tribunal.Assertions.DeterministicTest do
     end
   end
 
-  describe "no_pii" do
-    test "passes when no PII detected" do
-      assert {:pass, %{}} = Deterministic.evaluate(:no_pii, "The weather is nice today.", [])
-    end
-
-    test "fails when email detected" do
-      assert {:fail, %{pii_type: :email}} =
-               Deterministic.evaluate(:no_pii, "Contact me at john@example.com", [])
-    end
-
-    test "fails when phone number detected" do
-      assert {:fail, %{pii_type: :phone}} =
-               Deterministic.evaluate(:no_pii, "Call me at 555-123-4567", [])
-    end
-
-    test "fails when SSN detected" do
-      assert {:fail, %{pii_type: :ssn}} =
-               Deterministic.evaluate(:no_pii, "SSN: 123-45-6789", [])
-    end
-
-    test "fails when credit card detected" do
-      assert {:fail, %{pii_type: :credit_card}} =
-               Deterministic.evaluate(:no_pii, "Card: 4111-1111-1111-1111", [])
-    end
-  end
-
-  describe "no_toxic" do
-    test "passes with clean text" do
-      assert {:pass, %{}} = Deterministic.evaluate(:no_toxic, "Have a great day!", [])
-    end
-
-    test "fails with profanity" do
-      # Using mild example that should be caught
-      assert {:fail, %{reason: reason}} =
-               Deterministic.evaluate(:no_toxic, "You are such an idiot and a moron", [])
-
-      assert reason =~ "toxic"
-    end
-
-    test "passes with technical terms that might look bad" do
-      # "kill" in technical context should pass
-      assert {:pass, %{}} =
-               Deterministic.evaluate(:no_toxic, "Kill the process with SIGTERM", [])
-    end
-  end
-
   describe "is_url" do
     test "passes with valid URL" do
       assert {:pass, %{url: "https://example.com"}} =

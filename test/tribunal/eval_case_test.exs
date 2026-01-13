@@ -188,35 +188,8 @@ defmodule Tribunal.EvalCaseTest do
     end
   end
 
-  describe "refute_pii/1" do
-    test "passes when no PII found" do
-      refute_pii("Hello world")
-    end
-
-    test "fails when email found" do
-      assert_raise ExUnit.AssertionError, fn ->
-        refute_pii("Contact me at test@example.com")
-      end
-    end
-
-    test "fails when phone found" do
-      assert_raise ExUnit.AssertionError, fn ->
-        refute_pii("Call 555-123-4567")
-      end
-    end
-  end
-
-  describe "refute_toxic/1" do
-    test "passes when no toxic content" do
-      refute_toxic("This is a helpful response.")
-    end
-
-    test "fails when toxic content found" do
-      assert_raise ExUnit.AssertionError, fn ->
-        refute_toxic("You're an idiot")
-      end
-    end
-  end
+  # Note: refute_pii/1 and refute_toxic/1 now use LLM-based evaluation.
+  # Tests for the /2 variants with mock clients are in the LLM assertions section below.
 
   describe "assert_url/1" do
     test "passes with valid URL" do

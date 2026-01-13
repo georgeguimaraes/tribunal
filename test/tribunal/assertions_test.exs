@@ -145,8 +145,6 @@ defmodule Tribunal.AssertionsTest do
       assert :min_length in available
       assert :max_length in available
       assert :word_count in available
-      assert :no_pii in available
-      assert :no_toxic in available
       assert :is_url in available
       assert :is_email in available
       assert :levenshtein in available
