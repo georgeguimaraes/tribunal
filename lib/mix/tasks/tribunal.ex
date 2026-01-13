@@ -11,7 +11,23 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
     * `--format` - Output format: console (default), json, github, junit
     * `--output` - Write results to file instead of stdout
-    * `--provider` - Module:function to call for each input (e.g. MyApp.RAG:query)
+    * `--provider` - Module:function to call for each test case (e.g. MyApp.Agent:query)
+
+  ## Provider Function
+
+  The provider function receives a `Tribunal.TestCase` struct and should return
+  the LLM output as a string. The test case includes:
+
+    * `input` - The query/prompt
+    * `context` - Optional context for RAG-style queries
+    * `expected_output` - Optional expected answer
+
+  Example provider:
+
+      def query(%Tribunal.TestCase{input: input, context: context}) do
+        # Call your LLM here
+        MyApp.LLM.generate(input, context: context)
+      end
 
   ## Examples
 
@@ -20,6 +36,9 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
       # Run specific dataset
       mix tribunal.eval test/evals/datasets/questions.json
+
+      # Run with a provider to generate outputs
+      mix tribunal.eval --provider MyApp.Agent:query
 
       # Output JSON for CI
       mix tribunal.eval --format json --output results.json
@@ -113,7 +132,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     test_case =
       if provider do
         {mod, fun} = provider
-        output = apply(mod, fun, [test_case.input])
+        output = apply(mod, fun, [test_case])
         Tribunal.TestCase.with_output(test_case, output)
       else
         test_case
