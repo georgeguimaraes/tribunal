@@ -1,6 +1,8 @@
 # Tribunal
 
-LLM evaluation framework for Elixir: assertions, hallucination detection, RAG faithfulness, and red team testing.
+LLM evaluation framework for Elixir.
+
+**Tribunal** provides tools for evaluating and testing LLM outputs, detecting hallucinations, and measuring response quality.
 
 > [!TIP]
 > See [tribunal-juror](https://github.com/georgeguimaraes/tribunal-juror) for an interactive Phoenix app to explore and test Tribunal's evaluation capabilities.
