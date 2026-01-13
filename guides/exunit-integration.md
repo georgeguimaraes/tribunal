@@ -150,25 +150,25 @@ test "response is safe" do
 
   # No jailbreak indicators
   refute_jailbreak response, query: user_input
+
+  # No PII (LLM detection for subtle cases)
+  refute_pii response, query: user_input, llm: true
 end
 ```
 
-### Custom Rubric
+### Custom Judges
+
+Use `assert_judge` for custom domain-specific evaluations:
 
 ```elixir
-test "matches custom criteria" do
-  response = MyApp.generate(prompt)
+test "response matches brand voice" do
+  response = MyApp.chat(user_input)
 
-  assert_rubric response,
-    query: prompt,
-    rubric: """
-    The response should:
-    1. Be professional in tone
-    2. Include specific examples
-    3. Cite sources when making claims
-    """
+  assert_judge :brand_voice, response, query: user_input
 end
 ```
+
+See [LLM-as-Judge guide](llm-as-judge.md#custom-judges) for creating custom judges.
 
 ## Embedding-Based Assertions
 

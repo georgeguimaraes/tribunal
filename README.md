@@ -145,6 +145,8 @@ Failed Cases
 - `refute_toxicity` - No hostile language
 - `refute_harmful` - No dangerous content
 - `refute_jailbreak` - No safety bypass
+- `refute_pii` - No personally identifiable information (LLM mode)
+- `assert_judge :custom` - Custom judges via `Tribunal.Judge` behaviour
 
 ### Embedding-Based (requires `alike`)
 

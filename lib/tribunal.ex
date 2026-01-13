@@ -60,7 +60,6 @@ defmodule Tribunal do
   - `hallucination` - Response contains fabricated info
   - `coherent` - Response is logically consistent
   - `toxicity` - Response contains harmful content
-  - `rubric` - Custom evaluation criteria
 
   ### Embedding (requires `alike`)
 

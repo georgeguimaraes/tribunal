@@ -264,25 +264,6 @@ The judge LLM returns structured JSON:
 - `reason`: Human-readable explanation (useful for debugging)
 - `score`: Numeric confidence (0.0-1.0)
 
-## Custom Rubric
-
-For custom evaluation criteria:
-
-```elixir
-assert_rubric response,
-  query: user_input,
-  rubric: """
-  Evaluate the response against these criteria:
-
-  1. Professional Tone (0-1): Uses formal language, no slang
-  2. Completeness (0-1): Addresses all parts of the question
-  3. Accuracy (0-1): Information is factually correct
-  4. Conciseness (0-1): No unnecessary verbosity
-
-  Score each criterion and provide an overall verdict.
-  """
-```
-
 ## Testing Without LLM Calls
 
 For unit tests, inject a mock LLM client:
@@ -323,26 +304,195 @@ Strategies:
 mix test --only llm_eval
 ```
 
+## Custom Judges
+
+Create domain-specific judges by implementing the `Tribunal.Judge` behaviour.
+
+### The Judge Behaviour
+
+The behaviour defines these callbacks:
+
+```elixir
+# Required callbacks
+@callback name() :: atom()
+@callback prompt(test_case :: TestCase.t(), opts :: keyword()) :: String.t()
+
+# Optional callbacks
+@callback validate(test_case :: TestCase.t()) :: :ok | {:error, String.t()}
+@callback negative_metric?() :: boolean()
+@callback evaluate_result(result :: map(), opts :: keyword()) :: {:pass, map()} | {:fail, map()}
+```
+
+- `name/0`: The atom used to invoke the judge (e.g., `:brand_voice`)
+- `prompt/2`: Builds the evaluation prompt for the LLM
+- `validate/1`: Validates the test case has required fields (e.g., context for faithfulness)
+- `negative_metric?/0`: When `true`, "yes" verdict = fail (for detecting bad things like toxicity)
+- `evaluate_result/2`: Custom pass/fail logic based on the LLM response
+
+### Basic Example
+
+```elixir
+defmodule MyApp.Judges.BrandVoice do
+  @behaviour Tribunal.Judge
+
+  @impl true
+  def name, do: :brand_voice
+
+  @impl true
+  def prompt(test_case, _opts) do
+    """
+    Evaluate if the response matches our brand voice guidelines:
+
+    - Friendly but professional tone
+    - No jargon or technical terms
+    - Empathetic and helpful
+
+    Response to evaluate:
+    #{test_case.actual_output}
+
+    Query: #{test_case.input}
+
+    Respond with:
+    - verdict: "yes" if matches guidelines, "no" if not
+    - reason: explanation of your verdict
+    - score: 0.0 to 1.0 confidence
+    """
+  end
+end
+```
+
+### With Validation
+
+Require certain fields in the test case:
+
+```elixir
+defmodule MyApp.Judges.ContextAware do
+  @behaviour Tribunal.Judge
+
+  @impl true
+  def name, do: :context_aware
+
+  @impl true
+  def validate(test_case) do
+    if is_nil(test_case.context) or test_case.context == [] do
+      {:error, "Context is required for this judge"}
+    else
+      :ok
+    end
+  end
+
+  @impl true
+  def prompt(test_case, _opts) do
+    # ... build prompt using test_case.context
+  end
+end
+```
+
+### Negative Metrics
+
+For judges that detect bad things (where "yes" = fail):
+
+```elixir
+defmodule MyApp.Judges.ComplianceViolation do
+  @behaviour Tribunal.Judge
+
+  @impl true
+  def name, do: :compliance_violation
+
+  @impl true
+  def negative_metric?, do: true
+
+  @impl true
+  def prompt(test_case, _opts) do
+    """
+    Does this output violate any compliance rules?
+
+    Output: #{test_case.actual_output}
+
+    Respond with:
+    - verdict: "yes" if violation detected, "no" if compliant
+    - reason: explanation
+    - score: 0.0 to 1.0 (severity)
+    """
+  end
+end
+```
+
+### Custom Result Evaluation
+
+Override how results are interpreted:
+
+```elixir
+defmodule MyApp.Judges.StrictCompliance do
+  @behaviour Tribunal.Judge
+
+  @impl true
+  def name, do: :strict_compliance
+
+  @impl true
+  def prompt(test_case, _opts) do
+    # ... build prompt
+  end
+
+  @impl true
+  def evaluate_result(response, _opts) do
+    # Custom logic: require score >= 0.95 to pass
+    if response["score"] >= 0.95 do
+      {:pass, %{verdict: response["verdict"], reason: response["reason"], score: response["score"]}}
+    else
+      {:fail, %{verdict: response["verdict"], reason: "Score below 0.95 threshold", score: response["score"]}}
+    end
+  end
+end
+```
+
+### Registration
+
+Register custom judges in your config:
+
+```elixir
+# config/config.exs
+config :tribunal, :custom_judges, [
+  MyApp.Judges.BrandVoice,
+  MyApp.Judges.Compliance
+]
+```
+
+Use them like built-in judges:
+
+```elixir
+assert_judge :brand_voice, response, query: input
+```
+
 ## Prompt Templates
 
-Tribunal uses carefully crafted prompts for each metric. The prompts:
+Each built-in judge is implemented as a module in `Tribunal.Judges.*`. The prompts:
 
 1. Explain the evaluation task
 2. Provide the test case data
 3. Request structured JSON output
-4. Include examples of pass/fail scenarios
+4. Include guidance for edge cases
 
-To see the generated prompt:
+To see a judge's prompt:
 
 ```elixir
-alias Tribunal.Assertions.Judge
-
-test_case = %TestCase{
+test_case = %Tribunal.TestCase{
   input: "Question",
   actual_output: "Answer",
   context: ["Source"]
 }
 
-prompt = Judge.build_prompt(:faithful, test_case)
+prompt = Tribunal.Judges.Faithful.prompt(test_case, [])
 IO.puts(prompt)
 ```
+
+Available judge modules:
+- `Tribunal.Judges.Faithful`
+- `Tribunal.Judges.Relevant`
+- `Tribunal.Judges.Hallucination`
+- `Tribunal.Judges.Correctness`
+- `Tribunal.Judges.Bias`
+- `Tribunal.Judges.Toxicity`
+- `Tribunal.Judges.Harmful`
+- `Tribunal.Judges.Jailbreak`
+- `Tribunal.Judges.PII`

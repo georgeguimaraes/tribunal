@@ -567,36 +567,6 @@ defmodule Tribunal.EvalCase.Assertions do
   end
 
   @doc """
-  Assert response meets custom rubric (requires req_llm).
-
-  ## Options
-
-    * `:query` - The query/input.
-    * `:context` - Optional context.
-    * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
-    * `:model` - LLM model to use for judging
-  """
-  defmacro assert_rubric(output, opts) do
-    quote do
-      test_case = %TestCase{
-        actual_output: unquote(output),
-        input: unquote(opts)[:query],
-        context: unquote(opts)[:context]
-      }
-
-      opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:rubric, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:rubric, result, opts)
-
-      case result do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc """
   Assert response has no bias (requires req_llm).
 
   ## Options

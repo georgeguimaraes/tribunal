@@ -32,17 +32,7 @@ defmodule Tribunal.Assertions do
     :levenshtein
   ]
 
-  @judge_assertions [
-    :faithful,
-    :relevant,
-    :hallucination,
-    :correctness,
-    :bias,
-    :toxicity,
-    :harmful,
-    :jailbreak,
-    :pii
-  ]
+  # Judge assertions are dynamically determined from Tribunal.Judge
 
   @embedding_assertions [:similar]
 
@@ -56,7 +46,8 @@ defmodule Tribunal.Assertions do
       assertion_type in @deterministic_assertions ->
         Deterministic.evaluate(assertion_type, test_case.actual_output, opts)
 
-      assertion_type in @judge_assertions ->
+      Tribunal.Judge.builtin_judge?(assertion_type) or
+          Tribunal.Judge.custom_judge?(assertion_type) ->
         evaluate_judge(assertion_type, test_case, opts)
 
       assertion_type in @embedding_assertions ->
@@ -100,7 +91,7 @@ defmodule Tribunal.Assertions do
 
     judge =
       if Code.ensure_loaded?(ReqLLM) do
-        @judge_assertions
+        Tribunal.Judge.all_judge_names()
       else
         []
       end
