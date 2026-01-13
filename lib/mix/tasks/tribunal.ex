@@ -14,6 +14,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     * `--provider` - Module:function to call for each test case (e.g. MyApp.Agent:query)
     * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (always exit 0)
     * `--strict` - Fail on any failure, equivalent to --threshold 1.0 (for CI gates)
+    * `--concurrency` - Number of test cases to run in parallel. Default: 1 (sequential)
 
   ## Provider Function
 
@@ -56,6 +57,9 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
       # Strict mode: fail on any failure (for CI gates)
       mix tribunal.eval --strict
+
+      # Run 5 test cases in parallel
+      mix tribunal.eval --concurrency 5
   """
 
   use Mix.Task
@@ -73,7 +77,8 @@ defmodule Mix.Tasks.Tribunal.Eval do
           output: :string,
           provider: :string,
           threshold: :float,
-          strict: :boolean
+          strict: :boolean,
+          concurrency: :integer
         ]
       )
 
@@ -85,6 +90,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     provider = parse_provider(opts[:provider])
     threshold = opts[:threshold]
     strict = opts[:strict] || false
+    concurrency = opts[:concurrency] || 1
 
     files = if Enum.empty?(files), do: find_default_files(), else: files
 
@@ -97,7 +103,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
     results =
       files
-      |> Enum.flat_map(&load_and_run(&1, provider))
+      |> Enum.flat_map(&load_and_run(&1, provider, concurrency))
       |> aggregate_results(start_time)
 
     # Determine pass/fail based on threshold
@@ -143,14 +149,24 @@ defmodule Mix.Tasks.Tribunal.Eval do
     end
   end
 
-  defp load_and_run(path, provider) do
+  defp load_and_run(path, provider, concurrency) do
     Mix.shell().info("Loading #{path}...")
 
     cases = Tribunal.Dataset.load_with_assertions!(path)
 
-    Enum.map(cases, fn {test_case, assertions} ->
-      run_case(test_case, assertions, provider)
-    end)
+    if concurrency > 1 do
+      cases
+      |> Task.async_stream(
+        fn {test_case, assertions} -> run_case(test_case, assertions, provider) end,
+        max_concurrency: concurrency,
+        timeout: 120_000
+      )
+      |> Enum.map(fn {:ok, result} -> result end)
+    else
+      Enum.map(cases, fn {test_case, assertions} ->
+        run_case(test_case, assertions, provider)
+      end)
+    end
   end
 
   defp run_case(test_case, assertions, provider) do
