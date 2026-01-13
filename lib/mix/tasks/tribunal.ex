@@ -100,6 +100,18 @@ defmodule Mix.Tasks.Tribunal.Eval do
       |> Enum.flat_map(&load_and_run(&1, provider))
       |> aggregate_results(start_time)
 
+    # Determine pass/fail based on threshold
+    passed =
+      cond do
+        strict -> results.summary.failed == 0
+        is_number(threshold) -> results.summary.pass_rate >= threshold
+        true -> true
+      end
+
+    results = put_in(results, [:summary, :threshold_passed], passed)
+    results = put_in(results, [:summary, :threshold], threshold)
+    results = put_in(results, [:summary, :strict], strict)
+
     formatted = format_results(results, format)
 
     if output do
@@ -109,14 +121,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
       Mix.shell().info(formatted)
     end
 
-    should_fail =
-      cond do
-        strict -> results.summary.failed > 0
-        is_number(threshold) -> results.summary.pass_rate < threshold
-        true -> false
-      end
-
-    if should_fail do
+    unless passed do
       System.halt(1)
     end
   end

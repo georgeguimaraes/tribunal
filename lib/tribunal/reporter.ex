@@ -105,11 +105,20 @@ defmodule Tribunal.Reporter.Console do
   end
 
   defp footer(summary) do
-    status = if summary.failed > 0, do: "❌ FAILED", else: "✅ PASSED"
+    # Use threshold_passed if available (from mix task), otherwise just check failures
+    passed = Map.get(summary, :threshold_passed, summary.failed == 0)
+    status = if passed, do: "✅ PASSED", else: "❌ FAILED"
+
+    threshold_info =
+      cond do
+        Map.get(summary, :strict) -> " (strict mode)"
+        threshold = Map.get(summary, :threshold) -> " (threshold: #{round(threshold * 100)}%)"
+        true -> ""
+      end
 
     """
     ───────────────────────────────────────────────────────────────
-    #{status}
+    #{status}#{threshold_info}
     """
   end
 
