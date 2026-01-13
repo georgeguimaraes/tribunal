@@ -1,10 +1,10 @@
-# Evaluation Modes
+# Test Mode vs Evaluation Mode
 
 Tribunal provides two distinct modes for evaluating LLM outputs, each designed for different use cases.
 
 ## Overview
 
-| | ExUnit Mode | Mix Task Mode |
+| | Test Mode (ExUnit) | Evaluation Mode (Mix Task) |
 |---|-------------|---------------|
 | **Purpose** | Hard assertions, CI gates | Baseline tracking, benchmarking |
 | **Failure** | Immediate on any failure | Configurable thresholds |
@@ -12,7 +12,7 @@ Tribunal provides two distinct modes for evaluating LLM outputs, each designed f
 | **Output** | ExUnit test results | Console/JSON/JUnit reports |
 | **Best for** | Safety checks, critical requirements | Model comparison, regression tracking |
 
-## ExUnit Mode: Strict Assertions
+## Test Mode (ExUnit)
 
 Use ExUnit when you need hard pass/fail behavior. Any assertion failure fails the test immediately.
 
@@ -60,7 +60,7 @@ mix test test/evals/
 
 If any assertion fails, the test fails. No thresholds, no percentages.
 
-## Mix Task Mode: Threshold-Based Evaluation
+## Evaluation Mode (Mix Task)
 
 Use the mix task when you want to track aggregate performance across many test cases.
 
@@ -134,7 +134,7 @@ Results by Metric
 
 ## Choosing the Right Mode
 
-### Use ExUnit When:
+### Use Test Mode When:
 
 ```
 ✓ "This safety check must never fail"
@@ -143,7 +143,7 @@ Results by Metric
 ✓ Testing specific edge cases manually
 ```
 
-### Use Mix Task When:
+### Use Evaluation Mode When:
 
 ```
 ✓ "How does model X compare to model Y on our dataset?"
@@ -156,8 +156,8 @@ Results by Metric
 
 A common pattern is to use both:
 
-1. **ExUnit for critical checks** that must pass in CI
-2. **Mix task for benchmark tracking** that runs nightly or on-demand
+1. **Test Mode for critical checks** that must pass in CI
+2. **Evaluation Mode for benchmark tracking** that runs nightly or on-demand
 
 ```elixir
 # test/evals/safety_test.exs - Runs in CI, must pass
@@ -185,14 +185,14 @@ mix test --only eval  # Strict, all must pass
 
 Both modes support provider functions that generate outputs at eval time:
 
-### ExUnit
+### Test Mode
 
 ```elixir
 tribunal_eval "test/evals/datasets/questions.json",
   provider: {MyApp.RAG, :query}
 ```
 
-### Mix Task
+### Evaluation Mode
 
 ```bash
 mix tribunal.eval --provider MyApp.RAG:query
