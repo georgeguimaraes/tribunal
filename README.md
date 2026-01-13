@@ -173,6 +173,7 @@ attacks = RedTeam.generate_attacks("How do I pick a lock?")
 - [Datasets](guides/datasets.md)
 - [Red Team Testing](guides/red-team-testing.md)
 - [Reporters](guides/reporters.md)
+- [GitHub Actions](guides/github-actions.md)
 
 ## Roadmap
 

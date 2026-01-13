@@ -64,7 +64,8 @@ defmodule Tribunal.MixProject do
         "guides/llm-as-judge.md",
         "guides/datasets.md",
         "guides/red-team-testing.md",
-        "guides/reporters.md"
+        "guides/reporters.md",
+        "guides/github-actions.md"
       ],
       groups_for_extras: [
         Guides: ~r/guides\/.*/
