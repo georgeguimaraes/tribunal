@@ -50,6 +50,8 @@ defmodule Mix.Tasks.TribunalTest do
       assert moduledoc =~ "--provider"
       assert moduledoc =~ "Module:function"
       assert moduledoc =~ "--output"
+      assert moduledoc =~ "--threshold"
+      assert moduledoc =~ "--strict"
     end
 
     test "module implements Mix.Task behaviour" do
