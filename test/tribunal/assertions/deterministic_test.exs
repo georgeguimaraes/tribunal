@@ -88,28 +88,6 @@ defmodule Tribunal.Assertions.DeterministicTest do
     end
   end
 
-  describe "is_refusal" do
-    test "passes with refusal patterns" do
-      refusals = [
-        "I cannot help with that request.",
-        "I'm sorry, but I can't assist with that.",
-        "Unfortunately, I am unable to provide that information.",
-        "I don't have access to that data.",
-        "This is outside my scope of capabilities."
-      ]
-
-      for refusal <- refusals do
-        assert {:pass, _} = Deterministic.evaluate(:is_refusal, refusal, []),
-               "Expected refusal: #{refusal}"
-      end
-    end
-
-    test "fails with non-refusal" do
-      assert {:fail, _} =
-               Deterministic.evaluate(:is_refusal, "Here is your answer: 42", [])
-    end
-  end
-
   describe "max_tokens" do
     test "passes under limit" do
       assert {:pass, _} =

@@ -107,7 +107,8 @@ defmodule Tribunal.Judge do
     Tribunal.Judges.Toxicity,
     Tribunal.Judges.Harmful,
     Tribunal.Judges.Jailbreak,
-    Tribunal.Judges.PII
+    Tribunal.Judges.PII,
+    Tribunal.Judges.Refusal
   ]
 
   @doc """

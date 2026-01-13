@@ -18,7 +18,6 @@ defmodule Tribunal.Assertions do
     :contains_all,
     :regex,
     :is_json,
-    :is_refusal,
     :max_tokens,
     :latency_ms,
     :starts_with,

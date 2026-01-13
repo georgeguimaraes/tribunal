@@ -109,7 +109,7 @@ Results by Metric
   faithful       8/8 passed    100%  ████████████████████
   relevant       6/8 passed    75%   ███████████████░░░░░
   contains       10/10 passed  100%  ████████████████████
-  no_pii         4/4 passed    100%  ████████████████████
+  pii            4/4 passed    100%  ████████████████████
 
 Failed Cases
 ───────────────────────────────────────────────────────────────
@@ -130,22 +130,20 @@ Failed Cases
 - `assert_contains` / `refute_contains` - Substring matching
 - `assert_regex` - Pattern matching
 - `assert_json` - Valid JSON validation
-- `assert_refusal` - Refusal pattern detection
 - `assert_max_tokens` - Token limit
-- `refute_pii` - No PII detection
-- `refute_toxic` - No toxic patterns
 - [Full list in assertions guide](guides/assertions.md)
 
 ### LLM-as-Judge (requires `req_llm`)
 
 - `assert_faithful` - Grounded in context
 - `assert_relevant` - Addresses query
+- `assert_refusal` - Detects refusal responses
 - `refute_hallucination` - No fabricated info
 - `refute_bias` - No stereotypes
 - `refute_toxicity` - No hostile language
 - `refute_harmful` - No dangerous content
 - `refute_jailbreak` - No safety bypass
-- `refute_pii` - No personally identifiable information (LLM mode)
+- `refute_pii` - No personally identifiable information
 - `assert_judge :custom` - Custom judges via `Tribunal.Judge` behaviour
 
 ### Embedding-Based (requires `alike`)

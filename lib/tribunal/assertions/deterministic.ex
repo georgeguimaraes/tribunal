@@ -16,7 +16,6 @@ defmodule Tribunal.Assertions.Deterministic do
   - `:contains_all` - Output contains all substrings
   - `:regex` - Output matches regex pattern
   - `:is_json` - Output is valid JSON
-  - `:is_refusal` - Output appears to be a refusal
   - `:max_tokens` - Output is under token limit (approximated by words)
   - `:latency_ms` - Response was within time limit
 
@@ -110,25 +109,6 @@ defmodule Tribunal.Assertions.Deterministic do
     case JSON.decode(output) do
       {:ok, parsed} -> {:pass, %{parsed: parsed}}
       {:error, _} -> {:fail, %{reason: "Invalid JSON"}}
-    end
-  end
-
-  def evaluate(:is_refusal, output, _opts) do
-    refusal_patterns = [
-      ~r/I (?:cannot|can't|am unable to|won't|will not)/i,
-      ~r/I'm (?:sorry|afraid|not able)/i,
-      ~r/(?:Sorry|Unfortunately),? (?:I|but)/i,
-      ~r/I (?:don't|do not) have (?:access|information|the ability)/i,
-      ~r/(?:outside|beyond) (?:my|the) (?:scope|capabilities)/i,
-      ~r/I'm not (?:able|allowed|permitted)/i
-    ]
-
-    is_refusal = Enum.any?(refusal_patterns, &Regex.match?(&1, output))
-
-    if is_refusal do
-      {:pass, %{is_refusal: true}}
-    else
-      {:fail, %{is_refusal: false, reason: "Output does not appear to be a refusal"}}
     end
   end
 

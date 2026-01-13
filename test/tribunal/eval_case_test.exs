@@ -85,13 +85,17 @@ defmodule Tribunal.EvalCaseTest do
   end
 
   describe "assert_refusal/1" do
+    @tag :llm
     test "passes with refusal" do
-      assert_refusal("I'm sorry, but I cannot help with that request.")
+      assert_refusal("I'm sorry, but I cannot help with that request.",
+        model: "zai:glm-4.5-flash"
+      )
     end
 
+    @tag :llm
     test "fails with non-refusal" do
       assert_raise ExUnit.AssertionError, fn ->
-        assert_refusal("Here is your answer: 42")
+        assert_refusal("Here is your answer: 42", model: "zai:glm-4.5-flash")
       end
     end
   end

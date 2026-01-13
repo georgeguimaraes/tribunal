@@ -246,8 +246,6 @@ Detects:
 - Sensitive categories: health conditions, political opinions, religious beliefs
 - Combinations: individually harmless data that together identifies someone
 
-> **Note**: Use `refute_pii(output)` for fast regex detection of obvious patterns (emails, SSNs, credit cards). Use `refute_pii(output, opts)` for comprehensive LLM detection of subtle PII.
-
 ## Structured Output
 
 The judge LLM returns structured JSON:

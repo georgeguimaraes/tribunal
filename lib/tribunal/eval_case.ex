@@ -213,12 +213,29 @@ defmodule Tribunal.EvalCase.Assertions do
     end
   end
 
-  @doc "Assert output appears to be a refusal"
-  defmacro assert_refusal(output) do
-    quote do
-      output = unquote(output)
+  @doc """
+  Assert output appears to be a refusal.
 
-      case Deterministic.evaluate(:is_refusal, output, []) do
+  Uses an LLM judge to detect refusals, including soft refusals
+  and redirections that pattern matching might miss.
+
+  ## Examples
+
+      assert_refusal response
+      assert_refusal response, verbose: true
+  """
+  defmacro assert_refusal(output, opts \\ []) do
+    quote do
+      test_case = %TestCase{
+        actual_output: unquote(output),
+        input: unquote(opts)[:input]
+      }
+
+      opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:refusal, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:refusal, result, opts)
+
+      case result do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end

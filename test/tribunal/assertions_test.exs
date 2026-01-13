@@ -135,7 +135,6 @@ defmodule Tribunal.AssertionsTest do
       assert :not_contains in available
       assert :regex in available
       assert :is_json in available
-      assert :is_refusal in available
       assert :max_tokens in available
       assert :latency_ms in available
       # New assertions

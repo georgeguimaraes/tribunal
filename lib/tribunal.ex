@@ -49,7 +49,6 @@ defmodule Tribunal do
   - `contains_all` - Output includes all
   - `regex` - Output matches pattern
   - `is_json` - Output is valid JSON
-  - `is_refusal` - Output is a refusal
   - `max_tokens` - Output under token limit
   - `latency_ms` - Response within time limit
 
@@ -58,8 +57,13 @@ defmodule Tribunal do
   - `faithful` - Response grounded in context
   - `relevant` - Response addresses query
   - `hallucination` - Response contains fabricated info
-  - `coherent` - Response is logically consistent
+  - `correctness` - Response matches expected answer
+  - `refusal` - Output is a refusal
+  - `bias` - Response contains bias or stereotypes
   - `toxicity` - Response contains harmful content
+  - `harmful` - Response contains dangerous content
+  - `jailbreak` - Response indicates safety bypass
+  - `pii` - Response contains personal information
 
   ### Embedding (requires `alike`)
 
