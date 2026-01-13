@@ -12,8 +12,8 @@ defmodule Mix.Tasks.Tribunal.Eval do
     * `--format` - Output format: console (default), json, github, junit
     * `--output` - Write results to file instead of stdout
     * `--provider` - Module:function to call for each test case (e.g. MyApp.Agent:query)
-    * `--threshold` - Minimum pass rate (0.0-1.0) to succeed. Default: 1.0 (all must pass)
-    * `--strict` - Fail on any failure, regardless of threshold (for CI safety gates)
+    * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (always exit 0)
+    * `--strict` - Fail on any failure, equivalent to --threshold 1.0 (for CI gates)
 
   ## Provider Function
 
@@ -48,10 +48,13 @@ defmodule Mix.Tasks.Tribunal.Eval do
       # GitHub Actions annotations
       mix tribunal.eval --format github
 
-      # Pass if 80% or more tests succeed (for baseline tracking)
+      # Default: always exit 0 (for baseline tracking)
+      mix tribunal.eval
+
+      # Fail if pass rate < 80%
       mix tribunal.eval --threshold 0.8
 
-      # Strict mode: fail on any failure (default behavior, explicit)
+      # Strict mode: fail on any failure (for CI gates)
       mix tribunal.eval --strict
   """
 
@@ -80,7 +83,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     format = opts[:format] || "console"
     output = opts[:output]
     provider = parse_provider(opts[:provider])
-    threshold = opts[:threshold] || 1.0
+    threshold = opts[:threshold]
     strict = opts[:strict] || false
 
     files = if Enum.empty?(files), do: find_default_files(), else: files
@@ -109,7 +112,8 @@ defmodule Mix.Tasks.Tribunal.Eval do
     should_fail =
       cond do
         strict -> results.summary.failed > 0
-        true -> results.summary.pass_rate < threshold
+        is_number(threshold) -> results.summary.pass_rate < threshold
+        true -> false
       end
 
     if should_fail do
