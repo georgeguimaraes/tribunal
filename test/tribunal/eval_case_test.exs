@@ -188,9 +188,6 @@ defmodule Tribunal.EvalCaseTest do
     end
   end
 
-  # Note: refute_pii/1 and refute_toxic/1 now use LLM-based evaluation.
-  # Tests for the /2 variants with mock clients are in the LLM assertions section below.
-
   describe "assert_url/1" do
     test "passes with valid URL" do
       assert_url("https://example.com")
