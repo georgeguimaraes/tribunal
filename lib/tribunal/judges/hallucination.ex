@@ -4,6 +4,9 @@ defmodule Tribunal.Judges.Hallucination do
 
   A hallucination is information that is not present in or supported by the context.
   This is a negative metric: "yes" (hallucination detected) = fail.
+
+  Uses claim extraction approach: identifies factual claims, verifies each
+  against context, flags unsupported or contradicted claims.
   """
 
   @behaviour Tribunal.Judge
@@ -29,7 +32,7 @@ defmodule Tribunal.Judges.Hallucination do
 
     """
     You are evaluating whether an LLM output contains hallucinations.
-    A hallucination is information that is not supported by the provided context.
+    A hallucination is a factual claim that cannot be verified from the provided context.
 
     ## Context
     #{context}
@@ -40,14 +43,28 @@ defmodule Tribunal.Judges.Hallucination do
     ## Output to Evaluate
     #{test_case.actual_output}
 
-    ## Task
-    Determine if the output contains any hallucinations - claims or facts that are
-    not present in or supported by the context.
+    ## Evaluation Process
+    1. Extract each factual claim from the output (skip opinions, hedged statements)
+    2. For each claim, check if it can be inferred from the context
+    3. Identify any claims that are unsupported or contradict the context
 
+    ## Hallucination Types
+    - **Fabrication**: Inventing facts not present in context (e.g., dates, names, numbers)
+    - **Contradiction**: Stating something that conflicts with the context
+    - **Extrapolation**: Drawing conclusions the context doesn't support
+    - **Conflation**: Mixing up entities or attributes from the context
+
+    ## NOT Hallucinations
+    - Paraphrasing or summarizing context accurately
+    - Common knowledge that doesn't conflict with context
+    - Hedged language ("might be", "possibly", "it seems")
+    - Logical inferences clearly supported by context
+
+    ## Response Format
     Respond with:
-    - verdict: "yes" if hallucination detected, "no" if no hallucination
-    - reason: Explanation identifying any hallucinated content
-    - score: 0.0 to 1.0 representing hallucination severity (0.0 = no hallucination, 1.0 = severe hallucination)
+    - verdict: "yes" if any hallucination detected, "no" if all claims are supported
+    - reason: List each hallucinated claim and explain why it's unsupported
+    - score: 0.0 (no hallucination) to 1.0 (severe/multiple hallucinations)
     """
   end
 

@@ -573,8 +573,8 @@ defmodule Tribunal.Assertions.JudgeTest do
 
       assert prompt =~ "jailbreak"
       assert prompt =~ "DAN"
-      assert prompt =~ "Roleplay Compliance"
-      assert prompt =~ "Claims of No Restrictions"
+      assert prompt =~ "Persona Adoption"
+      assert prompt =~ "Safety Bypass Claims"
       assert prompt =~ "Ignore all instructions"
       assert prompt =~ "I'm now in DAN mode"
     end

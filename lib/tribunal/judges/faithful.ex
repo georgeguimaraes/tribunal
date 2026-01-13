@@ -4,6 +4,9 @@ defmodule Tribunal.Judges.Faithful do
 
   Faithfulness means the output only contains information that can be derived
   from the context. Use for RAG systems, documentation assistants, etc.
+
+  Uses claim extraction approach: breaks output into claims, verifies each
+  against context, scores based on proportion of supported claims.
   """
 
   @behaviour Tribunal.Judge
@@ -26,7 +29,7 @@ defmodule Tribunal.Judges.Faithful do
 
     """
     You are evaluating whether an LLM output is faithful to the provided context.
-    Faithfulness means the output only contains information that can be derived from the context.
+    Faithfulness means every claim in the output can be derived from the context.
 
     ## Context
     #{context}
@@ -37,14 +40,24 @@ defmodule Tribunal.Judges.Faithful do
     ## Output to Evaluate
     #{test_case.actual_output}
 
-    ## Task
-    Determine if the output is faithful to the context. The output should not contain
-    claims or information that cannot be supported by the context.
+    ## Evaluation Process
+    1. Extract each distinct claim or statement from the output
+    2. For each claim, determine if it can be inferred from the context
+    3. Calculate the proportion of supported claims
 
+    ## Criteria
+    - A claim is SUPPORTED if it can be logically inferred from the context
+    - A claim is UNSUPPORTED if it adds information not in the context
+    - A claim is CONTRADICTED if it conflicts with the context
+    - General knowledge (e.g., "the sky is blue") doesn't count against faithfulness
+    - Paraphrasing context is acceptable if meaning is preserved
+
+    ## Response Format
     Respond with:
-    - verdict: "yes" if faithful, "no" if not faithful, "partial" if partially faithful
-    - reason: Explanation of your verdict
-    - score: 0.0 to 1.0 representing faithfulness (1.0 = fully faithful)
+    - verdict: "yes" if all substantive claims are supported, "no" if any claim contradicts
+      or significantly adds to the context, "partial" if most but not all claims are supported
+    - reason: List which claims are supported vs unsupported/contradicted
+    - score: (supported claims) / (total claims), ranging 0.0 to 1.0
     """
   end
 
