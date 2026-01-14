@@ -1,4 +1,4 @@
-# Tribunal
+# Tribunal ⚖️
 
 LLM evaluation framework for Elixir.
 
