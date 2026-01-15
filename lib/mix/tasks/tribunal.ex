@@ -266,12 +266,23 @@ defmodule Mix.Tasks.Tribunal.Init do
   use Mix.Task
 
   @impl Mix.Task
-  def run(_args) do
-    create_dir("test/evals")
-    create_dir("test/evals/datasets")
+  def run(_args), do: run([], base_dir: ".")
 
-    create_file("test/evals/datasets/example.json", example_dataset_json())
-    create_file("test/evals/datasets/example.yaml", example_dataset_yaml())
+  @doc """
+  Run the init task with options.
+
+  ## Options
+
+    * `:base_dir` - Base directory for creating the eval structure. Defaults to current directory.
+  """
+  def run(_args, opts) do
+    base_dir = Keyword.get(opts, :base_dir, ".")
+
+    create_dir(Path.join(base_dir, "test/evals"))
+    create_dir(Path.join(base_dir, "test/evals/datasets"))
+
+    create_file(Path.join(base_dir, "test/evals/datasets/example.json"), example_dataset_json())
+    create_file(Path.join(base_dir, "test/evals/datasets/example.yaml"), example_dataset_yaml())
 
     Mix.shell().info("""
 
