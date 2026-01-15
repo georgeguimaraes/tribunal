@@ -70,6 +70,7 @@ jobs:
         run: mix hex.publish --yes
 
       - name: Mark release PR as tagged
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
