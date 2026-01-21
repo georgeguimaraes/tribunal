@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.1.1](https://github.com/georgeguimaraes/tribunal/compare/v1.1.0...v1.1.1) (2026-01-21)
+
+
+### Miscellaneous
+
+* **deps-dev:** bump ex_doc from 0.39.3 to 0.40.0 ([#7](https://github.com/georgeguimaraes/tribunal/issues/7)) ([e32af86](https://github.com/georgeguimaraes/tribunal/commit/e32af86c620da726dd137b70e4afc1b64ee2a223))
+* **deps:** bump actions/cache from 3 to 5 ([#5](https://github.com/georgeguimaraes/tribunal/issues/5)) ([bb8612d](https://github.com/georgeguimaraes/tribunal/commit/bb8612df06d7ab8fe680fff53166c656dde66990))
+* **deps:** bump actions/checkout from 4 to 6 ([#6](https://github.com/georgeguimaraes/tribunal/issues/6)) ([488c229](https://github.com/georgeguimaraes/tribunal/commit/488c2292c0a9a18a8c31b7669d79e6b9e5da85b9))
+* **deps:** bump amannn/action-semantic-pull-request from 5 to 6 ([#4](https://github.com/georgeguimaraes/tribunal/issues/4)) ([f153bc5](https://github.com/georgeguimaraes/tribunal/commit/f153bc55b85f7eaca3d832f5df1584d637b03f15))
+* sync release-please config with arcana ([3b6c6a6](https://github.com/georgeguimaraes/tribunal/commit/3b6c6a6618df9d0b4b6616e229e1300cd17af5fa))
+
+
+### Code Refactoring
+
+* **ci:** use release-please for GitHub releases ([7e6dd6e](https://github.com/georgeguimaraes/tribunal/commit/7e6dd6e535f1cd79aa691197cc9ccda7d277a8d2))
+* **ci:** use shared workflows from georgeguimaraes/workflows ([b7fe021](https://github.com/georgeguimaraes/tribunal/commit/b7fe0212dc24b4b5d2cad36644c65f4f3ebec2d0))
+
+
+### Continuous Integration
+
+* add dependabot for mix and github-actions ([adbd1fb](https://github.com/georgeguimaraes/tribunal/commit/adbd1fbede74ba16cf7e8076795388542a1f0d05))
+
 ## [1.1.0](https://github.com/georgeguimaraes/tribunal/compare/v1.0.0...v1.1.0) (2026-01-15)
 
 
