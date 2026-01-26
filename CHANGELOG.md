@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.2](https://github.com/georgeguimaraes/tribunal/compare/v1.1.1...v1.1.2) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** chain hex-publish in release-please workflow ([e8c8c59](https://github.com/georgeguimaraes/tribunal/commit/e8c8c59246dc109f21ab95aea379803002461924))
+
+
+### Miscellaneous
+
+* **deps:** bump req_llm from 1.2.0 to 1.3.0 ([#8](https://github.com/georgeguimaraes/tribunal/issues/8)) ([1d13a54](https://github.com/georgeguimaraes/tribunal/commit/1d13a54cfe2419bf9f9cb08114a9338b0cfcab3a))
+* remove unused on-release workflow ([6a15c78](https://github.com/georgeguimaraes/tribunal/commit/6a15c78d5860baf3b048589f13073ea84dbebd26))
+
 ## [1.1.1](https://github.com/georgeguimaraes/tribunal/compare/v1.1.0...v1.1.1) (2026-01-21)
 
 
