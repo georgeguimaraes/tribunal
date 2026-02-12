@@ -93,14 +93,20 @@ defmodule Tribunal.Reporter.Console do
   end
 
   defp format_failure_row({c, idx}) do
-    input = String.slice(c.input, 0, 50)
-
     reasons =
       Enum.map_join(c.failures, "\n", fn {type, reason} -> "     ├─ #{type}: #{reason}" end)
 
+    output_line =
+      if c[:actual_output] do
+        output = String.slice(to_string(c.actual_output), 0, 200)
+        "\n     └─ output: #{output}"
+      else
+        ""
+      end
+
     """
-      #{idx}. "#{input}"
-    #{reasons}
+      #{idx}. "#{c.input}"
+    #{reasons}#{output_line}
     """
   end
 
@@ -212,14 +218,20 @@ defmodule Tribunal.Reporter.Text do
   end
 
   defp format_failure_row({c, idx}) do
-    input = String.slice(c.input, 0, 50)
-
     reasons =
       Enum.map_join(c.failures, "\n", fn {type, reason} -> "     |- #{type}: #{reason}" end)
 
+    output_line =
+      if c[:actual_output] do
+        output = String.slice(to_string(c.actual_output), 0, 200)
+        "\n     \\- output: #{output}"
+      else
+        ""
+      end
+
     """
-      #{idx}. "#{input}"
-    #{reasons}
+      #{idx}. "#{c.input}"
+    #{reasons}#{output_line}
     """
   end
 
@@ -310,7 +322,8 @@ defmodule Tribunal.Reporter.GitHub do
       |> Enum.filter(&(&1.status == :failed))
       |> Enum.map(fn c ->
         reasons = Enum.map_join(c.failures, "; ", fn {type, reason} -> "#{type}: #{reason}" end)
-        "::error::#{c.input}: #{reasons}"
+        output_suffix = if c[:actual_output], do: " | output: #{c.actual_output}", else: ""
+        "::error::#{c.input}: #{reasons}#{output_suffix}"
       end)
 
     summary =
@@ -352,9 +365,12 @@ defmodule Tribunal.Reporter.JUnit do
     name = escape_xml(c.input)
     time = (c.duration_ms || 0) / 1000
 
+    output_line = if c[:actual_output], do: "\nOutput: #{c.actual_output}", else: ""
+
     failure_msg =
       c.failures
       |> Enum.map_join("\n", fn {type, reason} -> "#{type}: #{reason}" end)
+      |> Kernel.<>(output_line)
       |> escape_xml()
 
     """
@@ -533,10 +549,18 @@ defmodule Tribunal.Reporter.HTML do
         "<code>#{escape_html(to_string(type))}</code>: #{escape_html(reason)}"
       end)
 
+    output_html =
+      if c[:actual_output] do
+        ~s(<div class="failure-output"><strong>Output:</strong> #{escape_html(to_string(c.actual_output))}</div>)
+      else
+        ""
+      end
+
     """
     <div class="failure">
       <div class="failure-input">#{escape_html(c.input)}</div>
       <div class="failure-reason">#{reasons}</div>
+      #{output_html}
     </div>
     """
   end

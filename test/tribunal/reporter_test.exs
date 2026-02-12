@@ -18,12 +18,14 @@ defmodule Tribunal.ReporterTest do
     cases: [
       %{
         input: "What's the return policy?",
+        actual_output: "You can return items within 30 days with a receipt.",
         status: :passed,
         failures: [],
         duration_ms: 100
       },
       %{
         input: "Do you ship internationally?",
+        actual_output: "We ship worldwide to over 100 countries.",
         status: :failed,
         failures: [
           {:faithful, "Score 0.5 below threshold 0.8"},
@@ -33,6 +35,7 @@ defmodule Tribunal.ReporterTest do
       },
       %{
         input: "What are the store hours?",
+        actual_output: "We are open 24/7.",
         status: :failed,
         failures: [{:hallucination, "Detected unsupported claim"}],
         duration_ms: 150
@@ -63,6 +66,11 @@ defmodule Tribunal.ReporterTest do
       output = Console.format(@sample_results)
       assert output =~ "Do you ship internationally?"
       assert output =~ "faithful"
+    end
+
+    test "includes actual output in failed cases" do
+      output = Console.format(@sample_results)
+      assert output =~ "output: We ship worldwide to over 100 countries."
     end
 
     test "shows FAILED status" do
@@ -123,6 +131,11 @@ defmodule Tribunal.ReporterTest do
       output = GitHub.format(@sample_results)
       assert output =~ "faithful"
     end
+
+    test "includes actual output in annotations" do
+      output = GitHub.format(@sample_results)
+      assert output =~ "output: We ship worldwide to over 100 countries."
+    end
   end
 
   describe "JUnit.format/1" do
@@ -151,6 +164,11 @@ defmodule Tribunal.ReporterTest do
       output = JUnit.format(@sample_results)
       assert output =~ "<failure"
       assert output =~ "faithful"
+    end
+
+    test "includes actual output in failure message" do
+      output = JUnit.format(@sample_results)
+      assert output =~ "Output: We ship worldwide to over 100 countries."
     end
 
     test "escapes XML special characters" do

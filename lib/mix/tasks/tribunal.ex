@@ -197,6 +197,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
     %{
       input: test_case.input,
+      actual_output: test_case.actual_output,
       status: if(Enum.empty?(failures), do: :passed, else: :failed),
       failures: failures,
       results: results,
