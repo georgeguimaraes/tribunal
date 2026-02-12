@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
     * `--format` - Output format: console (default), text, json, html, github, junit
     * `--output` - Write results to file instead of stdout
-    * `--provider` - Module:function to call for each test case (e.g. MyApp.Agent:query)
+    * `--provider` - Module.function to call for each test case (e.g. MyApp.Agent.query)
     * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (always exit 0)
     * `--strict` - Fail on any failure, equivalent to --threshold 1.0 (for CI gates)
     * `--concurrency` - Number of test cases to run in parallel. Default: 1 (sequential)
@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
       mix tribunal.eval test/evals/datasets/questions.json
 
       # Run with a provider to generate outputs
-      mix tribunal.eval --provider MyApp.Agent:query
+      mix tribunal.eval --provider MyApp.Agent.query
 
       # Output JSON for CI
       mix tribunal.eval --format json --output results.json
@@ -155,12 +155,12 @@ defmodule Mix.Tasks.Tribunal.Eval do
   defp parse_provider(nil), do: nil
 
   defp parse_provider(str) do
-    case String.split(str, ":") do
-      [mod, fun] ->
-        {Module.concat([mod]), String.to_atom(fun)}
+    case str |> String.split(".") |> List.pop_at(-1) do
+      {fun, [_ | _] = mod_parts} ->
+        {Module.concat(mod_parts), String.to_atom(fun)}
 
       _ ->
-        Mix.raise("Invalid provider format. Use Module:function (e.g. MyApp.RAG:query)")
+        Mix.raise("Invalid provider format. Use Module.function (e.g. MyApp.RAG.query)")
     end
   end
 

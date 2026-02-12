@@ -181,7 +181,7 @@ mix tribunal.eval
 mix tribunal.eval test/evals/datasets/questions.json
 
 # With provider
-mix tribunal.eval --provider MyApp.RAG:query
+mix tribunal.eval --provider MyApp.RAG.query
 
 # Output formats
 mix tribunal.eval --format json --output results.json

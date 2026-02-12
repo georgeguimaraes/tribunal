@@ -46,7 +46,7 @@ defmodule Mix.Tasks.TribunalTest do
       assert moduledoc =~ "junit"
       assert moduledoc =~ "github"
       assert moduledoc =~ "--provider"
-      assert moduledoc =~ "Module:function"
+      assert moduledoc =~ "Module.function"
       assert moduledoc =~ "--output"
       assert moduledoc =~ "--threshold"
       assert moduledoc =~ "--strict"

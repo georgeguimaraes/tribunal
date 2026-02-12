@@ -195,7 +195,7 @@ tribunal_eval "test/evals/datasets/questions.json",
 ### Evaluation Mode
 
 ```bash
-mix tribunal.eval --provider MyApp.RAG:query
+mix tribunal.eval --provider MyApp.RAG.query
 ```
 
 The provider receives a `Tribunal.TestCase` struct with `input` and `context`, and returns the actual output string.
