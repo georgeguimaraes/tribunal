@@ -63,7 +63,7 @@ defmodule Tribunal.Assertions.Embedding do
 
   defp default_similarity(sentence1, sentence2, opts) do
     if Code.ensure_loaded?(Alike) do
-      Alike.similarity(sentence1, sentence2, opts)
+      apply(Alike, :similarity, [sentence1, sentence2, opts])
     else
       {:error, "alike is not available. Add {:alike, \"~> 0.4\"} to your dependencies."}
     end

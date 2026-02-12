@@ -100,16 +100,16 @@ defmodule Tribunal.Assertions.Judge do
     if Code.ensure_loaded?(ReqLLM) do
       context =
         Enum.map(messages, fn
-          %{role: "system", content: content} -> ReqLLM.Context.system(content)
-          %{role: "user", content: content} -> ReqLLM.Context.user(content)
-          %{role: "assistant", content: content} -> ReqLLM.Context.assistant(content)
+          %{role: "system", content: content} -> apply(ReqLLM.Context, :system, [content])
+          %{role: "user", content: content} -> apply(ReqLLM.Context, :user, [content])
+          %{role: "assistant", content: content} -> apply(ReqLLM.Context, :assistant, [content])
         end)
 
       llm_opts = Keyword.take(opts, [:temperature, :max_tokens])
 
-      case ReqLLM.generate_object(model, context, @schema, llm_opts) do
+      case apply(ReqLLM, :generate_object, [model, context, @schema, llm_opts]) do
         {:ok, response} ->
-          {:ok, ReqLLM.Response.object(response)}
+          {:ok, apply(ReqLLM.Response, :object, [response])}
 
         {:error, error} ->
           {:error, inspect(error)}
