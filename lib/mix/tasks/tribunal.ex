@@ -15,6 +15,8 @@ defmodule Mix.Tasks.Tribunal.Eval do
     * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (always exit 0)
     * `--strict` - Fail on any failure, equivalent to --threshold 1.0 (for CI gates)
     * `--concurrency` - Number of test cases to run in parallel. Default: 1 (sequential)
+    * `--limit` - Maximum number of test cases to evaluate
+    * `--offset` - Number of test cases to skip before evaluating. Default: 0
 
   ## Provider Function
 
@@ -60,6 +62,12 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
       # Run 5 test cases in parallel
       mix tribunal.eval --concurrency 5
+
+      # Evaluate only the first 50 cases
+      mix tribunal.eval --limit 50
+
+      # Skip 30 cases, then evaluate the next 50
+      mix tribunal.eval --offset 30 --limit 50
   """
 
   use Mix.Task
@@ -78,7 +86,9 @@ defmodule Mix.Tasks.Tribunal.Eval do
           provider: :string,
           threshold: :float,
           strict: :boolean,
-          concurrency: :integer
+          concurrency: :integer,
+          limit: :integer,
+          offset: :integer
         ]
       )
 
@@ -91,6 +101,8 @@ defmodule Mix.Tasks.Tribunal.Eval do
     threshold = opts[:threshold]
     strict = opts[:strict] || false
     concurrency = opts[:concurrency] || 1
+    limit = opts[:limit]
+    offset = opts[:offset] || 0
 
     files = if Enum.empty?(files), do: find_default_files(), else: files
 
@@ -103,7 +115,10 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
     results =
       files
-      |> Enum.flat_map(&load_and_run(&1, provider, concurrency))
+      |> Enum.flat_map(&load_dataset/1)
+      |> Enum.drop(offset)
+      |> then(fn cases -> if limit, do: Enum.take(cases, limit), else: cases end)
+      |> run_cases(provider, concurrency)
       |> aggregate_results(start_time)
 
     # Determine pass/fail based on threshold
@@ -149,11 +164,12 @@ defmodule Mix.Tasks.Tribunal.Eval do
     end
   end
 
-  defp load_and_run(path, provider, concurrency) do
+  defp load_dataset(path) do
     Mix.shell().info("Loading #{path}...")
+    Tribunal.Dataset.load_with_assertions!(path)
+  end
 
-    cases = Tribunal.Dataset.load_with_assertions!(path)
-
+  defp run_cases(cases, provider, concurrency) do
     if concurrency > 1 do
       cases
       |> Task.async_stream(
