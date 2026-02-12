@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/georgeguimaraes/tribunal/compare/v1.2.0...v1.3.0) (2026-02-12)
+
+
+### Features
+
+* add --limit and --offset options to mix tribunal.eval ([5f392fa](https://github.com/georgeguimaraes/tribunal/commit/5f392fa164faa7fd24a6b66b52b0ba9dedc1069e))
+
 ## [1.2.0](https://github.com/georgeguimaraes/tribunal/compare/v1.1.1...v1.2.0) (2026-02-12)
 
 
