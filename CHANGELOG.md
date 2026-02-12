@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.2.0](https://github.com/georgeguimaraes/tribunal/compare/v1.1.1...v1.2.0) (2026-02-12)
+
+
+### Features
+
+* include actual_output in eval results and all reporters ([559bdc7](https://github.com/georgeguimaraes/tribunal/commit/559bdc7f07bccbcf0246be5ed9786414ef93c0f7))
+
+
+### Bug Fixes
+
+* **ci:** chain hex-publish in release-please workflow ([e8c8c59](https://github.com/georgeguimaraes/tribunal/commit/e8c8c59246dc109f21ab95aea379803002461924))
+
+
+### Miscellaneous
+
+* **deps-dev:** bump credo from 1.7.15 to 1.7.16 ([#10](https://github.com/georgeguimaraes/tribunal/issues/10)) ([0ea9825](https://github.com/georgeguimaraes/tribunal/commit/0ea98259c1030add19561186e01c8d62a3f60bc5))
+* **deps-dev:** bump ex_doc from 0.40.0 to 0.40.1 ([#11](https://github.com/georgeguimaraes/tribunal/issues/11)) ([18f6fcd](https://github.com/georgeguimaraes/tribunal/commit/18f6fcd8b6f0b98e189483213174508bf0f0159c))
+* **deps:** bump req_llm from 1.2.0 to 1.3.0 ([#8](https://github.com/georgeguimaraes/tribunal/issues/8)) ([1d13a54](https://github.com/georgeguimaraes/tribunal/commit/1d13a54cfe2419bf9f9cb08114a9338b0cfcab3a))
+* **deps:** bump req_llm from 1.3.0 to 1.5.1 ([#13](https://github.com/georgeguimaraes/tribunal/issues/13)) ([7995052](https://github.com/georgeguimaraes/tribunal/commit/7995052900d23aba5c29574cf170b2ed4f7f05ba))
+* remove unused on-release workflow ([6a15c78](https://github.com/georgeguimaraes/tribunal/commit/6a15c78d5860baf3b048589f13073ea84dbebd26))
+
 ## [1.1.1](https://github.com/georgeguimaraes/tribunal/compare/v1.1.0...v1.1.1) (2026-01-21)
 
 
