@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/georgeguimaraes/tribunal/compare/v1.3.1...v1.3.2) (2026-02-12)
+
+
+### Code Refactoring
+
+* use dot notation for --provider option ([5a9dfdb](https://github.com/georgeguimaraes/tribunal/commit/5a9dfdbafade22ee0c5b518893032ceead0a2776))
+
 ## [1.3.1](https://github.com/georgeguimaraes/tribunal/compare/v1.3.0...v1.3.1) (2026-02-12)
 
 
