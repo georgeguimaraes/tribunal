@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/georgeguimaraes/tribunal/compare/v1.3.0...v1.3.1) (2026-02-12)
+
+
+### Bug Fixes
+
+* silence compile warnings for optional dependencies ([8515874](https://github.com/georgeguimaraes/tribunal/commit/85158747902d9517db36efec5ae8a052ac741602))
+
 ## [1.3.0](https://github.com/georgeguimaraes/tribunal/compare/v1.2.0...v1.3.0) (2026-02-12)
 
 
