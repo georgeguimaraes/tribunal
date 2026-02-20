@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.3](https://github.com/georgeguimaraes/tribunal/compare/v1.3.2...v1.3.3) (2026-02-20)
+
+
+### Miscellaneous
+
+* **deps:** bump alike from 0.4.0 to 0.4.2 ([#17](https://github.com/georgeguimaraes/tribunal/issues/17)) ([4d038bb](https://github.com/georgeguimaraes/tribunal/commit/4d038bbbf9ac2296b73f800bb10fdb120337b8b5))
+* **deps:** bump req_llm from 1.5.1 to 1.6.0 ([#20](https://github.com/georgeguimaraes/tribunal/issues/20)) ([51bff91](https://github.com/georgeguimaraes/tribunal/commit/51bff91cc43c83fb7a86f83f1c57b18c8222def8))
+* **deps:** bump yaml_elixir from 2.12.0 to 2.12.1 ([#18](https://github.com/georgeguimaraes/tribunal/issues/18)) ([1e1e9ec](https://github.com/georgeguimaraes/tribunal/commit/1e1e9ec6f81413ec32c5a03e81dab35983772031))
+
 ## [1.3.2](https://github.com/georgeguimaraes/tribunal/compare/v1.3.1...v1.3.2) (2026-02-12)
 
 
