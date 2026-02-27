@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.4](https://github.com/georgeguimaraes/tribunal/compare/v1.3.3...v1.3.4) (2026-02-27)
+
+
+### Bug Fixes
+
+* align metric bar rows in CLI output ([43db3aa](https://github.com/georgeguimaraes/tribunal/commit/43db3aa28ac5a043873dd67883e89447bb2255ef))
+
 ## [1.3.3](https://github.com/georgeguimaraes/tribunal/compare/v1.3.2...v1.3.3) (2026-02-20)
 
 
