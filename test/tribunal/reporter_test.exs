@@ -83,6 +83,48 @@ defmodule Tribunal.ReporterTest do
       output = Console.format(passing_results)
       assert output =~ "PASSED"
     end
+
+    test "aligns metric bars across rows" do
+      results = %{
+        @sample_results
+        | metrics: %{
+            accuracy: %{passed: 1, total: 5},
+            faithfulness: %{passed: 10, total: 10}
+          }
+      }
+
+      output = Console.format(results)
+      lines = output |> String.split("\n") |> Enum.filter(&String.contains?(&1, "passed"))
+      bar_parts = Enum.map(lines, fn line -> String.slice(line, 16..-1//1) end)
+      lengths = Enum.map(bar_parts, &String.length/1)
+      assert length(lengths) == 2
+
+      assert Enum.uniq(lengths) |> length() == 1,
+             "bar rows have different lengths: #{inspect(bar_parts)}"
+    end
+  end
+
+  describe "Text.format/1" do
+    test "aligns metric bars across rows" do
+      alias Tribunal.Reporter.Text
+
+      results = %{
+        @sample_results
+        | metrics: %{
+            accuracy: %{passed: 1, total: 5},
+            faithfulness: %{passed: 10, total: 10}
+          }
+      }
+
+      output = Text.format(results)
+      lines = output |> String.split("\n") |> Enum.filter(&String.contains?(&1, "passed"))
+      bar_parts = Enum.map(lines, fn line -> String.slice(line, 16..-1//1) end)
+      lengths = Enum.map(bar_parts, &String.length/1)
+      assert length(lengths) == 2
+
+      assert Enum.uniq(lengths) |> length() == 1,
+             "bar rows have different lengths: #{inspect(bar_parts)}"
+    end
   end
 
   describe "JSON.format/1" do

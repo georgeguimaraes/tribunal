@@ -63,7 +63,9 @@ defmodule Tribunal.Reporter.Console do
       Enum.map_join(metrics, "\n", fn {name, data} ->
         rate = if data.total > 0, do: data.passed / data.total, else: 0
         bar = progress_bar(rate, 20)
-        "  #{pad(name, 14)} #{data.passed}/#{data.total} passed   #{round(rate * 100)}%   #{bar}"
+        counts = String.pad_leading("#{data.passed}/#{data.total}", 7)
+        pct = String.pad_leading("#{round(rate * 100)}%", 4)
+        "  #{pad(name, 14)} #{counts} passed  #{pct}  #{bar}"
       end)
 
     """
@@ -188,7 +190,9 @@ defmodule Tribunal.Reporter.Text do
       Enum.map_join(metrics, "\n", fn {name, data} ->
         rate = if data.total > 0, do: data.passed / data.total, else: 0
         bar = progress_bar(rate, 20)
-        "  #{pad(name, 14)} #{data.passed}/#{data.total} passed   #{round(rate * 100)}%   #{bar}"
+        counts = String.pad_leading("#{data.passed}/#{data.total}", 7)
+        pct = String.pad_leading("#{round(rate * 100)}%", 4)
+        "  #{pad(name, 14)} #{counts} passed  #{pct}  #{bar}"
       end)
 
     """
