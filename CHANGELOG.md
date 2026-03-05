@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.5](https://github.com/georgeguimaraes/tribunal/compare/v1.3.4...v1.3.5) (2026-03-05)
+
+
+### Miscellaneous
+
+* **deps-dev:** bump credo from 1.7.16 to 1.7.17 ([#22](https://github.com/georgeguimaraes/tribunal/issues/22)) ([73d0c5a](https://github.com/georgeguimaraes/tribunal/commit/73d0c5ae0c373660cfde2255a6776f2e61ebb211))
+
 ## [1.3.4](https://github.com/georgeguimaraes/tribunal/compare/v1.3.3...v1.3.4) (2026-02-27)
 
 
