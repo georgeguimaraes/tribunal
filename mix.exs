@@ -1,7 +1,7 @@
 defmodule Tribunal.MixProject do
   use Mix.Project
 
-  @version "1.3.5"
+  @version "1.3.6"
   @source_url "https://github.com/georgeguimaraes/tribunal"
 
   def project do
