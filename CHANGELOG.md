@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.6](https://github.com/georgeguimaraes/tribunal/compare/v1.3.5...v1.3.6) (2026-04-24)
+
+
+### Miscellaneous
+
+* **deps-dev:** bump credo from 1.7.17 to 1.7.18 ([#29](https://github.com/georgeguimaraes/tribunal/issues/29)) ([a5e0fb8](https://github.com/georgeguimaraes/tribunal/commit/a5e0fb84e9fc5299803476e9a1599f1933f6750d))
+* **deps:** bump alike from 0.4.2 to 0.4.3 ([#28](https://github.com/georgeguimaraes/tribunal/issues/28)) ([ac308cf](https://github.com/georgeguimaraes/tribunal/commit/ac308cfde071f094b297ffc81a363b244b262b5a))
+* **deps:** bump googleapis/release-please-action from 4 to 5 ([#31](https://github.com/georgeguimaraes/tribunal/issues/31)) ([ff05425](https://github.com/georgeguimaraes/tribunal/commit/ff054259bb333b03e6dd1b76ae5995be8c2e2488))
+* **deps:** bump req_llm from 1.6.0 to 1.8.0 ([#25](https://github.com/georgeguimaraes/tribunal/issues/25)) ([f3f5d49](https://github.com/georgeguimaraes/tribunal/commit/f3f5d49b01a899bd251343731b6f083bb35d7e47))
+* **deps:** bump req_llm from 1.8.0 to 1.10.0 ([#30](https://github.com/georgeguimaraes/tribunal/issues/30)) ([b6ea776](https://github.com/georgeguimaraes/tribunal/commit/b6ea77600175ed41ff55695ce106468c5a458411))
+
 ## [1.3.5](https://github.com/georgeguimaraes/tribunal/compare/v1.3.4...v1.3.5) (2026-03-05)
 
 
