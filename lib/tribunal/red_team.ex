@@ -43,6 +43,69 @@ defmodule Tribunal.RedTeam do
       end
   """
 
+  alias Tribunal.RedTeam.Plugin
+
+  @doc """
+  Generates red-team attacks via configured plugins.
+
+  Plugin-driven counterpart to `generate_attacks/2`. Where `generate_attacks/2`
+  returns static template-wrapped versions of a single prompt, `generate/1`
+  asks plugin modules (each backed by an attacker LLM or a static corpus) to
+  produce adversarial cases tailored to a specific assistant.
+
+  Each returned case is a regular Tribunal dataset entry with `:input`,
+  `:metadata`, and `:expected` and round-trips cleanly through
+  `Tribunal.Dataset`.
+
+  ## Options
+
+    * `:plugins` — required. List of plugin ids (atoms), e.g. `[:policy]`.
+    * Plugin-specific options pass through. For example, `Plugins.Policy`
+      requires `:purpose` and `:policy`.
+
+  ## Example
+
+      {:ok, cases} = Tribunal.RedTeam.generate(
+        plugins: [:policy],
+        purpose: "Shopping assistant for a cosmetics retailer.",
+        policy: "Never give medical or financial advice."
+      )
+  """
+  def generate(opts) do
+    plugins = Keyword.fetch!(opts, :plugins)
+
+    :telemetry.span(
+      [:tribunal, :red_team, :generate],
+      %{plugins: plugins},
+      fn ->
+        result = run_plugins(plugins, opts)
+        {result, %{count: count_cases(result)}}
+      end
+    )
+  end
+
+  defp run_plugins(plugins, opts) do
+    Enum.reduce_while(plugins, {:ok, []}, fn id, {:ok, acc} ->
+      case run_plugin(id, opts) do
+        {:ok, cases} -> {:cont, {:ok, acc ++ cases}}
+        {:error, _} = err -> {:halt, err}
+      end
+    end)
+  end
+
+  defp run_plugin(id, opts) do
+    case Plugin.find(id) do
+      {:ok, module} -> wrap_plugin_error(id, module.generate(opts))
+      :error -> {:error, {:unknown_plugin, id}}
+    end
+  end
+
+  defp wrap_plugin_error(_id, {:ok, cases}), do: {:ok, cases}
+  defp wrap_plugin_error(id, {:error, reason}), do: {:error, {id, reason}}
+
+  defp count_cases({:ok, cases}), do: length(cases)
+  defp count_cases(_), do: 0
+
   @doc """
   Generates all attack variants for a given prompt.
 

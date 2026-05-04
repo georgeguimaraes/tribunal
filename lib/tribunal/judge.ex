@@ -108,7 +108,12 @@ defmodule Tribunal.Judge do
     Tribunal.Judges.Harmful,
     Tribunal.Judges.Jailbreak,
     Tribunal.Judges.PII,
-    Tribunal.Judges.Refusal
+    Tribunal.Judges.Refusal,
+    Tribunal.Judges.PolicyViolation,
+    Tribunal.Judges.Hijacked,
+    Tribunal.Judges.PromptExtracted,
+    Tribunal.Judges.ExcessiveAgency,
+    Tribunal.Judges.Imitation
   ]
 
   @doc """

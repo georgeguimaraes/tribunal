@@ -227,4 +227,72 @@ defmodule Tribunal.RedTeamTest do
       assert attack =~ "test prompt"
     end
   end
+
+  describe "generate/1" do
+    alias Tribunal.RedTeam.Attacker.Stub
+
+    setup do
+      on_exit(&Stub.clear/0)
+      :ok
+    end
+
+    test "dispatches to plugins by id and concatenates results" do
+      Stub.set_response(%{
+        attacks: [
+          %{prompt: "a1", goal: "g1"},
+          %{prompt: "a2", goal: "g2"}
+        ]
+      })
+
+      {:ok, cases} =
+        RedTeam.generate(
+          plugins: [:policy],
+          purpose: "p",
+          policy: "po",
+          count: 2,
+          attacker: Stub
+        )
+
+      assert length(cases) == 2
+      assert Enum.map(cases, & &1.input) == ["a1", "a2"]
+    end
+
+    test "returns {:error, {:unknown_plugin, id}} for an unknown plugin" do
+      assert {:error, {:unknown_plugin, :nope}} = RedTeam.generate(plugins: [:nope])
+    end
+
+    test "raises if :plugins is missing" do
+      assert_raise KeyError, fn -> RedTeam.generate([]) end
+    end
+
+    test "emits a generate span" do
+      ref = :erlang.unique_integer([:positive])
+
+      :telemetry.attach_many(
+        "generate-test-#{ref}",
+        [
+          [:tribunal, :red_team, :generate, :start],
+          [:tribunal, :red_team, :generate, :stop]
+        ],
+        fn event, _meas, meta, parent -> send(parent, {:event, event, meta}) end,
+        self()
+      )
+
+      Stub.set_response(%{attacks: [%{prompt: "x", goal: "y"}]})
+
+      {:ok, _} =
+        RedTeam.generate(
+          plugins: [:policy],
+          purpose: "p",
+          policy: "po",
+          count: 1,
+          attacker: Stub
+        )
+
+      assert_receive {:event, [:tribunal, :red_team, :generate, :start], %{plugins: [:policy]}}
+      assert_receive {:event, [:tribunal, :red_team, :generate, :stop], _}
+
+      :telemetry.detach("generate-test-#{ref}")
+    end
+  end
 end
