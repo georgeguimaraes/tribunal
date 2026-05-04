@@ -113,7 +113,8 @@ defmodule Tribunal.Judge do
     Tribunal.Judges.Hijacked,
     Tribunal.Judges.PromptExtracted,
     Tribunal.Judges.ExcessiveAgency,
-    Tribunal.Judges.Imitation
+    Tribunal.Judges.Imitation,
+    Tribunal.Judges.Hallucinated
   ]
 
   @doc """

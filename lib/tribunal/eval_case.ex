@@ -879,6 +879,40 @@ defmodule Tribunal.EvalCase.Assertions do
   end
 
   @doc """
+  Assert response did not fabricate specifics (requires req_llm).
+
+  Pairs with `Tribunal.RedTeam.Plugins.Hallucination`. Distinct from
+  `refute_hallucination/2`, which grades faithfulness against a supplied
+  context. This macro grades on the *signature* of confabulation without
+  ground truth.
+
+  ## Options
+
+    * `:purpose` - Required. The assistant's purpose text.
+    * `:query` - Optional context about the input.
+    * `:threshold` - Score threshold (default: 0.8)
+    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:model` - LLM model to use for judging
+  """
+  defmacro refute_hallucinated(output, opts) do
+    quote do
+      test_case = %TestCase{
+        actual_output: unquote(output),
+        input: unquote(opts)[:query]
+      }
+
+      opts = unquote(opts)
+      result = Tribunal.Assertions.evaluate(:hallucinated, test_case, opts)
+      Tribunal.EvalCase.Assertions.print_verbose(:hallucinated, result, opts)
+
+      case result do
+        {:pass, _} -> :ok
+        {:fail, details} -> flunk(details[:reason])
+      end
+    end
+  end
+
+  @doc """
   Assert response is correct compared to expected (requires req_llm).
 
   ## Options
