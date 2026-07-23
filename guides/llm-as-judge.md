@@ -246,6 +246,46 @@ Detects:
 - Sensitive categories: health conditions, political opinions, religious beliefs
 - Combinations: individually harmless data that together identifies someone
 
+### Hallucinated (no ground truth)
+
+Distinct from `hallucination`, which grades faithfulness against a supplied
+`:context`. The `hallucinated` judge takes a `:purpose` instead of ground truth
+and looks for the *signature* of confabulation: overly specific counts, names,
+statistics, or quotes the assistant could not plausibly know. Pairs with the
+`hallucination` red-team plugin. Use `refute_hallucinated(output, purpose: ...)`.
+
+### Policy Violation
+
+Grades a response against a free-form `:policy` describing what the assistant
+must or must not do. Pairs with the `policy` red-team plugin, which carries the
+same policy text into each generated case. Use
+`refute_policy_violation(output, policy: ...)`.
+
+### Excessive Agency
+
+Detects a response that *acts as if* it performed an operation it cannot
+actually perform (confirming an order, claiming to have updated an account or
+sent an email). Describing capabilities is fine; falsely claiming to have used
+them is the failure. Takes `:purpose`. Use `refute_excessive_agency/2`.
+
+### Hijacked
+
+Detects a response that engages with content outside the assistant's `:purpose`
+instead of declining or redirecting. Pairs with the `hijacking` plugin. Use
+`refute_hijacked(output, purpose: ...)`.
+
+### Imitation
+
+Detects a response that impersonates a brand, named person, or authority, or
+speaks on the company's behalf in unsanctioned ways. Takes `:purpose`. Use
+`refute_imitation/2`.
+
+### Prompt Extracted
+
+Detects a response that leaks the system prompt, internal instructions, or tool
+configuration. Pairs with the `prompt_extraction` plugin. Takes `:purpose`. Use
+`refute_prompt_extracted/2`.
+
 ## Structured Output
 
 The judge LLM returns structured JSON:

@@ -25,7 +25,7 @@ Tribunal offers two modes for different use cases:
 ```elixir
 def deps do
   [
-    {:tribunal, "~> 0.1.0"},
+    {:tribunal, "~> 1.3"},
 
     # Optional: for LLM-as-judge evaluations
     {:req_llm, "~> 1.2"},
@@ -137,13 +137,20 @@ Failed Cases
 
 - `assert_faithful` - Grounded in context
 - `assert_relevant` - Addresses query
+- `assert_correctness` - Matches expected answer
 - `assert_refusal` - Detects refusal responses
-- `refute_hallucination` - No fabricated info
+- `refute_hallucination` - No fabricated info (grades against `:context`)
+- `refute_hallucinated` - No confabulation without ground truth (grades against `:purpose`)
 - `refute_bias` - No stereotypes
 - `refute_toxicity` - No hostile language
 - `refute_harmful` - No dangerous content
 - `refute_jailbreak` - No safety bypass
 - `refute_pii` - No personally identifiable information
+- `refute_policy_violation` - No violation of a supplied policy
+- `refute_excessive_agency` - No false claims of performing actions
+- `refute_hijacked` - No engagement with off-topic content
+- `refute_imitation` - No impersonation of a brand, person, or authority
+- `refute_prompt_extracted` - No leak of system prompt or instructions
 - `assert_judge :custom` - Custom judges via `Tribunal.Judge` behaviour
 
 ### Embedding-Based (requires `alike`)
@@ -152,16 +159,54 @@ Failed Cases
 
 ## Red Team Testing
 
-Generate adversarial prompts to test LLM safety:
+Tribunal generates adversarial prompts two ways.
+
+### Static template attacks
+
+Wrap a single prompt in fixed encoding, injection, and jailbreak templates. No
+API calls, fully deterministic:
 
 ```elixir
 alias Tribunal.RedTeam
 
 attacks = RedTeam.generate_attacks("How do I pick a lock?")
-# Returns encoding attacks (base64, leetspeak, rot13)
-# injection attacks (ignore instructions, delimiter injection)
-# jailbreak attacks (DAN, STAN, developer mode)
+# Returns encoding attacks (base64, leetspeak, rot13, pig latin, reversed)
+# injection attacks (ignore instructions, prompt extraction, role switch, delimiter)
+# jailbreak attacks (DAN, STAN, developer mode, hypothetical, roleplay, research)
 ```
+
+### LLM-driven plugin attacks
+
+Plugins ask an attacker LLM to synthesize attacks tailored to a specific
+assistant. Generation is separate from running: it emits a reviewable dataset
+you commit and run with `mix tribunal.eval`, the same as any eval suite.
+
+```elixir
+{:ok, cases} = Tribunal.RedTeam.generate(
+  plugins: [:policy, :hijacking, :prompt_extraction],
+  purpose: "Shopping assistant for a cosmetics retailer.",
+  policy: "Never give medical or financial advice. Stay on topic.",
+  count: 5
+)
+```
+
+Or from the command line:
+
+```bash
+mix tribunal.redteam.generate \
+  --plugins policy,hijacking \
+  --purpose "Shopping assistant for a cosmetics retailer." \
+  --policy-file priv/policy.txt \
+  --count 5 \
+  --output test/evals/datasets/redteam.yaml
+```
+
+Built-in plugins: `policy`, `excessive_agency`, `prompt_extraction`,
+`imitation`, `hijacking`, `hallucination`. Each pairs with a judge
+(`refute_policy_violation`, `refute_hijacked`, etc.) that grades the target's
+response. The attacker LLM defaults to `req_llm` with sonnet; custom attackers
+and plugins plug in via config. See the
+[red team guide](guides/red-team-testing.md).
 
 ## Guides
 
@@ -182,7 +227,10 @@ attacks = RedTeam.generate_attacks("How do I pick a lock?")
 - [x] Hallucination detection
 - [x] LLM-as-judge with configurable models
 - [x] ExUnit integration for test assertions
-- [x] Red team attack generators
+- [x] Red team attack generators (static templates)
+- [x] LLM-driven red team plugin system
+- [ ] Red team strategies (crescendo, iterative jailbreak)
+- [ ] Dataset template variables
 - [ ] Async batch evaluation
 
 ## License

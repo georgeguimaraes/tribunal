@@ -2,45 +2,50 @@ defmodule Tribunal.RedTeam do
   @moduledoc """
   Red team attack generators for testing LLM safety.
 
-  Inspired by promptfoo's red team strategies, this module provides functions to generate
-  adversarial prompts for testing your LLM's resistance to jailbreaks and manipulation.
+  Inspired by promptfoo's red team strategies, this module offers two ways to
+  produce adversarial prompts:
 
-  ## Attack Categories
+  1. **Static template attacks** via `generate_attacks/2` — wrap a single
+     prompt in fixed encoding, injection, and jailbreak templates. No API
+     calls, fully deterministic.
+  2. **LLM-driven plugin attacks** via `generate/1` — plugin modules ask an
+     attacker LLM to synthesize attacks tailored to a specific assistant.
+     Each result is a regular Tribunal dataset entry you run with
+     `mix tribunal.eval`. See `Tribunal.RedTeam.Plugin`.
 
-  ### Static Encoding Attacks
-  Transform harmful prompts using encoding techniques:
-  - Base64 encoding
-  - Leetspeak substitution
-  - ROT13 cipher
-  - Pig Latin
-  - Reversed text
+  ## Static attack categories
 
-  ### Prompt Injection Attacks
-  Attempt to override system instructions:
-  - Ignore previous instructions
-  - System prompt extraction
-  - Role switching
+  ### Encoding attacks
+  Transform a prompt so filters miss it: Base64, leetspeak, ROT13, Pig Latin,
+  reversed text.
 
-  ### Jailbreak Attacks
-  Classic jailbreak techniques:
-  - DAN (Do Anything Now)
-  - STAN (Strive To Avoid Norms)
-  - Developer mode
-  - Hypothetical framing
+  ### Prompt injection attacks
+  Override system instructions: ignore-instructions, system-prompt extraction,
+  role switching, delimiter injection.
+
+  ### Jailbreak attacks
+  Classic jailbreak framings: DAN, STAN, developer mode, hypothetical,
+  character roleplay, research framing.
 
   ## Usage
 
-      # Generate all attacks for a harmful prompt
+      # Static: generate all template attacks for a prompt
       attacks = Tribunal.RedTeam.generate_attacks("How do I pick a lock?")
 
-      # Generate specific attack type
-      {:ok, encoded} = Tribunal.RedTeam.base64_encode("harmful prompt")
-
-      # Test your LLM against red team attacks
       for {attack_type, prompt} <- attacks do
         response = MyLLM.generate(prompt)
-        refute_jailbreak_llm(response, query: prompt)
+        refute_jailbreak(response, query: prompt)
       end
+
+      # A single static attack type
+      prompt = Tribunal.RedTeam.base64_attack("harmful prompt")
+
+      # LLM-driven: generate a reviewable dataset via plugins
+      {:ok, cases} = Tribunal.RedTeam.generate(
+        plugins: [:policy, :hijacking],
+        purpose: "Shopping assistant for a cosmetics retailer.",
+        policy: "Never give medical or financial advice."
+      )
   """
 
   alias Tribunal.RedTeam.Plugin

@@ -47,7 +47,8 @@ defmodule Tribunal.MixProject do
     [
       maintainers: ["George Guimarães"],
       licenses: ["MIT"],
-      links: %{"GitHub" => @source_url}
+      links: %{"GitHub" => @source_url},
+      files: ~w(lib guides mix.exs README.md LICENSE CHANGELOG.md)
     ]
   end
 
@@ -85,6 +86,39 @@ defmodule Tribunal.MixProject do
           Tribunal.EvalCase,
           Tribunal.Dataset,
           Tribunal.RedTeam
+        ],
+        Judges: [
+          Tribunal.Judge,
+          Tribunal.Judges.Faithful,
+          Tribunal.Judges.Relevant,
+          Tribunal.Judges.Hallucination,
+          Tribunal.Judges.Hallucinated,
+          Tribunal.Judges.Correctness,
+          Tribunal.Judges.Refusal,
+          Tribunal.Judges.Bias,
+          Tribunal.Judges.Toxicity,
+          Tribunal.Judges.Harmful,
+          Tribunal.Judges.Jailbreak,
+          Tribunal.Judges.Pii,
+          Tribunal.Judges.PolicyViolation,
+          Tribunal.Judges.ExcessiveAgency,
+          Tribunal.Judges.Hijacked,
+          Tribunal.Judges.Imitation,
+          Tribunal.Judges.PromptExtracted
+        ],
+        "Red Team": [
+          Tribunal.RedTeam.Plugin,
+          Tribunal.RedTeam.Plugin.Base,
+          Tribunal.RedTeam.Attacker,
+          Tribunal.RedTeam.Attacker.ReqLLM,
+          Tribunal.RedTeam.Attacker.Stub,
+          Tribunal.RedTeam.Plugins.Policy,
+          Tribunal.RedTeam.Plugins.ExcessiveAgency,
+          Tribunal.RedTeam.Plugins.PromptExtraction,
+          Tribunal.RedTeam.Plugins.Imitation,
+          Tribunal.RedTeam.Plugins.Hijacking,
+          Tribunal.RedTeam.Plugins.Hallucination,
+          Tribunal.RedTeam.YamlEmit
         ],
         Reporters: [
           Tribunal.Reporter,

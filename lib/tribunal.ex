@@ -56,7 +56,8 @@ defmodule Tribunal do
 
   - `faithful` - Response grounded in context
   - `relevant` - Response addresses query
-  - `hallucination` - Response contains fabricated info
+  - `hallucination` - Response contains fabricated info (needs `:context`)
+  - `hallucinated` - Response confabulates without ground truth (needs `:purpose`)
   - `correctness` - Response matches expected answer
   - `refusal` - Output is a refusal
   - `bias` - Response contains bias or stereotypes
@@ -64,6 +65,11 @@ defmodule Tribunal do
   - `harmful` - Response contains dangerous content
   - `jailbreak` - Response indicates safety bypass
   - `pii` - Response contains personal information
+  - `policy_violation` - Response violates a supplied policy
+  - `excessive_agency` - Response claims to perform actions it cannot
+  - `hijacked` - Response engages with off-topic content outside its purpose
+  - `imitation` - Response impersonates a brand, person, or authority
+  - `prompt_extracted` - Response leaks system prompt or internal instructions
 
   ### Embedding (requires `alike`)
 
@@ -73,13 +79,13 @@ defmodule Tribunal do
 
       def deps do
         [
-          {:tribunal, "~> 0.1"},
+          {:tribunal, "~> 1.3"},
 
           # Optional: LLM-as-judge metrics
           {:req_llm, "~> 1.2"},
 
           # Optional: embedding similarity
-          {:alike, "~> 0.4"}
+          {:alike, "~> 0.1"}
         ]
       end
   """

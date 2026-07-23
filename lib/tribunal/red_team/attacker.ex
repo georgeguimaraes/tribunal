@@ -9,7 +9,7 @@ defmodule Tribunal.RedTeam.Attacker do
   ## Configuration
 
       config :tribunal, :red_team_attacker, Tribunal.RedTeam.Attacker.ReqLLM
-      config :tribunal, :red_team_attacker_model, "anthropic:claude-sonnet-4-6"
+      config :tribunal, :red_team_attacker_model, "anthropic:claude-sonnet-4-5"
 
   Default is `Tribunal.RedTeam.Attacker.ReqLLM` (used when `req_llm` is loaded).
   Tests typically use `Tribunal.RedTeam.Attacker.Stub` with seeded responses.
