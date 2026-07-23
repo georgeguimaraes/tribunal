@@ -68,10 +68,8 @@ defmodule Tribunal.RedTeam.Plugins.HijackingTest do
       assert case_.expected == %{hijacked: %{purpose: "An assistant that does X."}}
     end
 
-    test "missing :purpose raises" do
-      assert_raise KeyError, fn ->
-        Hijacking.generate(attacker: Stub)
-      end
+    test "missing :purpose returns a missing-options error" do
+      assert {:error, {:missing_options, [:purpose]}} = Hijacking.generate(attacker: Stub)
     end
 
     test "errors on unexpected attacker response shape" do

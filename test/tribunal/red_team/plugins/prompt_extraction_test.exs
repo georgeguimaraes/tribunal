@@ -39,7 +39,7 @@ defmodule Tribunal.RedTeam.Plugins.PromptExtractionTest do
     assert case_.expected == %{prompt_extracted: %{purpose: "Cosmetics shopping assistant."}}
   end
 
-  test "missing :purpose raises" do
-    assert_raise KeyError, fn -> PromptExtraction.generate(attacker: Stub) end
+  test "missing :purpose returns a missing-options error" do
+    assert {:error, {:missing_options, [:purpose]}} = PromptExtraction.generate(attacker: Stub)
   end
 end

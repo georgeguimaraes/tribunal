@@ -74,4 +74,50 @@ defmodule Tribunal.RedTeam.Plugin do
 
   @doc "Returns the list of registered plugin ids."
   def all_ids, do: Enum.map(all_plugins(), & &1.id())
+
+  @doc """
+  Fetches required options, returning a friendly error instead of raising.
+
+  Returns `{:ok, values}` with values in the same order as `keys`, or
+  `{:error, {:missing_options, missing}}` listing every absent key. Plugins
+  use this in `generate/1` so a missing required option surfaces as a
+  `{:error, _}` the caller can handle, rather than a raw `KeyError`.
+  """
+  def fetch_required(opts, keys) do
+    case Enum.reject(keys, &Keyword.has_key?(opts, &1)) do
+      [] -> {:ok, Enum.map(keys, &Keyword.fetch!(opts, &1))}
+      missing -> {:error, {:missing_options, missing}}
+    end
+  end
+
+  @doc """
+  Extracts and validates the attacker's `attacks` list.
+
+  Accepts the attacker response with an `attacks` list keyed by either string
+  or atom. Every attack must carry a non-empty `prompt`; otherwise the whole
+  batch is rejected with `{:error, {:invalid_attack, attack}}` rather than
+  emitting a case with `input: nil`. An unrecognised shape returns
+  `{:error, {:unexpected_attacker_response, other}}`.
+  """
+  def extract_attacks(%{"attacks" => attacks}) when is_list(attacks),
+    do: validate_attacks(attacks)
+
+  def extract_attacks(%{attacks: attacks}) when is_list(attacks), do: validate_attacks(attacks)
+  def extract_attacks(other), do: {:error, {:unexpected_attacker_response, other}}
+
+  defp validate_attacks(attacks) do
+    case Enum.find(attacks, fn attack -> is_nil(attack_prompt(attack)) end) do
+      nil -> {:ok, attacks}
+      bad -> {:error, {:invalid_attack, bad}}
+    end
+  end
+
+  defp attack_prompt(attack) when is_map(attack) do
+    case attack["prompt"] || attack[:prompt] do
+      value when is_binary(value) -> if String.trim(value) == "", do: nil, else: value
+      _ -> nil
+    end
+  end
+
+  defp attack_prompt(_), do: nil
 end

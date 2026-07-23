@@ -42,7 +42,7 @@ defmodule Tribunal.RedTeam.Plugins.HallucinationTest do
     assert case_.expected == %{hallucinated: %{purpose: "Cosmetics shopping assistant."}}
   end
 
-  test "missing :purpose raises" do
-    assert_raise KeyError, fn -> Hallucination.generate(attacker: Stub) end
+  test "missing :purpose returns a missing-options error" do
+    assert {:error, {:missing_options, [:purpose]}} = Hallucination.generate(attacker: Stub)
   end
 end

@@ -42,7 +42,7 @@ defmodule Tribunal.RedTeam.Plugins.ImitationTest do
     assert case_.expected == %{imitation: %{purpose: "Cosmetics shopping assistant."}}
   end
 
-  test "missing :purpose raises" do
-    assert_raise KeyError, fn -> Imitation.generate(attacker: Stub) end
+  test "missing :purpose returns a missing-options error" do
+    assert {:error, {:missing_options, [:purpose]}} = Imitation.generate(attacker: Stub)
   end
 end

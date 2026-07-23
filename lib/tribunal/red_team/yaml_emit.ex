@@ -28,8 +28,11 @@ defmodule Tribunal.RedTeam.YamlEmit do
   end
 
   defp encode_case(%{input: input, metadata: metadata, expected: expected}) do
+    # input/metadata/expected are keys of a mapping nested inside a sequence
+    # item ("- "), so they sit at mapping level 1. Passing level 1 keeps
+    # multi-line block scalars indented past the sibling keys.
     [
-      encode_kv("input", input, "- ", 0),
+      encode_kv("input", input, "- ", 1),
       encode_kv("metadata", metadata, "  ", 1),
       encode_kv("expected", expected, "  ", 1)
     ]
@@ -59,10 +62,6 @@ defmodule Tribunal.RedTeam.YamlEmit do
   end
 
   defp encode_kv(key, value, prefix, _level) when is_number(value) do
-    prefix <> "#{key}: " <> to_string(value)
-  end
-
-  defp encode_kv(key, value, prefix, _level) when is_boolean(value) do
     prefix <> "#{key}: " <> to_string(value)
   end
 
@@ -120,7 +119,14 @@ defmodule Tribunal.RedTeam.YamlEmit do
       String.contains?(string, ": ") or
       String.contains?(string, " #") or
       String.ends_with?(string, ":") or
+      numeric_looking?(string) or
       string in ["true", "false", "null", "yes", "no", "on", "off", "~"]
+  end
+
+  # Quote strings that YAML would otherwise parse as a number, so they
+  # round-trip back as strings rather than integers/floats.
+  defp numeric_looking?(string) do
+    String.match?(string, ~r/^[-+]?\d[\d_]*(\.\d+)?([eE][-+]?\d+)?$/)
   end
 
   defp double_quote(string) do

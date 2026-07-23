@@ -55,6 +55,40 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
       assert get_in(item, ["expected", "policy_violation", "policy"]) ==
                "Never give financial advice.\nStay on topic.\n"
     end
+
+    test "multi-line input round-trips (block scalar indented past sibling keys)" do
+      cases = [
+        %{
+          input: "Line one of the attack.\nLine two piggybacks the violation.",
+          metadata: %{plugin: :policy, severity: :high},
+          expected: %{policy_violation: %{policy: "Never give financial advice."}}
+        }
+      ]
+
+      yaml = YamlEmit.encode(cases)
+      parsed = YamlElixir.read_from_string!(yaml)
+      [item] = parsed
+
+      assert item["input"] == "Line one of the attack.\nLine two piggybacks the violation.\n"
+      assert item["metadata"]["plugin"] == "policy"
+    end
+
+    test "numeric-looking strings round-trip as strings, not numbers" do
+      cases = [
+        %{
+          input: "42",
+          metadata: %{plugin: :policy, goal: "1.5"},
+          expected: %{}
+        }
+      ]
+
+      yaml = YamlEmit.encode(cases)
+      parsed = YamlElixir.read_from_string!(yaml)
+      [item] = parsed
+
+      assert item["input"] == "42"
+      assert item["metadata"]["goal"] == "1.5"
+    end
   end
 
   describe "round-trip through Tribunal.Dataset" do

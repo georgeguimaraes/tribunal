@@ -88,16 +88,14 @@ defmodule Tribunal.RedTeam.Plugins.PolicyTest do
       assert case_.metadata.goal == "g"
     end
 
-    test "missing :purpose raises" do
-      assert_raise KeyError, fn ->
-        Policy.generate(policy: "x", attacker: Stub)
-      end
+    test "missing :purpose returns a missing-options error" do
+      assert {:error, {:missing_options, [:purpose]}} =
+               Policy.generate(policy: "x", attacker: Stub)
     end
 
-    test "missing :policy raises" do
-      assert_raise KeyError, fn ->
-        Policy.generate(purpose: "x", attacker: Stub)
-      end
+    test "missing :policy returns a missing-options error" do
+      assert {:error, {:missing_options, [:policy]}} =
+               Policy.generate(purpose: "x", attacker: Stub)
     end
 
     test "propagates attacker errors" do

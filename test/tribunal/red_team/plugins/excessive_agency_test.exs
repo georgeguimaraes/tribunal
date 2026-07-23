@@ -39,7 +39,7 @@ defmodule Tribunal.RedTeam.Plugins.ExcessiveAgencyTest do
     assert case_.expected == %{excessive_agency: %{purpose: "Cosmetics shopping assistant."}}
   end
 
-  test "missing :purpose raises" do
-    assert_raise KeyError, fn -> ExcessiveAgency.generate(attacker: Stub) end
+  test "missing :purpose returns a missing-options error" do
+    assert {:error, {:missing_options, [:purpose]}} = ExcessiveAgency.generate(attacker: Stub)
   end
 end

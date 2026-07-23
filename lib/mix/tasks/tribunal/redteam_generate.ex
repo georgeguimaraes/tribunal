@@ -74,8 +74,14 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
 
     case RedTeam.generate(generate_opts) do
       {:ok, cases} -> write_output(cases, opts)
+      {:error, {plugin, {:missing_options, missing}}} -> missing_options_error(plugin, missing)
       {:error, reason} -> Mix.raise("Generation failed: #{inspect(reason)}")
     end
+  end
+
+  defp missing_options_error(plugin, missing) do
+    flags = Enum.map_join(missing, ", ", &"--#{&1}")
+    Mix.raise("Plugin #{plugin} requires: #{flags}")
   end
 
   defp parse_plugins(opts) do
@@ -104,6 +110,10 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
+
+  defp write_output([], _opts) do
+    Mix.shell().error("No attacks were generated; nothing written.")
+  end
 
   defp write_output(cases, opts) do
     format = format_for(opts)
