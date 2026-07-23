@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.4.0](https://github.com/georgeguimaraes/tribunal/compare/v1.3.6...v1.4.0) (2026-07-23)
+
+
+### Features
+
+* Add Hallucination red-team plugin ([743b347](https://github.com/georgeguimaraes/tribunal/commit/743b34751dfde4e4e0bf22eb5f95bda7ec09d46b))
+* Add LLM-driven red-team plugin system ([c93fcd4](https://github.com/georgeguimaraes/tribunal/commit/c93fcd403a42945cd05c59c335a6a5352b9e74c1))
+
+
+### Bug Fixes
+
+* Harden red-team YAML emit and plugin option handling ([c3c9381](https://github.com/georgeguimaraes/tribunal/commit/c3c938159ec6e30eb6619c096c425d2902c081f2))
+
+
+### Miscellaneous
+
+* Add MIT license ([adcce07](https://github.com/georgeguimaraes/tribunal/commit/adcce07427208bd5cb79e4a80e05d12397d0f86d))
+* **deps:** Bump req_llm to 1.11.0 ([b39ab10](https://github.com/georgeguimaraes/tribunal/commit/b39ab106e127b360e7382cef6d7ca66ecc6791c7))
+* **deps:** Update dependencies ([d4f8f63](https://github.com/georgeguimaraes/tribunal/commit/d4f8f635afbe535aaa8caf7a33542207adc22abc))
+
+
+### Documentation
+
+* Document red-team plugin system and fix stale references ([d54c9cd](https://github.com/georgeguimaraes/tribunal/commit/d54c9cd1bd9b4b3f804ab586f3815dd350ec4d90))
+
+
+### Code Refactoring
+
+* Collapse red-team plugins onto shared Plugin.Base ([deea8af](https://github.com/georgeguimaraes/tribunal/commit/deea8af927e8fc1bf5a26f1a5f01897493c4b999))
+
 ## [1.3.6](https://github.com/georgeguimaraes/tribunal/compare/v1.3.5...v1.3.6) (2026-04-24)
 
 
