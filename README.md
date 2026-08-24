@@ -7,6 +7,14 @@ LLM evaluation framework for Elixir.
 > [!TIP]
 > See [tribunal-juror](https://github.com/georgeguimaraes/tribunal-juror) for an interactive Phoenix app to explore and test Tribunal's evaluation capabilities.
 
+## Why Tribunal
+
+If you build LLM features in Elixir, there's no native way to answer "is this output any good, and did my last change make it worse?" Regular tests can't assert on faithfulness, relevance, or whether a jailbreak got through, and the mature eval tools (DeepEval, RAGAS, promptfoo) all live in Python, off your stack and out of your CI.
+
+Tribunal makes LLM quality a first-class ExUnit citizen. You write `assert_faithful`, `refute_hallucination`, and `refute_jailbreak` next to your normal assertions, and they run in `mix test` and your existing CI. No separate runtime, no mandatory cloud service, judge and embedding deps are optional.
+
+You get deterministic assertions, LLM-as-judge metrics, embedding similarity, dataset-driven evals, and an LLM-driven red-team generator, all in Elixir.
+
 ## Test Mode vs Evaluation Mode
 
 Tribunal offers two modes for different use cases:
