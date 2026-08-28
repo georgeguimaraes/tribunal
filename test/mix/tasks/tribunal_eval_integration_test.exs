@@ -18,17 +18,49 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     Mix.Task.reenable("tribunal.eval")
     Mix.Task.reenable("app.start")
 
-    output = capture_io(fn -> Eval.run([path, "--format", "text"]) end)
+    output =
+      capture_io(fn ->
+        assert_raise Mix.Error, "Evaluation failed", fn ->
+          Eval.run([path, "--format", "text"])
+        end
+      end)
 
     assert output =~ "Failed:    1"
     assert output =~ "contains"
     assert output =~ "evaluation: Missing actual output"
-    assert output =~ "COMPLETED (no gate)"
-    refute output =~ "\nPASSED"
+    assert output =~ "FAILED"
   end
 
   test "reports a provider exception as a failed case", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "provider_error.json")
+
+    File.write!(
+      path,
+      ~s([{"input":"hello","expected":{"contains":["hello"]}}])
+    )
+
+    Mix.Task.reenable("tribunal.eval")
+    Mix.Task.reenable("app.start")
+
+    output =
+      capture_io(fn ->
+        assert_raise Mix.Error, "Evaluation failed", fn ->
+          Eval.run([
+            path,
+            "--format",
+            "text",
+            "--provider",
+            "Mix.Tasks.TribunalEvalIntegrationTest.failing_provider"
+          ])
+        end
+      end)
+
+    assert output =~ "Failed:    1"
+    assert output =~ "provider: provider exploded"
+  end
+
+  test "keeps ordinary quality failures report-only without a gate", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "quality_failure.json")
 
     File.write!(
       path,
@@ -45,12 +77,12 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
           "--format",
           "text",
           "--provider",
-          "Mix.Tasks.TribunalEvalIntegrationTest.failing_provider"
+          "Mix.Tasks.TribunalEvalIntegrationTest.wrong_provider"
         ])
       end)
 
     assert output =~ "Failed:    1"
-    assert output =~ "provider: provider exploded"
+    assert output =~ "COMPLETED (no gate)"
   end
 
   test "fails when no eval files exist", %{tmp_dir: tmp_dir} do
@@ -96,13 +128,15 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     output =
       capture_io(fn ->
-        Eval.run([
-          path,
-          "--format",
-          "text",
-          "--provider",
-          "Mix.Tasks.TribunalEvalIntegrationTest.killing_provider"
-        ])
+        assert_raise Mix.Error, "Evaluation failed", fn ->
+          Eval.run([
+            path,
+            "--format",
+            "text",
+            "--provider",
+            "Mix.Tasks.TribunalEvalIntegrationTest.killing_provider"
+          ])
+        end
       end)
 
     assert output =~ "Failed:    1"
@@ -144,19 +178,22 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     Mix.Task.reenable("app.start")
 
     capture_io(fn ->
-      Eval.run([
-        path,
-        "--format",
-        "text",
-        "--concurrency",
-        "2",
-        "--provider",
-        "Mix.Tasks.TribunalEvalIntegrationTest.#{provider}"
-      ])
+      assert_raise Mix.Error, "Evaluation failed", fn ->
+        Eval.run([
+          path,
+          "--format",
+          "text",
+          "--concurrency",
+          "2",
+          "--provider",
+          "Mix.Tasks.TribunalEvalIntegrationTest.#{provider}"
+        ])
+      end
     end)
   end
 
   def failing_provider(_test_case), do: raise("provider exploded")
+  def wrong_provider(_test_case), do: "wrong answer"
 
   def killing_provider(%Tribunal.TestCase{input: "kill"}), do: Process.exit(self(), :kill)
   def killing_provider(%Tribunal.TestCase{input: "pass"}), do: "ok"

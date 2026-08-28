@@ -18,6 +18,7 @@ defmodule Tribunal.Evaluator do
           failures: [{atom() | String.t(), String.t()}],
           results: map(),
           evaluations: [assertion_result()],
+          execution_error: boolean(),
           duration_ms: non_neg_integer()
         }
 
@@ -43,6 +44,7 @@ defmodule Tribunal.Evaluator do
       failures: failures,
       results: Assertions.summarize(evaluations),
       evaluations: evaluations,
+      execution_error: execution_error?(test_case, assertions, evaluations),
       duration_ms: now() - started_at
     }
   end
@@ -63,6 +65,7 @@ defmodule Tribunal.Evaluator do
       failures: [{:provider, reason(reason, "Provider failed")}],
       results: Assertions.summarize(evaluations),
       evaluations: evaluations,
+      execution_error: true,
       duration_ms: duration_ms
     }
   end
@@ -121,6 +124,19 @@ defmodule Tribunal.Evaluator do
     Enum.map(assertions, fn
       {type, _opts} -> {type, {:error, reason}}
       type -> {type, {:error, reason}}
+    end)
+  end
+
+  defp execution_error?(%TestCase{actual_output: nil}, _assertions, _evaluations), do: true
+
+  defp execution_error?(_test_case, assertions, _evaluations) when assertions in [[], %{}],
+    do: true
+
+  defp execution_error?(_test_case, _assertions, evaluations) do
+    Enum.any?(evaluations, fn
+      {_type, {:pass, _details}} -> false
+      {_type, {:fail, _details}} -> false
+      _evaluation -> true
     end)
   end
 

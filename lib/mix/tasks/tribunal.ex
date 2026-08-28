@@ -102,9 +102,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     formatted = format_results(results, settings.format)
     write_results(formatted, settings.output)
 
-    unless passed do
-      System.halt(1)
-    end
+    unless passed, do: Mix.raise("Evaluation failed")
   end
 
   defp parse_args(args) do
@@ -206,6 +204,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
   defp validate_format!(format), do: Mix.raise("Unknown format: #{format}")
 
   defp gate_status(%{total: 0}, _strict, _threshold), do: :failed
+  defp gate_status(%{errors: errors}, _strict, _threshold) when errors > 0, do: :error
   defp gate_status(%{failed: 0}, true, _threshold), do: :passed
   defp gate_status(_summary, true, _threshold), do: :failed
 
@@ -290,6 +289,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
     passed = Enum.count(cases, &(&1.status == :passed))
     failed = Enum.count(cases, &(&1.status == :failed))
+    errors = Enum.count(cases, &Map.get(&1, :execution_error, false))
     total = length(cases)
 
     metrics = aggregate_metrics(cases)
@@ -300,6 +300,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
         total: total,
         passed: passed,
         failed: failed,
+        errors: errors,
         pass_rate: if(total > 0, do: passed / total, else: 0),
         duration_ms: duration
       },

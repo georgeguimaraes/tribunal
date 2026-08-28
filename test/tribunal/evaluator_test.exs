@@ -14,6 +14,7 @@ defmodule Tribunal.EvaluatorTest do
 
     assert result.status == :passed
     assert result.failures == []
+    refute result.execution_error
   end
 
   test "fails when actual output is missing" do
@@ -24,6 +25,7 @@ defmodule Tribunal.EvaluatorTest do
     assert result.status == :failed
     assert result.failures == [{:evaluation, "Missing actual output"}]
     assert [{:contains, {:error, "Missing actual output"}}] = result.evaluations
+    assert result.execution_error
   end
 
   test "fails when no assertions are configured" do
@@ -33,6 +35,7 @@ defmodule Tribunal.EvaluatorTest do
 
     assert result.status == :failed
     assert result.failures == [{:evaluation, "No assertions configured"}]
+    assert result.execution_error
   end
 
   test "treats assertion errors as failures" do
@@ -42,6 +45,7 @@ defmodule Tribunal.EvaluatorTest do
 
     assert result.status == :failed
     assert result.failures == [{:unknown_assertion, "Unknown assertion type: unknown_assertion"}]
+    assert result.execution_error
   end
 
   test "preserves repeated assertion results and failures" do
@@ -57,6 +61,7 @@ defmodule Tribunal.EvaluatorTest do
     assert result.status == :failed
     assert [{:contains, _reason}] = result.failures
     assert {:fail, _} = result.results.contains
+    refute result.execution_error
   end
 
   test "the compatibility result stays failed when a later duplicate passes" do
@@ -102,6 +107,7 @@ defmodule Tribunal.EvaluatorTest do
     assert result.status == :failed
     assert result.failures == [{:provider, "connection refused"}]
     assert [{:contains, {:error, "connection refused"}}] = result.evaluations
+    assert result.execution_error
   end
 
   test "preserves an explicit execution duration for task failures" do
