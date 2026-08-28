@@ -110,34 +110,9 @@ So "porting promptfoo's catalog" means three different kinds of work:
 
 ## Evaluation architecture
 
-The next work is organized around one rule: Mix and ExUnit share evaluation semantics, while each keeps its native execution model.
+Mix and ExUnit share evaluation semantics while keeping their native execution models. Red-team generation produces ordinary Tribunal datasets that use these same evaluation paths.
 
-`Tribunal.Evaluator` owns single-case truth. It evaluates an output against assertions, preserves repeated assertions, applies defaults, and returns a passed or failed case result. Missing output, missing assertions, assertion errors, and unexpected assertion responses fail closed.
-
-`tribunal_eval` stays native to ExUnit. One dataset row generates one ExUnit test, providers continue receiving the input string, and ExUnit owns test scheduling, filtering, timeouts, and failure presentation.
-
-`mix tribunal.eval` stays the batch interface. Providers continue receiving the full `Tribunal.TestCase`, while the Mix task owns dataset execution, concurrency, aggregation, quality gates, reports, and exit codes.
-
-### Current: trustworthy shared evaluation
-
-- Route both `tribunal_eval` and `mix tribunal.eval` through `Tribunal.Evaluator`.
-- Preserve the existing public APIs and provider contracts.
-- Fail closed on missing outputs and assertion errors.
-- Preserve repeated assertion results instead of losing them in a map.
-- Apply `tribunal_eval` defaults with case-specific options taking precedence.
-- Fix the remaining unsafe dataset and CLI boundaries before adding more features.
-
-### Next: structured inputs
-
-Tracking [issue #32](https://github.com/georgeguimaraes/tribunal/issues/32). Dataset input should accept structured JSON-compatible data, usually a map of variables. The application provider owns prompt rendering because the prompt is application code.
-
-Tribunal will not add its own template language. Existing string inputs remain valid, and the two provider contracts stay unchanged: ExUnit receives `test_case.input`, while the Mix provider receives the full test case.
-
-### Later: repeated runs and batch gates
-
-Tracking [issue #35](https://github.com/georgeguimaraes/tribunal/issues/35). Repeated attempts and their reduction belong in the shared single-case evaluation model. Dataset-wide and per-group thresholds belong in `mix tribunal.eval`, where Tribunal owns the batch.
-
-ExUnit continues to report one test result per dataset row. A repeated case can be represented as one ExUnit test, but suite-wide percentage gates will not be hidden inside independently scheduled ExUnit tests. Use `mix tribunal.eval` when the acceptance decision depends on aggregate statistics.
+The detailed plan for structured inputs, repeated sampling, result schemas, reporting, and batch gates lives in [`EVALUATION_PLAN.md`](EVALUATION_PLAN.md).
 
 ## Open decisions still on the table
 
@@ -147,20 +122,3 @@ Resolved entries from the original list moved into "Locked for Phase 1" above. R
 2. **Crescendo / iterative-jailbreak architecture.** These need a runtime feedback loop (attacker LLM sees defender's response, refines next attack). Tribunal's current `provider` callback is single-turn. Either extend the callback to multi-turn or add a separate `multi_turn_provider` shape. Phase 2 concern.
 3. **Where does the Ngen-side runner live?** Options: (a) extend `Ngen.Chat.Eval.run_for_store/2` with red-team cases mixed in; (b) separate `Ngen.Chat.RedTeam.run_for_store/2` module to keep concerns clean. Lean toward (b). Phase 3 concern.
 4. **Telemetry aggregation on the Ngen side.** Promptfoo produces per-plugin pass rates. Tribunal's per-plugin grouping (via `metadata.plugin`) gives this shape on the tribunal side; Ngen's aggregator needs to mirror it. Phase 3 concern.
-
-## Concrete reference points for the new session
-
-- Tribunal source: `~/code/tribunal`
-- Ngen source: `~/code/new-gen-ai/canopy/backend/ngen`
-- Promptfoo configs we built (for shape reference): `~/code/new-gen-ai/canopy/tools/promptfoo/` — **only present on branch `red-team-eval-endpoint` (PR #4422), not yet merged to main**. To access without switching branches: `git fetch origin && git checkout origin/red-team-eval-endpoint -- tools/promptfoo`.
-  - `redteam.template.yaml` shows the plugin/strategy mix we settled on.
-  - `cosmetics/store.env`, `boxlunch/store.env` show the per-store config shape.
-- Eval endpoint: `~/code/new-gen-ai/canopy/backend/ngen/lib/ngen_web/controllers/internal/eval_controller.ex` (PR #4422).
-- Eval cases pattern: `~/code/new-gen-ai/canopy/backend/ngen/lib/ngen/chat/eval/cases/cosmetics.ex`.
-- Quality assertion pattern: `~/code/new-gen-ai/canopy/backend/ngen/lib/ngen/chat/eval/assertions.ex` (`clean_canvas?/1`).
-- Public attack corpora: AdvBench (`github.com/llm-attacks/llm-attacks`), JailbreakBench (`github.com/JailbreakBench/jailbreakbench`).
-- Promptfoo plugin reference: `https://promptfoo.dev/docs/red-team/plugins/`.
-
-## Suggested opening message for the new session
-
-> "I want to extend tribunal (`~/code/tribunal`) with promptfoo-equivalent red-team plugins so we can run adversarial evals against the Ngen chat orchestrator entirely from Elixir, no cloud dependencies. Please read the roadmap doc I'm about to paste, then start by walking me through the open decisions before writing any code. After we agree, we'll start with Phase 1, plugin: `policy`, since it's the highest-value and uses the assistant's actual `@guardrails` text."
