@@ -8,8 +8,7 @@ defmodule Tribunal.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: Tribunal.Worker.start_link(arg)
-      # {Tribunal.Worker, arg}
+      {Task.Supervisor, name: Tribunal.TaskSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

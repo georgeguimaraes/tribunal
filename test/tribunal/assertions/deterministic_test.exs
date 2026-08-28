@@ -23,6 +23,11 @@ defmodule Tribunal.Assertions.DeterministicTest do
       {:fail, details} = Deterministic.evaluate(:contains, "Hello", value: "world")
       assert details.reason =~ "missing"
     end
+
+    test "errors when no expected values are configured" do
+      assert {:error, reason} = Deterministic.evaluate(:contains, "Hello", actual_output: "x")
+      assert reason =~ "requires"
+    end
   end
 
   describe "not_contains" do
@@ -33,6 +38,11 @@ defmodule Tribunal.Assertions.DeterministicTest do
     test "fails when substring found" do
       assert {:fail, %{found: ["world"]}} =
                Deterministic.evaluate(:not_contains, "Hello world", value: "world")
+    end
+
+    test "errors when no forbidden values are configured" do
+      assert {:error, reason} = Deterministic.evaluate(:not_contains, "Hello", [])
+      assert reason =~ "requires"
     end
   end
 
@@ -57,6 +67,11 @@ defmodule Tribunal.Assertions.DeterministicTest do
     test "fails when some missing" do
       assert {:fail, %{missing: ["foo"]}} =
                Deterministic.evaluate(:contains_all, "Hello world", values: ["Hello", "foo"])
+    end
+
+    test "errors when no expected values are configured" do
+      assert {:error, reason} = Deterministic.evaluate(:contains_all, "Hello", [])
+      assert reason =~ "requires"
     end
   end
 

@@ -71,6 +71,10 @@ defmodule Mix.Tasks.TribunalTest do
         Eval.run(["--concurrency", "0"])
       end
     end
+
+    test "rejects unknown formats before running a dataset" do
+      assert_raise Mix.Error, ~r/Unknown format/, fn -> Eval.run(["--format", "xml"]) end
+    end
   end
 
   describe "Init" do

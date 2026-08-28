@@ -198,7 +198,7 @@ tribunal_eval "test/evals/datasets/questions.json",
 mix tribunal.eval --provider MyApp.RAG.query
 ```
 
-The provider receives a `Tribunal.TestCase` struct with `input` and `context`, and returns the actual output string.
+The provider contracts intentionally follow each mode. `tribunal_eval` passes `test_case.input`, so the provider behaves like an ordinary application function inside ExUnit. `mix tribunal.eval` passes the full `Tribunal.TestCase` so batch providers can also inspect context, expected output, and metadata. Both return the actual output string.
 
 ## CI Integration Examples
 

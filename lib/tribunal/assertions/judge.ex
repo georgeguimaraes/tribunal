@@ -87,7 +87,7 @@ defmodule Tribunal.Assertions.Judge do
 
   defp call_llm(model, messages, opts) do
     # Allow injecting custom LLM for tests via opts[:llm]
-    case opts[:llm] do
+    case opts[:llm] || opts[:llm_client] do
       nil ->
         call_req_llm(model, messages, opts)
 

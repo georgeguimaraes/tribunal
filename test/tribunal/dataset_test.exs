@@ -78,6 +78,57 @@ defmodule Tribunal.DatasetTest do
       File.write!(Path.join(fixtures_path, "test.txt"), "hello")
       assert {:error, _} = Dataset.load(Path.join(fixtures_path, "test.txt"))
     end
+
+    test "returns errors for structurally invalid datasets", %{fixtures_path: fixtures_path} do
+      top_level = Path.join(fixtures_path, "top_level_object.json")
+      invalid_case = Path.join(fixtures_path, "invalid_case.json")
+      missing_input = Path.join(fixtures_path, "missing_input.json")
+      invalid_expected = Path.join(fixtures_path, "invalid_expected.json")
+      invalid_expected_list = Path.join(fixtures_path, "invalid_expected_list.json")
+      invalid_context = Path.join(fixtures_path, "invalid_context.json")
+      invalid_input = Path.join(fixtures_path, "invalid_input.json")
+      invalid_options = Path.join(fixtures_path, "invalid_options.yaml")
+      invalid_case_keys = Path.join(fixtures_path, "invalid_case_keys.yaml")
+
+      File.write!(top_level, JSON.encode!(%{"input" => "hello"}))
+      File.write!(invalid_case, JSON.encode!([42]))
+      File.write!(missing_input, JSON.encode!([%{"expected" => %{}}]))
+      File.write!(invalid_expected, JSON.encode!([%{"input" => "hello", "expected" => 42}]))
+
+      File.write!(
+        invalid_expected_list,
+        JSON.encode!([%{"input" => "hello", "expected" => [%{"contains" => "x"}]}])
+      )
+
+      File.write!(invalid_context, JSON.encode!([%{"input" => "hello", "context" => 42}]))
+      File.write!(invalid_input, JSON.encode!([%{"input" => 42}]))
+
+      File.write!(invalid_options, "- input: hello\n  expected:\n    contains:\n      1: hello\n")
+      File.write!(invalid_case_keys, "- input: hello\n  1: ignored\n")
+
+      assert {:error, {:invalid_dataset, _}} = Dataset.load(top_level)
+      assert {:error, {:invalid_case, 0, "case must be an object"}} = Dataset.load(invalid_case)
+      assert {:error, {:invalid_case, 0, "input is required"}} = Dataset.load(missing_input)
+
+      assert {:error, {:invalid_case, 0, "expected must be an object or list"}} =
+               Dataset.load(invalid_expected)
+
+      assert {:error, {:invalid_case, 0, "expected list items must be assertion names" <> _}} =
+               Dataset.load(invalid_expected_list)
+
+      assert {:error, {:invalid_case, 0, "context must be a string or list of strings"}} =
+               Dataset.load(invalid_context)
+
+      assert {:error, {:invalid_case, 0, "input must be a string"}} = Dataset.load(invalid_input)
+
+      assert {:error,
+              {:invalid_case, 0,
+               "expected assertions must use string or atom names and valid options"}} =
+               Dataset.load(invalid_options)
+
+      assert {:error, {:invalid_case, 0, "case field names must be strings or atoms"}} =
+               Dataset.load(invalid_case_keys)
+    end
   end
 
   describe "load!/1" do
@@ -118,6 +169,54 @@ defmodule Tribunal.DatasetTest do
       assert {:ok, [{_test_case, [{^name, []}]}]} = Dataset.load_with_assertions(path)
       refute existing_atom?(name)
     end
+
+    test "resolves registered custom judge names", %{fixtures_path: fixtures_path} do
+      path = Path.join(fixtures_path, "custom_judge.json")
+
+      File.write!(
+        path,
+        JSON.encode!([
+          %{
+            "input" => "hello",
+            "expected" => %{"dataset_custom_judge" => %{"rules" => "be concise"}}
+          }
+        ])
+      )
+
+      previous = Application.get_env(:tribunal, :custom_judges, [])
+      Application.put_env(:tribunal, :custom_judges, [Tribunal.DatasetCustomJudge])
+      on_exit(fn -> Application.put_env(:tribunal, :custom_judges, previous) end)
+
+      assert {:ok, [{_test_case, [{:dataset_custom_judge, [rules: "be concise"]}]}]} =
+               Dataset.load_with_assertions(path)
+    end
+
+    test "resolves built-in judge option keys explicitly", %{fixtures_path: fixtures_path} do
+      path = Path.join(fixtures_path, "judge_options.json")
+
+      File.write!(
+        path,
+        JSON.encode!([
+          %{
+            "input" => "hello",
+            "expected" => %{
+              "faithful" => %{
+                "model" => "anthropic:claude-haiku-4-5-20251001",
+                "threshold" => 0.9
+              }
+            }
+          }
+        ])
+      )
+
+      assert {:ok,
+              [
+                {_test_case,
+                 [
+                   {:faithful, [model: "anthropic:claude-haiku-4-5-20251001", threshold: 0.9]}
+                 ]}
+              ]} = Dataset.load_with_assertions(path)
+    end
   end
 
   defp existing_atom?(value) do
@@ -126,4 +225,14 @@ defmodule Tribunal.DatasetTest do
   rescue
     ArgumentError -> false
   end
+end
+
+defmodule Tribunal.DatasetCustomJudge do
+  @behaviour Tribunal.Judge
+
+  @impl true
+  def name, do: :dataset_custom_judge
+
+  @impl true
+  def prompt(_test_case, opts), do: Keyword.fetch!(opts, :rules)
 end

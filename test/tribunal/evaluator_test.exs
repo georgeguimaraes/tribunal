@@ -23,6 +23,7 @@ defmodule Tribunal.EvaluatorTest do
 
     assert result.status == :failed
     assert result.failures == [{:evaluation, "Missing actual output"}]
+    assert [{:contains, {:error, "Missing actual output"}}] = result.evaluations
   end
 
   test "fails when no assertions are configured" do
@@ -55,6 +56,20 @@ defmodule Tribunal.EvaluatorTest do
     assert length(result.evaluations) == 2
     assert result.status == :failed
     assert [{:contains, _reason}] = result.failures
+    assert {:fail, _} = result.results.contains
+  end
+
+  test "the compatibility result stays failed when a later duplicate passes" do
+    test_case = %TestCase{input: "hello", actual_output: "hello world"}
+
+    result =
+      Evaluator.evaluate(test_case, [
+        {:contains, [value: "goodbye"]},
+        {:contains, [value: "hello"]}
+      ])
+
+    assert result.status == :failed
+    assert {:fail, _} = result.results.contains
   end
 
   test "assertion options override defaults" do
@@ -79,9 +94,21 @@ defmodule Tribunal.EvaluatorTest do
   test "represents provider failures as failed cases" do
     test_case = %TestCase{input: "hello"}
 
-    result = Evaluator.error(test_case, "connection refused")
+    result =
+      Evaluator.error(test_case, "connection refused",
+        assertions: [{:contains, [value: "hello"]}]
+      )
 
     assert result.status == :failed
     assert result.failures == [{:provider, "connection refused"}]
+    assert [{:contains, {:error, "connection refused"}}] = result.evaluations
+  end
+
+  test "preserves an explicit execution duration for task failures" do
+    test_case = %TestCase{input: "hello"}
+
+    result = Evaluator.error(test_case, "timeout", duration_ms: 120_000)
+
+    assert result.duration_ms == 120_000
   end
 end

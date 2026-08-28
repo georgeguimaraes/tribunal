@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     * `--format` - Output format: console (default), text, json, html, github, junit
     * `--output` - Write results to file instead of stdout
     * `--provider` - Module.function to call for each test case (e.g. MyApp.Agent.query)
-    * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (always exit 0)
+    * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (non-empty runs exit 0 after reporting)
     * `--strict` - Fail on any failure, equivalent to --threshold 1.0 (for CI gates)
     * `--concurrency` - Number of test cases to run in parallel. Default: 1 (sequential)
     * `--limit` - Maximum number of test cases to evaluate
@@ -51,7 +51,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
       # GitHub Actions annotations
       mix tribunal.eval --format github
 
-      # Default: always exit 0 (for baseline tracking)
+      # Default: complete without a quality gate (for baseline tracking)
       mix tribunal.eval
 
       # Fail if pass rate < 80%
@@ -78,69 +78,94 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
   @impl Mix.Task
   def run(args) do
-    {opts, files, invalid} =
-      OptionParser.parse(args,
-        strict: [
-          format: :string,
-          output: :string,
-          provider: :string,
-          threshold: :float,
-          strict: :boolean,
-          concurrency: :integer,
-          limit: :integer,
-          offset: :integer
-        ]
-      )
+    {opts, files, invalid} = parse_args(args)
 
     validate_options!(opts, invalid)
 
     # Start the app to load modules
     Mix.Task.run("app.start")
 
-    format = opts[:format] || "console"
-    output = opts[:output]
-    provider = parse_provider(opts[:provider])
-    threshold = opts[:threshold]
-    strict = opts[:strict] || false
-    concurrency = opts[:concurrency] || 1
-    limit = opts[:limit]
-    offset = opts[:offset] || 0
-
-    files = if Enum.empty?(files), do: find_default_files(), else: files
-
-    if Enum.empty?(files) do
-      Mix.raise("No eval files found. Create datasets in test/evals/")
-    end
+    settings = eval_settings(opts)
+    files = resolve_files!(files)
 
     start_time = System.monotonic_time(:millisecond)
 
     results =
       files
       |> Enum.flat_map(&load_dataset/1)
-      |> Enum.drop(offset)
-      |> then(fn cases -> if limit, do: Enum.take(cases, limit), else: cases end)
-      |> run_cases(provider, concurrency)
+      |> Enum.drop(settings.offset)
+      |> then(&limit_cases(&1, settings.limit))
+      |> run_cases(settings.provider, settings.concurrency)
       |> aggregate_results(start_time)
 
-    # Determine pass/fail based on threshold
-    passed = gate_passed?(results.summary, strict, threshold)
-
-    results = put_in(results, [:summary, :threshold_passed], passed)
-    results = put_in(results, [:summary, :threshold], threshold)
-    results = put_in(results, [:summary, :strict], strict)
-
-    formatted = format_results(results, format)
-
-    if output do
-      File.write!(output, formatted)
-      Mix.shell().info("Results written to #{output}")
-    else
-      Mix.shell().info(formatted)
-    end
+    {results, passed} = apply_gate(results, settings)
+    formatted = format_results(results, settings.format)
+    write_results(formatted, settings.output)
 
     unless passed do
       System.halt(1)
     end
+  end
+
+  defp parse_args(args) do
+    OptionParser.parse(args,
+      strict: [
+        format: :string,
+        output: :string,
+        provider: :string,
+        threshold: :float,
+        strict: :boolean,
+        concurrency: :integer,
+        limit: :integer,
+        offset: :integer
+      ]
+    )
+  end
+
+  defp eval_settings(opts) do
+    %{
+      format: opts[:format] || "console",
+      output: opts[:output],
+      provider: parse_provider(opts[:provider]),
+      threshold: opts[:threshold],
+      strict: opts[:strict] || false,
+      concurrency: opts[:concurrency] || 1,
+      limit: opts[:limit],
+      offset: opts[:offset] || 0
+    }
+  end
+
+  defp resolve_files!(files) do
+    files = if Enum.empty?(files), do: find_default_files(), else: files
+
+    if Enum.empty?(files) do
+      Mix.raise("No eval files found. Create datasets in test/evals/")
+    end
+
+    files
+  end
+
+  defp limit_cases(cases, nil), do: cases
+  defp limit_cases(cases, limit), do: Enum.take(cases, limit)
+
+  defp apply_gate(results, settings) do
+    gate_status = gate_status(results.summary, settings.strict, settings.threshold)
+    passed = gate_status in [:passed, :not_configured]
+    threshold_passed = if gate_status == :not_configured, do: nil, else: passed
+
+    results = put_in(results, [:summary, :threshold_passed], threshold_passed)
+    results = put_in(results, [:summary, :gate_status], gate_status)
+    results = put_in(results, [:summary, :threshold], settings.threshold)
+    results = put_in(results, [:summary, :strict], settings.strict)
+
+    {results, passed}
+  end
+
+  defp write_results(formatted, nil), do: Mix.shell().info(formatted)
+
+  defp write_results(formatted, output) do
+    File.write!(output, formatted)
+    Mix.shell().info("Results written to #{output}")
   end
 
   defp find_default_files do
@@ -154,6 +179,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     validate_positive!("--concurrency", opts[:concurrency])
     validate_positive!("--limit", opts[:limit])
     validate_offset!(opts[:offset])
+    validate_format!(opts[:format])
   end
 
   defp validate_known_options!([]), do: :ok
@@ -175,13 +201,19 @@ defmodule Mix.Tasks.Tribunal.Eval do
   defp validate_offset!(offset) when offset >= 0, do: :ok
   defp validate_offset!(_offset), do: Mix.raise("--offset cannot be negative")
 
-  defp gate_passed?(%{total: 0}, _strict, _threshold), do: false
-  defp gate_passed?(summary, true, _threshold), do: summary.failed == 0
+  defp validate_format!(nil), do: :ok
+  defp validate_format!(format) when format in ~w(console text json html github junit), do: :ok
+  defp validate_format!(format), do: Mix.raise("Unknown format: #{format}")
 
-  defp gate_passed?(summary, _strict, threshold) when is_number(threshold),
-    do: summary.pass_rate >= threshold
+  defp gate_status(%{total: 0}, _strict, _threshold), do: :failed
+  defp gate_status(%{failed: 0}, true, _threshold), do: :passed
+  defp gate_status(_summary, true, _threshold), do: :failed
 
-  defp gate_passed?(_summary, _strict, _threshold), do: true
+  defp gate_status(summary, _strict, threshold) when is_number(threshold) do
+    if summary.pass_rate >= threshold, do: :passed, else: :failed
+  end
+
+  defp gate_status(_summary, _strict, _threshold), do: :not_configured
 
   defp parse_provider(nil), do: nil
 
@@ -201,30 +233,34 @@ defmodule Mix.Tasks.Tribunal.Eval do
   end
 
   defp run_cases(cases, provider, concurrency) do
-    if concurrency > 1 do
-      task_results =
-        Task.async_stream(
-          cases,
-          fn {test_case, assertions} -> run_case(test_case, assertions, provider) end,
-          max_concurrency: concurrency,
-          timeout: 120_000
+    timeout = Application.get_env(:tribunal, :eval_timeout, 120_000)
+
+    task_results =
+      Task.Supervisor.async_stream_nolink(
+        Tribunal.TaskSupervisor,
+        cases,
+        fn {test_case, assertions} -> run_case(test_case, assertions, provider) end,
+        max_concurrency: concurrency,
+        timeout: timeout,
+        on_timeout: :kill_task
+      )
+
+    cases
+    |> Enum.zip(task_results)
+    |> Enum.map(fn
+      {_case, {:ok, result}} ->
+        result
+
+      {{test_case, assertions}, {:exit, reason}} ->
+        Tribunal.Evaluator.error(test_case, "Evaluation task failed: #{inspect(reason)}",
+          assertions: assertions,
+          duration_ms: task_error_duration(reason, timeout)
         )
-
-      cases
-      |> Enum.zip(task_results)
-      |> Enum.map(fn
-        {_case, {:ok, result}} ->
-          result
-
-        {{test_case, _assertions}, {:exit, reason}} ->
-          Tribunal.Evaluator.error(test_case, "Evaluation task failed: #{inspect(reason)}")
-      end)
-    else
-      Enum.map(cases, fn {test_case, assertions} ->
-        run_case(test_case, assertions, provider)
-      end)
-    end
+    end)
   end
+
+  defp task_error_duration(:timeout, timeout), do: timeout
+  defp task_error_duration(_reason, _timeout), do: 0
 
   defp run_case(test_case, assertions, provider) do
     start = System.monotonic_time(:millisecond)
@@ -234,7 +270,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
         Tribunal.Evaluator.evaluate(test_case, assertions, started_at: start)
 
       {:error, reason} ->
-        Tribunal.Evaluator.error(test_case, reason, started_at: start)
+        Tribunal.Evaluator.error(test_case, reason, started_at: start, assertions: assertions)
     end
   end
 
@@ -259,6 +295,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     metrics = aggregate_metrics(cases)
 
     %{
+      schema_version: 2,
       summary: %{
         total: total,
         passed: passed,

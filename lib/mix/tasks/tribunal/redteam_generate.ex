@@ -42,6 +42,7 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
   use Mix.Task
 
   alias Tribunal.RedTeam
+  alias Tribunal.RedTeam.Plugin
   alias Tribunal.RedTeam.YamlEmit
 
   @impl Mix.Task
@@ -92,7 +93,16 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
       raw ->
         raw
         |> String.split(",", trim: true)
-        |> Enum.map(&String.to_atom(String.trim(&1)))
+        |> Enum.map(&resolve_plugin!/1)
+    end
+  end
+
+  defp resolve_plugin!(raw_id) do
+    id = String.trim(raw_id)
+
+    case Enum.find(Plugin.all_ids(), &(Atom.to_string(&1) == id)) do
+      nil -> Mix.raise("Unknown red-team plugin: #{id}")
+      plugin_id -> plugin_id
     end
   end
 

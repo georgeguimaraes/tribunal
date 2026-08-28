@@ -105,7 +105,7 @@ Key differences from Console:
 
 ## JSON Reporter
 
-Machine-readable JSON output.
+Machine-readable JSON output. `Tribunal.Reporter.JSON.format/1` is a pass-through formatter for a report map you construct. The versioned schema below is produced by `mix tribunal.eval --format json`, which adds batch summary and gate fields before formatting.
 
 ```elixir
 alias Tribunal.Reporter.JSON
@@ -117,12 +117,17 @@ output = JSON.format(report)
 Output:
 ```json
 {
+  "schema_version": 2,
   "summary": {
     "total": 10,
     "passed": 8,
     "failed": 2,
-    "pass_rate": 80.0,
-    "duration_ms": 1500
+    "pass_rate": 0.8,
+    "duration_ms": 1500,
+    "gate_status": "not_configured",
+    "threshold_passed": null,
+    "threshold": null,
+    "strict": false
   },
   "metrics": {
     "contains": {"passed": 5, "total": 5},
@@ -138,12 +143,18 @@ Output:
     {
       "input": "How do I Y?",
       "status": "failed",
-      "failures": [["faithful", "Not grounded"]],
+      "failures": [{"faithful": "Not grounded"}],
+      "results": {"faithful": {"fail": {"reason": "Not grounded"}}},
+      "evaluations": [{"faithful": {"fail": {"reason": "Not grounded"}}}],
       "duration_ms": 200
     }
   ]
 }
 ```
+
+`results` contains one conservative summary per assertion type. When an assertion type is repeated, a failure or error wins over a pass. `evaluations` preserves every assertion execution in dataset order.
+
+Schema version 2 distinguishes quality-gate state from execution results. `summary.threshold_passed` is `null` when no gate was configured, and `summary.gate_status` is `"not_configured"`. This keeps report-only runs from being labeled as passing gates while they still exit successfully.
 
 ## HTML Reporter
 

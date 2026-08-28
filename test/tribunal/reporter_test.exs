@@ -84,6 +84,15 @@ defmodule Tribunal.ReporterTest do
       assert output =~ "PASSED"
     end
 
+    test "distinguishes a report-only run from a passed gate" do
+      results = put_in(@sample_results, [:summary, :threshold_passed], nil)
+
+      output = Console.format(results)
+
+      assert output =~ "COMPLETED (no gate)"
+      refute output =~ "PASSED"
+    end
+
     test "aligns metric bars across rows" do
       results = %{
         @sample_results
@@ -147,6 +156,14 @@ defmodule Tribunal.ReporterTest do
       output = JSON.format(@sample_results)
       {:ok, parsed} = json_decode(output)
       assert length(parsed["cases"]) == 3
+    end
+
+    test "documents the emitted failure tuple shape" do
+      output = JSON.format(@sample_results)
+      {:ok, parsed} = json_decode(output)
+
+      assert %{"faithful" => "Score 0.5 below threshold 0.8"} =
+               get_in(parsed, ["cases", Access.at(1), "failures", Access.at(0)])
     end
   end
 

@@ -28,6 +28,29 @@ defmodule Tribunal.AssertionsTest do
       assert {:error, msg} = Assertions.evaluate(:unknown_assertion, test_case, [])
       assert msg =~ "Unknown assertion"
     end
+
+    test "rejects options that belong to another assertion" do
+      test_case = %TestCase{input: "test", actual_output: "short"}
+
+      assert {:error, reason} =
+               Assertions.evaluate(:max_tokens, test_case, actual_output: 1)
+
+      assert reason =~ "Unknown options for max_tokens"
+    end
+
+    test "accepts documented judge context options" do
+      client = fn _model, _messages, _opts ->
+        {:ok, %{"verdict" => "yes", "reason" => "grounded", "score" => 1.0}}
+      end
+
+      test_case = %TestCase{actual_output: "answer", context: "source"}
+
+      assert {:pass, _} =
+               Assertions.evaluate(:faithful, test_case,
+                 context: "source",
+                 llm_client: client
+               )
+    end
   end
 
   describe "evaluate_all/2" do
@@ -76,6 +99,21 @@ defmodule Tribunal.AssertionsTest do
 
       assert {:pass, _} = results[:is_json]
     end
+
+    test "keeps the worst result for repeated assertion types" do
+      test_case = %TestCase{input: "test", actual_output: "Hello world"}
+
+      results =
+        Assertions.evaluate_all(
+          [
+            {:contains, [value: "missing"]},
+            {:contains, [value: "Hello"]}
+          ],
+          test_case
+        )
+
+      assert {:fail, _} = results[:contains]
+    end
   end
 
   describe "evaluate_each/3" do
@@ -112,6 +150,10 @@ defmodule Tribunal.AssertionsTest do
       }
 
       refute Assertions.all_passed?(results)
+    end
+
+    test "returns false when nothing was evaluated" do
+      refute Assertions.all_passed?(%{})
     end
   end
 
