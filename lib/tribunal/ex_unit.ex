@@ -159,11 +159,18 @@ defmodule Tribunal.ExUnit do
   defp fetch_assertions!(opts) do
     case Keyword.fetch(opts, :expected) do
       {:ok, assertions} when is_list(assertions) and assertions != [] ->
-        if Enum.all?(assertions, &valid_assertion?/1) do
-          assertions
-        else
-          raise ArgumentError,
-                ":expected must be a non-empty assertion list with atom or string names and keyword or map options"
+        case Enum.reduce_while(assertions, [], fn assertion, normalized ->
+               case normalize_assertion(assertion) do
+                 {:ok, value} -> {:cont, [value | normalized]}
+                 :error -> {:halt, :error}
+               end
+             end) do
+          :error ->
+            raise ArgumentError,
+                  ":expected must contain known atom or string assertion names with keyword or map options"
+
+          normalized ->
+            Enum.reverse(normalized)
         end
 
       _other ->
@@ -171,13 +178,36 @@ defmodule Tribunal.ExUnit do
     end
   end
 
-  defp valid_assertion?(type) when is_atom(type) or is_binary(type), do: true
-
-  defp valid_assertion?({type, assertion_opts}) when is_atom(type) or is_binary(type) do
-    keyword_options?(assertion_opts)
+  defp normalize_assertion(type) when is_atom(type) or is_binary(type) do
+    case known_assertion_type(type) do
+      nil -> :error
+      normalized -> {:ok, normalized}
+    end
   end
 
-  defp valid_assertion?(_assertion), do: false
+  defp normalize_assertion({type, assertion_opts}) when is_atom(type) or is_binary(type) do
+    case {known_assertion_type(type), keyword_options?(assertion_opts)} do
+      {nil, _valid_options?} -> :error
+      {_type, false} -> :error
+      {normalized, true} -> {:ok, {normalized, assertion_opts}}
+    end
+  end
+
+  defp normalize_assertion(_assertion), do: :error
+
+  defp known_assertion_type(type) when is_binary(type) do
+    case Tribunal.Assertions.resolve_type(type) do
+      normalized when is_atom(normalized) -> normalized
+      _unknown -> nil
+    end
+  end
+
+  defp known_assertion_type(type) when is_atom(type) do
+    case Tribunal.Assertions.resolve_type(Atom.to_string(type)) do
+      ^type -> type
+      _other -> nil
+    end
+  end
 
   defp validate_defaults!(defaults) do
     if keyword_options?(defaults) do

@@ -25,6 +25,17 @@ defmodule Tribunal.ExUnitTest do
       assert length(result.attempts) == 1
     end
 
+    test "normalizes known string assertion names before invoking the callback" do
+      result =
+        Tribunal.ExUnit.run(fn -> "hello" end,
+          input: "query",
+          expected: [{"contains", [value: "hello"]}]
+        )
+
+      assert result.status == :passed
+      assert [{:contains, {:pass, _details}}] = result.evaluations
+    end
+
     test "applies a sampling pass rule across fresh callback invocations" do
       Process.put(:tribunal_attempt, 0)
 
@@ -87,7 +98,16 @@ defmodule Tribunal.ExUnitTest do
 
       refute_received :invoked
 
-      assert_raise ArgumentError, ~r/:expected must be a non-empty assertion list/, fn ->
+      assert_raise ArgumentError, ~r/must contain known/, fn ->
+        tribunal_assert(fn -> send(self(), :invoked) end,
+          input: "query",
+          expected: [{"unknown_assertion", []}]
+        )
+      end
+
+      refute_received :invoked
+
+      assert_raise ArgumentError, ~r/:expected must contain known/, fn ->
         tribunal_assert(fn -> send(self(), :invoked) end,
           input: "query",
           expected: [contains: "hello"]
