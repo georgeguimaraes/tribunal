@@ -18,7 +18,7 @@ defmodule Tribunal.RedTeam.Attacker.ReqLLM do
       do_generate(prompt, schema, opts)
     else
       {:error,
-       "req_llm is not available. Add {:req_llm, \"~> 1.2\"} or configure a different attacker."}
+       "req_llm is not available. Add {:req_llm, \">= 1.2.0 and < 2.0.0\"} or configure a different attacker."}
     end
   end
 
