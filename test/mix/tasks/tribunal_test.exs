@@ -57,6 +57,20 @@ defmodule Mix.Tasks.TribunalTest do
       behaviours = Eval.__info__(:attributes)[:behaviour] || []
       assert Mix.Task in behaviours
     end
+
+    test "rejects unknown options" do
+      assert_raise Mix.Error, ~r/Invalid options/, fn -> Eval.run(["--unknown"]) end
+    end
+
+    test "validates numeric options" do
+      assert_raise Mix.Error, ~r/threshold must be between/, fn ->
+        Eval.run(["--threshold", "1.1"])
+      end
+
+      assert_raise Mix.Error, ~r/concurrency must be at least/, fn ->
+        Eval.run(["--concurrency", "0"])
+      end
+    end
   end
 
   describe "Init" do

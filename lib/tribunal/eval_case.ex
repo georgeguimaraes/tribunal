@@ -71,19 +71,10 @@ defmodule Tribunal.EvalCase do
           actual_output = apply(module, function, [test_case.input])
           test_case = Tribunal.TestCase.with_output(test_case, actual_output)
 
-          # Run all assertions
-          results = Tribunal.Assertions.evaluate_all(assertions, test_case)
+          result = Tribunal.Evaluator.evaluate(test_case, assertions, defaults: defaults)
 
-          # Fail if any assertion failed
-          failures =
-            results
-            |> Enum.filter(fn {_type, result} -> match?({:fail, _}, result) end)
-            |> Enum.map(fn {type, {:fail, details}} ->
-              "#{type}: #{details[:reason]}"
-            end)
-
-          if failures != [] do
-            flunk(Enum.join(failures, "\n"))
+          if result.status == :failed do
+            flunk(Tribunal.Evaluator.failure_message(result))
           end
         end
       end

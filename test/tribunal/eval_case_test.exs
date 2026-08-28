@@ -647,3 +647,16 @@ defmodule Tribunal.EvalCaseTest do
     end
   end
 end
+
+defmodule Tribunal.EvalCaseDatasetProvider do
+  def query("What is the return window?"), do: "Returns are accepted within 30 days."
+end
+
+defmodule Tribunal.EvalCaseGeneratedTest do
+  use ExUnit.Case, async: true
+  use Tribunal.EvalCase
+
+  tribunal_eval(Path.expand("../fixtures/eval_case_dataset.json", __DIR__),
+    provider: {Tribunal.EvalCaseDatasetProvider, :query}
+  )
+end

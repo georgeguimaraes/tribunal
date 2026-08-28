@@ -89,7 +89,7 @@ Multiple values:
 
 With options:
 ```json
-{"faithful": {"threshold": 0.9, "model": "anthropic:claude-3-5-sonnet-latest"}}
+{"faithful": {"threshold": 0.9, "model": "anthropic:claude-sonnet-4-6"}}
 ```
 
 No options:
@@ -165,7 +165,7 @@ tribunal_eval "test/evals/datasets/questions.json",
   provider: {MyApp.RAG, :query},
   defaults: [
     threshold: 0.9,
-    model: "anthropic:claude-3-5-sonnet-latest"
+    model: "anthropic:claude-sonnet-4-6"
   ]
 ```
 

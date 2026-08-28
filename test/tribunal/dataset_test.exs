@@ -108,5 +108,22 @@ defmodule Tribunal.DatasetTest do
       assert :contains_any in types
       assert :not_contains in types
     end
+
+    test "does not create atoms for unknown assertion names", %{fixtures_path: fixtures_path} do
+      name = "unknown_#{System.unique_integer([:positive])}"
+      path = Path.join(fixtures_path, "unknown_assertion.json")
+      File.write!(path, JSON.encode!([%{"input" => "hello", "expected" => %{name => %{}}}]))
+
+      refute existing_atom?(name)
+      assert {:ok, [{_test_case, [{^name, []}]}]} = Dataset.load_with_assertions(path)
+      refute existing_atom?(name)
+    end
+  end
+
+  defp existing_atom?(value) do
+    _atom = String.to_existing_atom(value)
+    true
+  rescue
+    ArgumentError -> false
   end
 end

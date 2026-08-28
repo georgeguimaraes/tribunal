@@ -40,7 +40,9 @@ defmodule Tribunal.Assertions do
 
   Returns `{:pass, details}` or `{:fail, details}`.
   """
-  def evaluate(assertion_type, %TestCase{} = test_case, opts \\ []) do
+  def evaluate(assertion_type, test_case, opts \\ [])
+
+  def evaluate(assertion_type, %TestCase{} = test_case, opts) when is_atom(assertion_type) do
     cond do
       assertion_type in @deterministic_assertions ->
         Deterministic.evaluate(assertion_type, test_case.actual_output, opts)
@@ -55,6 +57,10 @@ defmodule Tribunal.Assertions do
       true ->
         {:error, "Unknown assertion type: #{assertion_type}"}
     end
+  end
+
+  def evaluate(assertion_type, %TestCase{}, _opts) do
+    {:error, "Unknown assertion type: #{assertion_type}"}
   end
 
   @doc """
@@ -73,6 +79,35 @@ defmodule Tribunal.Assertions do
     assertions
     |> Enum.to_list()
     |> evaluate_all(test_case)
+  end
+
+  @doc """
+  Evaluates assertions in order without collapsing repeated assertion types.
+
+  Default options are applied to every assertion. Options declared on the
+  assertion take precedence over defaults.
+  """
+  def evaluate_each(assertions, test_case, defaults \\ [])
+
+  def evaluate_each(assertions, %TestCase{} = test_case, defaults) when is_map(assertions) do
+    assertions
+    |> Enum.to_list()
+    |> evaluate_each(test_case, defaults)
+  end
+
+  def evaluate_each(assertions, %TestCase{} = test_case, defaults) when is_list(assertions) do
+    defaults = normalize_opts(defaults)
+
+    Enum.map(assertions, fn
+      {type, opts} ->
+        case merge_opts(defaults, opts) do
+          {:ok, merged_opts} -> {type, safely_evaluate(type, test_case, merged_opts)}
+          {:error, reason} -> {type, {:error, reason}}
+        end
+
+      type when is_atom(type) or is_binary(type) ->
+        {type, safely_evaluate(type, test_case, defaults)}
+    end)
   end
 
   @doc """
@@ -129,5 +164,26 @@ defmodule Tribunal.Assertions do
     end
 
     Embedding.evaluate(test_case, opts)
+  end
+
+  defp safely_evaluate(type, test_case, opts) do
+    evaluate(type, test_case, opts)
+  rescue
+    error -> {:error, Exception.message(error)}
+  catch
+    kind, reason -> {:error, "#{kind}: #{inspect(reason)}"}
+  end
+
+  defp normalize_opts(opts) when is_map(opts), do: Map.to_list(opts)
+  defp normalize_opts(opts) when is_list(opts), do: opts
+
+  defp merge_opts(defaults, opts) do
+    opts = normalize_opts(opts)
+
+    if Keyword.keyword?(defaults) and Keyword.keyword?(opts) do
+      {:ok, Keyword.merge(defaults, opts)}
+    else
+      {:error, "Assertion options must use known atom keys"}
+    end
   end
 end

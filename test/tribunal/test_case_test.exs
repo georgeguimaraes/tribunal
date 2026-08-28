@@ -36,6 +36,16 @@ defmodule Tribunal.TestCaseTest do
 
       assert tc.context == ["Doc 1", "Doc 2"]
     end
+
+    test "ignores unknown external keys without creating atoms" do
+      key = "unknown_#{System.unique_integer([:positive])}"
+      refute existing_atom?(key)
+
+      tc = TestCase.new(%{"input" => "Hello", key => "ignored"})
+
+      assert tc.input == "Hello"
+      refute existing_atom?(key)
+    end
   end
 
   describe "with_output/2" do
@@ -63,5 +73,12 @@ defmodule Tribunal.TestCaseTest do
 
       assert tc.metadata == %{latency_ms: 150, tokens: 50}
     end
+  end
+
+  defp existing_atom?(value) do
+    _atom = String.to_existing_atom(value)
+    true
+  rescue
+    ArgumentError -> false
   end
 end

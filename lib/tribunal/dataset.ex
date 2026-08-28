@@ -133,15 +133,26 @@ defmodule Tribunal.Dataset do
     end)
   end
 
-  defp normalize_type(type) when is_binary(type), do: String.to_atom(type)
+  defp normalize_type(type) when is_binary(type) do
+    String.to_existing_atom(type)
+  rescue
+    ArgumentError -> type
+  end
+
   defp normalize_type(type) when is_atom(type), do: type
 
   defp normalize_opts(opts) when is_map(opts) do
     Enum.map(opts, fn
-      {k, v} when is_binary(k) -> {String.to_atom(k), v}
+      {k, v} when is_binary(k) -> {existing_atom_or_string(k), v}
       {k, v} when is_atom(k) -> {k, v}
     end)
   end
 
   defp normalize_opts(opts) when is_list(opts), do: opts
+
+  defp existing_atom_or_string(value) do
+    String.to_existing_atom(value)
+  rescue
+    ArgumentError -> value
+  end
 end

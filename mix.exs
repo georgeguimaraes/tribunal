@@ -75,7 +75,8 @@ defmodule Tribunal.MixProject do
         Core: [
           Tribunal,
           Tribunal.TestCase,
-          Tribunal.Assertions
+          Tribunal.Assertions,
+          Tribunal.Evaluator
         ],
         "Assertion Types": [
           Tribunal.Assertions.Deterministic,

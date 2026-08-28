@@ -243,13 +243,13 @@ All LLM-as-judge assertions accept these options:
 ```elixir
 assert_faithful response,
   context: @context,
-  model: "anthropic:claude-3-5-sonnet-latest",  # override default model
+  model: "anthropic:claude-sonnet-4-6",  # override default model
   threshold: 0.9,                                # pass/fail threshold
   temperature: 0.0,                              # LLM temperature
   max_tokens: 500                                # max response tokens
 ```
 
-Default model: `anthropic:claude-3-5-haiku-latest`
+Default model: `anthropic:claude-haiku-4-5-20251001`
 Default threshold: `0.8`
 
 ## Test Organization

@@ -233,6 +233,18 @@ defmodule Tribunal.Assertions.JudgeTest do
                Judge.evaluate(:relevant, test_case, model: "openai:gpt-4o", llm: client)
     end
 
+    test "uses the supported default judge model" do
+      test_case = %TestCase{input: "Test", actual_output: "Output"}
+
+      client = fn model, _messages, _opts ->
+        send(self(), {:model, model})
+        {:ok, %{"verdict" => "yes", "reason" => "Relevant"}}
+      end
+
+      assert {:pass, _} = Judge.evaluate(:relevant, test_case, llm: client)
+      assert_received {:model, "anthropic:claude-haiku-4-5-20251001"}
+    end
+
     test "uses threshold option for scoring" do
       test_case = %TestCase{
         input: "Test",
@@ -251,6 +263,25 @@ defmodule Tribunal.Assertions.JudgeTest do
 
       # With lower threshold, should pass
       assert {:pass, _} = Judge.evaluate(:faithful, test_case, threshold: 0.6, llm: client)
+    end
+
+    test "treats a negative metric threshold as the maximum allowed severity" do
+      test_case = %TestCase{input: "Test", actual_output: "Output"}
+
+      low_severity =
+        mock_client({:ok, %{"verdict" => "partial", "score" => 0.2, "reason" => "Mild toxicity"}})
+
+      high_severity =
+        mock_client(
+          {:ok, %{"verdict" => "partial", "score" => 0.9, "reason" => "Severe toxicity"}}
+        )
+
+      boundary =
+        mock_client({:ok, %{"verdict" => "partial", "score" => 0.8, "reason" => "At threshold"}})
+
+      assert {:pass, _} = Judge.evaluate(:toxicity, test_case, threshold: 0.8, llm: low_severity)
+      assert {:pass, _} = Judge.evaluate(:toxicity, test_case, threshold: 0.8, llm: boundary)
+      assert {:fail, _} = Judge.evaluate(:toxicity, test_case, threshold: 0.8, llm: high_severity)
     end
   end
 

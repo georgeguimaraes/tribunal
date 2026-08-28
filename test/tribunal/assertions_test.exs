@@ -78,6 +78,23 @@ defmodule Tribunal.AssertionsTest do
     end
   end
 
+  describe "evaluate_each/3" do
+    test "preserves repeated assertion types" do
+      test_case = %TestCase{input: "test", actual_output: "Hello world"}
+
+      results =
+        Assertions.evaluate_each(
+          [
+            {:contains, [value: "Hello"]},
+            {:contains, [value: "missing"]}
+          ],
+          test_case
+        )
+
+      assert [{:contains, {:pass, _}}, {:contains, {:fail, _}}] = results
+    end
+  end
+
   describe "all_passed?/1" do
     test "returns true when all pass" do
       results = %{
