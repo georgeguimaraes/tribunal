@@ -35,58 +35,46 @@ defmodule Tribunal.Assertions.Deterministic do
   def evaluate(:contains, output, opts) do
     values = List.wrap(opts[:value] || opts[:values])
 
-    results =
-      Enum.map(values, fn v ->
-        {v, String.contains?(output, v)}
-      end)
-
-    if Enum.all?(results, fn {_, matched} -> matched end) do
-      {:pass, %{matched: values}}
+    if values == [] do
+      {:error, "contains requires :value or :values"}
     else
-      missing = results |> Enum.reject(fn {_, m} -> m end) |> Enum.map(fn {v, _} -> v end)
-      {:fail, %{missing: missing, reason: "Output missing: #{inspect(missing)}"}}
+      evaluate_contains(output, values)
     end
   end
 
   def evaluate(:not_contains, output, opts) do
     values = List.wrap(opts[:value] || opts[:values])
 
-    found =
-      values
-      |> Enum.filter(&String.contains?(output, &1))
-
-    if Enum.empty?(found) do
-      {:pass, %{checked: values}}
+    if values == [] do
+      {:error, "not_contains requires :value or :values"}
     else
-      {:fail, %{found: found, reason: "Output contains forbidden: #{inspect(found)}"}}
+      evaluate_not_contains(output, values)
     end
   end
 
   def evaluate(:contains_any, output, opts) do
     values = List.wrap(opts[:value] || opts[:values])
 
-    found = Enum.find(values, &String.contains?(output, &1))
-
-    if found do
-      {:pass, %{matched: found}}
+    if values == [] do
+      {:error, "contains_any requires :value or :values"}
     else
-      {:fail, %{expected_any: values, reason: "Output contains none of: #{inspect(values)}"}}
+      found = Enum.find(values, &String.contains?(output, &1))
+
+      if found do
+        {:pass, %{matched: found}}
+      else
+        {:fail, %{expected_any: values, reason: "Output contains none of: #{inspect(values)}"}}
+      end
     end
   end
 
   def evaluate(:contains_all, output, opts) do
     values = List.wrap(opts[:value] || opts[:values])
 
-    results =
-      Enum.map(values, fn v ->
-        {v, String.contains?(output, v)}
-      end)
-
-    if Enum.all?(results, fn {_, matched} -> matched end) do
-      {:pass, %{matched: values}}
+    if values == [] do
+      {:error, "contains_all requires :value or :values"}
     else
-      missing = results |> Enum.reject(fn {_, m} -> m end) |> Enum.map(fn {v, _} -> v end)
-      {:fail, %{missing: missing, reason: "Output missing: #{inspect(missing)}"}}
+      evaluate_contains_all(output, values)
     end
   end
 
@@ -260,6 +248,29 @@ defmodule Tribunal.Assertions.Deterministic do
        }}
     end
   end
+
+  defp evaluate_contains(output, values) do
+    results = Enum.map(values, &{&1, String.contains?(output, &1)})
+
+    if Enum.all?(results, fn {_, matched} -> matched end) do
+      {:pass, %{matched: values}}
+    else
+      missing = results |> Enum.reject(fn {_, matched} -> matched end) |> Enum.map(&elem(&1, 0))
+      {:fail, %{missing: missing, reason: "Output missing: #{inspect(missing)}"}}
+    end
+  end
+
+  defp evaluate_not_contains(output, values) do
+    found = Enum.filter(values, &String.contains?(output, &1))
+
+    if Enum.empty?(found) do
+      {:pass, %{checked: values}}
+    else
+      {:fail, %{found: found, reason: "Output contains forbidden: #{inspect(found)}"}}
+    end
+  end
+
+  defp evaluate_contains_all(output, values), do: evaluate_contains(output, values)
 
   # Levenshtein distance algorithm
   defp levenshtein_distance(s1, s2) do

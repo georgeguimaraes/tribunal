@@ -6,7 +6,7 @@ defmodule Tribunal.Assertions.Judge do
   verdicts from the judge model.
   """
 
-  @default_model "anthropic:claude-3-5-haiku-latest"
+  @default_model "anthropic:claude-haiku-4-5-20251001"
   @default_threshold 0.8
 
   @schema [
@@ -87,7 +87,7 @@ defmodule Tribunal.Assertions.Judge do
 
   defp call_llm(model, messages, opts) do
     # Allow injecting custom LLM for tests via opts[:llm]
-    case opts[:llm] do
+    case opts[:llm] || opts[:llm_client] do
       nil ->
         call_req_llm(model, messages, opts)
 
@@ -134,8 +134,13 @@ defmodule Tribunal.Assertions.Judge do
   defp verdict_result("yes", _score, _threshold, false, details), do: {:pass, details}
   defp verdict_result("no", _score, _threshold, false, details), do: {:fail, details}
 
-  defp verdict_result("partial", score, threshold, _negative?, details)
+  defp verdict_result("partial", score, threshold, false, details)
        when is_number(score) and score >= threshold do
+    {:pass, details}
+  end
+
+  defp verdict_result("partial", score, threshold, true, details)
+       when is_number(score) and score <= threshold do
     {:pass, details}
   end
 

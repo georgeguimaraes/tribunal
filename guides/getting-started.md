@@ -86,7 +86,7 @@ This creates:
 Execute evaluations with configurable thresholds:
 
 ```bash
-# Run all evals in test/evals/ (default: exit 0, just report)
+# Run all evals in test/evals/ (quality failures are report-only by default)
 mix tribunal.eval
 
 # Run specific dataset

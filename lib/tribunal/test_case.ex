@@ -88,27 +88,19 @@ defmodule Tribunal.TestCase do
   end
 
   defp normalize_keys(map) do
-    Map.new(map, fn
-      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
-      {k, v} when is_atom(k) -> {k, v}
+    fields = MapSet.new(__struct__() |> Map.from_struct() |> Map.keys())
+
+    Enum.reduce(map, %{}, fn
+      {key, value}, acc when is_atom(key) ->
+        if MapSet.member?(fields, key), do: Map.put(acc, key, value), else: acc
+
+      {key, value}, acc when is_binary(key) ->
+        case Enum.find(fields, &(Atom.to_string(&1) == key)) do
+          nil -> acc
+          field -> Map.put(acc, field, value)
+        end
     end)
-  rescue
-    ArgumentError -> Map.new(map, fn {k, v} -> {safe_to_atom(k), v} end)
   end
-
-  defp safe_to_atom(k) when is_binary(k) do
-    case k do
-      "input" -> :input
-      "actual_output" -> :actual_output
-      "expected_output" -> :expected_output
-      "context" -> :context
-      "retrieval_context" -> :retrieval_context
-      "metadata" -> :metadata
-      _ -> String.to_atom(k)
-    end
-  end
-
-  defp safe_to_atom(k) when is_atom(k), do: k
 
   defp normalize_context(nil), do: nil
   defp normalize_context(ctx) when is_binary(ctx), do: [ctx]

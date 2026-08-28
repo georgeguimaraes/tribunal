@@ -27,17 +27,17 @@ Set the default judge model in your application config:
 
 ```elixir
 # config/config.exs or config/dev.exs
-config :tribunal, llm: "anthropic:claude-3-5-sonnet-latest"
+config :tribunal, llm: "anthropic:claude-sonnet-4-6"
 ```
 
 ### Default Model
 
-The default judge model is `anthropic:claude-3-5-haiku-latest`. Override per assertion:
+The default judge model is `anthropic:claude-haiku-4-5-20251001`. Override per assertion:
 
 ```elixir
 assert_faithful response,
   context: @docs,
-  model: "anthropic:claude-3-5-sonnet-latest"
+  model: "anthropic:claude-sonnet-4-6"
 ```
 
 Or use any model supported by ReqLLM:

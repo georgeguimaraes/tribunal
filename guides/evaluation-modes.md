@@ -96,7 +96,7 @@ Use the mix task when you want to track aggregate performance across many test c
 ### Running with Thresholds
 
 ```bash
-# Default: always exit 0, just report results
+# Default: report quality failures without blocking
 mix tribunal.eval
 
 # Pass if 80% of tests succeed
@@ -108,6 +108,8 @@ mix tribunal.eval --threshold 0.9 --concurrency 5
 # Strict mode: fail on any failure (like ExUnit)
 mix tribunal.eval --strict
 ```
+
+Provider failures, task exits, timeouts, invalid evaluation configuration, and runs that select zero cases still exit nonzero without a quality gate.
 
 ### Output
 
@@ -198,7 +200,7 @@ tribunal_eval "test/evals/datasets/questions.json",
 mix tribunal.eval --provider MyApp.RAG.query
 ```
 
-The provider receives a `Tribunal.TestCase` struct with `input` and `context`, and returns the actual output string.
+The provider contracts intentionally follow each mode. `tribunal_eval` passes `test_case.input`, so the provider behaves like an ordinary application function inside ExUnit. `mix tribunal.eval` passes the full `Tribunal.TestCase` so batch providers can also inspect context, expected output, and metadata. Both return the actual output string.
 
 ## CI Integration Examples
 

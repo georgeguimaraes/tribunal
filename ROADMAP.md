@@ -108,182 +108,36 @@ So "porting promptfoo's catalog" means three different kinds of work:
 - GitHub Action runs `mix ngen.red_team_eval --output report.json` on cron (nightly?).
 - Surface failures as PR comments or just a Slack ping.
 
-## Dataset template variables (issue #32)
+## Evaluation architecture
 
-Tracking [issue #32](https://github.com/georgeguimaraes/tribunal/issues/32). Matt McCoy flagged that large prompt templates with per-row interpolation slots don't fit the current dataset shape. Putting the rendered prompt into each row's `input:` duplicates the template across every row; a custom provider that ignores `input` and rebuilds the prompt works but ducks the design intent. Separate from the red-team work but lives in this doc since it's the only roadmap.
+The next work is organized around one rule: Mix and ExUnit share evaluation semantics, while each keeps its native execution model.
 
-### What the feature does
+`Tribunal.Evaluator` owns single-case truth. It evaluates an output against assertions, preserves repeated assertions, applies defaults, and returns a passed or failed case result. Missing output, missing assertions, assertion errors, and unexpected assertion responses fail closed.
 
-User keeps the prompt template in code (where it already lives), uses `{{var}}` placeholders, and the dataset YAML carries only per-row variables. Example:
+`tribunal_eval` stays native to ExUnit. One dataset row generates one ExUnit test, providers continue receiving the input string, and ExUnit owns test scheduling, filtering, timeouts, and failure presentation.
 
-```elixir
-@template """
-You are a customer service agent for Acme.
-Order ID: {{order_id}}
-Customer says: {{message}}
-Decline refunds older than 30 days.
-"""
-```
+`mix tribunal.eval` stays the batch interface. Providers continue receiving the full `Tribunal.TestCase`, while the Mix task owns dataset execution, concurrency, aggregation, quality gates, reports, and exit codes.
 
-```yaml
-- vars:
-    order_id: "12345"
-    message: "I want a refund for an order from 6 months ago"
-  expected:
-    refusal: {}
-    contains: ["30 days"]
-```
+### Current: trustworthy shared evaluation
 
-```elixir
-tribunal_eval "test/evals/datasets/support.yaml",
-  template: Acme.SupportPrompt.template(),
-  provider: {Acme.SupportLLM, :chat}
-```
+- Route both `tribunal_eval` and `mix tribunal.eval` through `Tribunal.Evaluator`.
+- Preserve the existing public APIs and provider contracts.
+- Fail closed on missing outputs and assertion errors.
+- Preserve repeated assertion results instead of losing them in a map.
+- Apply `tribunal_eval` defaults with case-specific options taking precedence.
+- Fix the remaining unsafe dataset and CLI boundaries before adding more features.
 
-```bash
-mix tribunal.eval support.yaml \
-  --template-file priv/prompts/support.txt \
-  --provider Acme.SupportLLM.chat
-```
+### Next: structured inputs
 
-Tribunal renders the template with each row's `vars` to produce `test_case.input`, then the provider runs as today and assertions work unchanged.
+Tracking [issue #32](https://github.com/georgeguimaraes/tribunal/issues/32). Dataset input should accept structured JSON-compatible data, usually a map of variables. The application provider owns prompt rendering because the prompt is application code.
 
-### Design choices
+Tribunal will not add its own template language. Existing string inputs remain valid, and the two provider contracts stay unchanged: ExUnit receives `test_case.input`, while the Mix provider receives the full test case.
 
-- Syntax: `{{var}}` Mustache-style. No clash with Elixir `#{}`, no EEx dep, no escaping headaches.
-- Template lives in code, not YAML. Multi-line prompts don't fit cleanly into YAML rows, and code is where users already organise prompts.
-- New dedicated `:vars` field on `Tribunal.TestCase`, not stuffed under `metadata`. Discoverable, validates better.
-- Both `input` and `vars` on the same row → error (ambiguous about what reaches the LLM).
-- Template references a missing var → error early with a clear message (`"template references {{order_id}} but vars has [:message] only"`).
-- Render target is `input`. Existing assertions that read `test_case.input` (jailbreak query context, etc.) keep working.
+### Later: repeated runs and batch gates
 
-### Implementation footprint
+Tracking [issue #35](https://github.com/georgeguimaraes/tribunal/issues/35). Repeated attempts and their reduction belong in the shared single-case evaluation model. Dataset-wide and per-group thresholds belong in `mix tribunal.eval`, where Tribunal owns the batch.
 
-- New `Tribunal.Template` module — `render(template, vars) :: {:ok, str} | {:error, {:missing_vars, [...]}}`. Regex substitution, no template engine dep, ~30 lines.
-- `Tribunal.TestCase` gets a `:vars` field.
-- `Tribunal.Dataset` threads `vars` through; renders when the caller passes a template.
-- `Tribunal.EvalCase.tribunal_eval/2` accepts `:template`.
-- `Mix.Tasks.Tribunal.Eval` accepts `--template-file` and `--template`.
-- Tests: render correctness, missing-var error, both-`input`-and-`vars` rejection.
-
-Roughly 1-2 days including docs update in `guides/datasets.md`.
-
-### Stopgap for the open issue
-
-Until this ships, the workaround is: put per-row vars under `metadata:` in the YAML and write a provider that reads `test_case.metadata` to render the template. `mix tribunal.eval --provider Module.fun` already passes the full `TestCase` through, so no replacement runner is needed. Worth posting this on issue #32 alongside a link to the planned feature so Matt's follow-up doesn't sit unanswered.
-
-## Repeated sampling and thresholds (issue #35)
-
-Tracking [issue #35](https://github.com/georgeguimaraes/tribunal/issues/35). Matt McCoy flagged that code-based eval tests are all-or-nothing pass, which is flaky when the LLM under test is nondeterministic. The fix is repeated sampling: run each case N times and decide pass/fail statistically instead of on a single roll. This is also the top gap surfaced by the Python-ecosystem survey (DeepEval/Inspect/promptfoo all do repeated runs, pass@k, and confidence intervals), so it does double duty.
-
-### The mental model: two axes
-
-"Repeated sampling + thresholds" is two mechanisms that compose. Keeping them separate is what keeps the config clean.
-
-**Axis 1 — the per-case rule (within-case).** Run one case K times through the provider, then collapse the K runs to a single case verdict via a rule:
-
-- `all` (pass^k) — passes only if every run passed. Reliability. The right default for safety gates (`refute_jailbreak`): one leak in five is a fail.
-- `any` (pass@k) — passes if any run passed. Capability ("can it ever get this right"), the classic code-gen/agent metric.
-- `majority` — passes if more than half passed. Robust to a flaky judge without demanding perfection.
-- `rate:P` — passes if the fraction passing ≥ P (e.g. at least 80% of 10 runs).
-
-**Axis 2 — the suite statistic (across-case).** Once each case has a verdict, summarize the dataset with a confidence interval instead of a bare point estimate, and gate on that. Today `aggregate_results` computes `pass_rate = passed/total` and the gate is `pass_rate >= threshold` (`lib/mix/tasks/tribunal.ex:124-133`). A Wilson score interval turns 42/50 into "84% (95% CI 72–92%)", and gating on the interval's lower bound stops us shipping on a lucky run.
-
-They compose: the repeats from Axis 1 are also what give Axis 2 enough samples for a meaningful interval.
-
-### How it slots into the code
-
-The insertion point is small and localized. `run_case/3` (`lib/mix/tasks/tribunal.ex:188`) calls the provider once and evaluates assertions once. Repeated sampling wraps exactly that:
-
-```
-run_case  →  run_case_repeated(test_case, assertions, provider, repeat, pass_rule)
-              ├─ run provider + evaluate_all K times
-              ├─ collect K per-run result maps
-              ├─ per assertion: count passes across runs (for flakiness reporting)
-              └─ collapse to one case verdict via pass_rule
-```
-
-Everything downstream (`aggregate_results`, thresholds, reporters) keeps working because a case still ends up `:passed`/`:failed`, just decided over K runs. `aggregate_results` gains the Wilson CI computed from the case verdicts. Concurrency already exists via `Task.async_stream` (`:172`); repeats change the work list from `cases` to `cases × K`, so `--concurrency` parallelizes across repeats with no new machinery.
-
-Statistical note on "n": collapsing each case to one verdict gives a suite CI with n = number of cases (each case one Bernoulli trial over the dataset) — that's the CI to gate CI/CD on. Separately, the K runs of a single case give a per-case CI (n = K) that measures how flaky that case is. Different questions; surface both — suite CI in the summary, per-case rate on failures.
-
-### Config and DX — mix task
-
-Four new flags. `--repeat` defaults to 1, so existing behavior and cost are untouched.
-
-```bash
-mix tribunal.eval --repeat 5                                   # each case 5×, pass only if all 5 pass
-mix tribunal.eval --repeat 5 --pass-rule majority --threshold 0.8
-mix tribunal.eval --repeat 10 --threshold 0.8 --threshold-ci  # gate on Wilson lower bound
-mix tribunal.eval --repeat 10 --pass-rule any                 # pass@k capability metric
-```
-
-- `--repeat N` — samples per case (default 1).
-- `--pass-rule all|any|majority|rate:P` — per-case rule (default `all`).
-- `--threshold P` — existing suite gate.
-- `--threshold-ci` — modifier: gate `--threshold` on the Wilson lower bound instead of the point estimate.
-
-`--strict` still means "no case may fail" and composes with the rule (strict + `all` = every case passes every run, strongest gate).
-
-Output is where it earns its keep — failures split flaky from consistent:
-
-```
-Summary
-  Total:     50 cases × 5 runs
-  Passed:    42 (84%, 95% CI 72–92%)
-  Pass rule: all (5/5 must pass)
-
-Failed Cases
-  1. "return policy for electronics?"
-     └─ faithful: failed 3/5 runs (40% pass) — FLAKY
-  2. "can I return opened software?"
-     └─ relevant: failed 5/5 runs (0% pass) — CONSISTENT
-```
-
-The flaky-vs-consistent split is the single most useful thing this produces: "the model can't do this" vs "it does this 2 times in 5" need different fixes.
-
-### Config and DX — ExUnit
-
-Repeat only makes sense where tribunal owns the provider call, so it lives on the dataset macro (`lib/tribunal/eval_case.ex:52`), which already controls invocation:
-
-```elixir
-tribunal_eval "test/evals/datasets/questions.json",
-  provider: {MyApp.RAG, :query},
-  repeat: 5,
-  pass_rule: :majority
-```
-
-Each generated test runs provider + assertions K times and flunks per the rule, with a message like `faithful: failed 3/5 runs`.
-
-Inline assertions (`assert_faithful response, ...`) receive an already-computed string, so there's nothing to resample — don't bolt repeat onto them (misleading). Offer an explicit generator form instead:
-
-```elixir
-assert_consistently 5, fn -> MyApp.RAG.query(q) end,
-  faithful: [context: @docs],
-  pass_rule: :all
-```
-
-Keeps the honest distinction: `assert_faithful` grades one output; `assert_consistently` grades a generator over K samples.
-
-### Statistics
-
-- Default to **Wilson score intervals**: no dependency, well understood, behaves at small n and near 0/1 where the normal approximation breaks.
-- The "Don't Pass@k" Bayesian posterior (Beta over the pass rate) from the survey (arxiv 2510.04265) is a legitimate upgrade — reads more naturally than a frequentist CI — but ship it later as `--stat bayesian`, not the v1 default.
-- If someone samples more than k, the unbiased pass@k estimator (Codex paper: `1 - C(n-c,k)/C(n,k)`) is the rigorous form; for the common `repeat == k` case it collapses to "any of the k passed".
-
-### Cost and gotchas
-
-- Repeats multiply provider + judge calls by K. Default `--repeat` to 1 and print the multiplier plainly (`50 cases × 5 runs = 250 invocations`).
-- No output caching by default — the point is fresh nondeterministic samples.
-- Per-row `metadata.repeat` override is a cheap nice-to-have so a known-flaky case can ask for more samples while the rest stay low.
-
-### Phasing
-
-1. **v1** — `--repeat` + `--pass-rule` in the mix task, `repeat:`/`pass_rule:` on `tribunal_eval`, and the flaky/consistent reporting in `Reporter.Console`. Closes #35 on its own. The reduction lives in a small `Tribunal.Sampling` (pass_rule over K runs + per-assertion pass counts).
-2. **v2** — Wilson CI in `aggregate_results` + `--threshold-ci`, CI shown in the summary and JSON/HTML reporters.
-3. **v3** — `assert_consistently` for in-test repeats, `metadata.repeat` per-row override, and `--stat bayesian`.
-
-Each phase is independently shippable. v1 is roughly 1-2 days including reporter updates and tests (pass_rule reduction, flaky detection, threshold composition).
+ExUnit continues to report one test result per dataset row. A repeated case can be represented as one ExUnit test, but suite-wide percentage gates will not be hidden inside independently scheduled ExUnit tests. Use `mix tribunal.eval` when the acceptance decision depends on aggregate statistics.
 
 ## Open decisions still on the table
 

@@ -352,7 +352,7 @@ All LLM assertions accept:
 
 ```elixir
 Assertions.evaluate(:faithful, test_case,
-  model: "anthropic:claude-3-5-sonnet-latest",  # default: claude-3-5-haiku-latest
+  model: "anthropic:claude-sonnet-4-6",  # default: claude-haiku-4-5-20251001
   threshold: 0.9,                                # default: 0.8
   temperature: 0.0,
   max_tokens: 500
