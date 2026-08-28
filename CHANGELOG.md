@@ -1,5 +1,78 @@
 # Changelog
 
+## [2.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v2.0.0) (2026-08-28)
+
+Tribunal 2.0 gives ExUnit and `mix tribunal.eval` one shared evaluation model while keeping each workflow native. ExUnit owns focused tests and hard requirements. The Mix task owns batch execution, aggregate gates, and reports.
+
+### ExUnit evaluations
+
+`tribunal_assert` runs application code from a normal ExUnit test, repeats it when needed, and reduces the attempts with `:all`, `:any`, `:majority`, or a required pass rate:
+
+```elixir
+test "answer is consistently grounded" do
+  tribunal_assert fn -> MyApp.Chat.reply(question) end,
+    input: question,
+    context: @context,
+    expected: [faithful: [threshold: 0.85]],
+    repeat: 5,
+    pass_rule: {:rate, 0.8}
+end
+```
+
+`tribunal_dataset` generates one native ExUnit test per dataset row and supports the same sampling rules. Provider failures and judge errors are reported as ExUnit errors, while ordinary quality failures remain assertion failures.
+
+### Batch policies and gates
+
+`mix tribunal.eval` now supports repeated sampling, versioned YAML policies, overall pass-rate gates, and metadata-group gates:
+
+```yaml
+version: 1
+datasets:
+  - test/evals/benchmark.yaml
+sampling:
+  repeat: 5
+  pass_rule: majority
+gates:
+  overall:
+    threshold: 0.9
+  groups:
+    by: category
+    threshold: 0.8
+```
+
+CLI options override policy values, and positional dataset paths replace the policy's dataset list. Quality failures are still report-only when no gate is configured. Operational errors and zero-case runs always exit nonzero.
+
+### Structured inputs and reports
+
+Dataset inputs can now be JSON-compatible strings, numbers, booleans, lists, or string-keyed maps. `evaluation_input` lets an application give judges a specific text projection while reports retain the original structured value.
+
+Reports now include sampling evidence. Console, text, HTML, JUnit, and JSON distinguish quality failures from operational errors. JSON reports use schema version 3 with ordered attempts, attempt totals, and overall and group gate results.
+
+### Migrating from 1.x
+
+Rename the ExUnit module and dataset macro:
+
+```elixir
+# 1.x
+use Tribunal.EvalCase
+tribunal_eval "test/evals/safety.yaml", provider: {MyApp.Chat, :reply}
+
+# 2.0
+use Tribunal.ExUnit
+tribunal_dataset "test/evals/safety.yaml", provider: {MyApp.Chat, :reply}
+```
+
+Other changes to account for:
+
+- `Tribunal.evaluate/2` now returns a complete case result with `status`, `failures`, `evaluations`, `results`, and `execution_error`. Per-assertion results moved under `result.results`, while `result.evaluations` preserves order and duplicate assertions.
+- Machine consumers need to migrate to JSON report schema version 3.
+- Dataset and assertion configuration is validated more strictly. Missing inputs, malformed options, missing output, and empty assertion sets now fail closed.
+- `--strict` and `--threshold` can no longer be combined.
+- Embedding assertions require `alike >= 0.4.0 and < 0.5.0`.
+- The default judge model changed from `anthropic:claude-3-5-haiku-latest` to `anthropic:claude-haiku-4-5-20251001`. Set `config :tribunal, llm: ...` to keep using a specific model.
+
+See [#54](https://github.com/georgeguimaraes/tribunal/pull/54) for the complete evaluation v2 implementation.
+
 ## [1.4.0](https://github.com/georgeguimaraes/tribunal/compare/v1.3.6...v1.4.0) (2026-07-23)
 
 
