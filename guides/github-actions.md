@@ -1,370 +1,185 @@
-# GitHub Actions Integration
+# GitHub Actions integration
 
-Run Tribunal evaluations in your CI/CD pipeline with GitHub Actions.
+Tribunal works as an ordinary ExUnit suite for hard requirements and as a gated Mix batch for benchmark policy.
 
-## Basic Setup
+## ExUnit safety checks
 
-Create `.github/workflows/eval.yml`:
+Generated `tribunal_dataset` tests and user-owned `tribunal_assert` tests run through `mix test`:
 
 ```yaml
-name: LLM Evaluation
+name: LLM safety
+
+on: [pull_request]
+
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18'
+          otp-version: '27'
+      - run: mix deps.get
+      - run: mix test --only eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+ExUnit treats quality failures as assertion failures and provider, judge, or execution failures as errors.
+
+## Gated batch evaluation
+
+Use a checked-in policy for repeatable CI settings:
+
+```yaml
+# config/evaluation_policy.yaml
+version: 1
+datasets:
+  - test/evals/benchmark.yaml
+sampling:
+  repeat: 3
+  pass_rule: majority
+gates:
+  overall:
+    threshold: 0.9
+  groups:
+    by: category
+    threshold: 0.8
+```
+
+```yaml
+name: LLM evaluation
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   eval:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
+      - uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.16'
-          otp-version: '26'
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Run evaluations
-        run: mix tribunal.eval --format github
+          elixir-version: '1.18'
+          otp-version: '27'
+      - run: mix deps.get
+      - name: Run evaluation gate
+        run: mix tribunal.eval --config config/evaluation_policy.yaml --format github
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-## Output Formats for CI
+Explicit CLI flags override the policy, and positional dataset files replace its dataset list:
 
-### GitHub Annotations
-
-Use `--format github` for inline PR annotations:
-
-```yaml
-- name: Run evaluations
-  run: mix tribunal.eval --format github
+```bash
+mix tribunal.eval test/evals/pull_request.yaml \
+  --config config/evaluation_policy.yaml \
+  --repeat 5 \
+  --pass-rule rate:0.8 \
+  --threshold 0.85 \
+  --group-by category \
+  --group-threshold 0.75
 ```
 
-This outputs GitHub workflow commands that create annotations directly on your PR:
-- Red error annotations for failed test cases
-- Notice annotations for the summary
+Policy values override defaults. Dataset paths are resolved from the repository working directory.
 
-### Save Reports as Artifacts
+## Exit behavior
 
-Save evaluation results for later review:
+Without `--threshold`, `--strict`, or a policy group gate, ordinary quality failures are report-only. The command exits zero with `gate_status: not_configured`.
+
+These conditions always exit nonzero:
+
+- a configured overall or group gate fails
+- a provider, assertion, judge, task, or timeout produces an operational error
+- configuration is invalid
+- the selected dataset contains zero cases
+
+Operational errors set `gate_status: error`. They cannot be hidden by `any`, `majority`, or a rate sampling rule. An ungated operational error keeps `threshold_passed: null` because no quality gate was configured.
+
+`--strict` is a zero-tolerance overall gate and cannot be combined with `--threshold`. `--group-by` and `--group-threshold` must be supplied together.
+
+## Saving reports even when the gate fails
+
+A failing command stops later shell commands in the same step. Generate the machine report in a step that records the exit code, upload it with `if: always()`, then preserve the original status:
 
 ```yaml
-- name: Run evaluations
-  run: |
-    mix tribunal.eval --format json --output results.json
-    mix tribunal.eval --format html --output report.html
+- name: Run evaluation
+  id: tribunal
+  continue-on-error: true
+  run: >-
+    mix tribunal.eval
+    --config config/evaluation_policy.yaml
+    --format json
+    --output results.json
 
-- name: Upload results
+- name: Upload evaluation report
+  if: always()
   uses: actions/upload-artifact@v4
   with:
-    name: eval-results
-    path: |
-      results.json
-      report.html
+    name: tribunal-${{ github.sha }}
+    path: results.json
+
+- name: Enforce evaluation result
+  if: steps.tribunal.outcome == 'failure'
+  run: exit 1
 ```
 
-### JUnit for Test Reporting
+JSON reports use schema version 3 and include reduced case totals, attempt totals, ordered attempt evidence, sampling summaries, and overall and group gate results.
 
-Use JUnit format for GitHub's built-in test reporting:
+## JUnit reporting
+
+JUnit distinguishes assertion failures from operational errors:
 
 ```yaml
-- name: Run evaluations
-  run: mix tribunal.eval --format junit --output results.xml
+- name: Produce JUnit report
   continue-on-error: true
+  run: mix tribunal.eval --config config/evaluation_policy.yaml --format junit --output junit.xml
 
-- name: Publish test results
-  uses: mikepenz/action-junit-report@v4
+- name: Publish JUnit report
   if: always()
+  uses: mikepenz/action-junit-report@v4
   with:
-    report_paths: 'results.xml'
+    report_paths: junit.xml
 ```
 
-## Pass/Fail Strategies
+## Scheduled baselines
 
-### Report-Only Quality Tracking
-
-By default, ordinary quality failures do not block the workflow. Execution and configuration errors still exit nonzero, including provider failures, timeouts, and runs that select zero cases.
+For broad report-only tracking, omit quality gates but keep operational failures blocking:
 
 ```yaml
-- name: Run evaluations (tracking only)
-  run: mix tribunal.eval --format json --output results.json
-  # Quality failures are stored for comparison without blocking
-```
-
-### Threshold-Based Gating
-
-Fail the workflow if pass rate drops below a threshold:
-
-```yaml
-- name: Run evaluations
-  run: mix tribunal.eval --threshold 0.8 --format github
-  # Fails if pass rate < 80%
-```
-
-### Strict Mode (Zero Tolerance)
-
-Fail on any test case failure:
-
-```yaml
-- name: Run evaluations
-  run: mix tribunal.eval --strict --format github
-  # Fails if any test case fails
-```
-
-## Complete Workflow Examples
-
-### Basic CI Gate
-
-```yaml
-name: LLM Evaluation
-
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  eval:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.16'
-          otp-version: '26'
-
-      - name: Cache deps
-        uses: actions/cache@v4
-        with:
-          path: deps
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Run evaluations
-        run: mix tribunal.eval --threshold 0.8 --format github
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-```
-
-### Full Pipeline with Artifacts
-
-```yaml
-name: LLM Evaluation
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  eval:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.16'
-          otp-version: '26'
-
-      - name: Cache deps
-        uses: actions/cache@v4
-        with:
-          path: deps
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Run evaluations
-        id: eval
-        run: |
-          mix tribunal.eval --format github --threshold 0.8
-          mix tribunal.eval --format json --output results.json
-          mix tribunal.eval --format html --output report.html
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      - name: Upload results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: eval-results-${{ github.sha }}
-          path: |
-            results.json
-            report.html
-
-      - name: Upload JUnit results
-        if: always()
-        run: mix tribunal.eval --format junit --output junit.xml
-
-      - name: Publish test report
-        uses: mikepenz/action-junit-report@v4
-        if: always()
-        with:
-          report_paths: 'junit.xml'
-          check_name: 'LLM Evaluation Results'
-```
-
-### Parallel Evaluation
-
-Speed up large evaluation suites with concurrency:
-
-```yaml
-- name: Run evaluations
-  run: mix tribunal.eval --concurrency 10 --format github
-  env:
-    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-```
-
-### Scheduled Baseline Tracking
-
-Run evaluations on a schedule to track model performance over time:
-
-```yaml
-name: Scheduled Evaluation
+name: Scheduled LLM baseline
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Daily at 6 AM UTC
-  workflow_dispatch:  # Allow manual trigger
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 jobs:
-  eval:
+  baseline:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
+      - uses: erlef/setup-beam@v1
         with:
-          elixir-version: '1.16'
-          otp-version: '26'
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Run evaluations
-        run: |
-          mix tribunal.eval --format json --output results-$(date +%Y%m%d).json
+          elixir-version: '1.18'
+          otp-version: '27'
+      - run: mix deps.get
+      - run: >-
+          mix tribunal.eval test/evals/benchmark.yaml
+          --repeat 3
+          --pass-rule majority
+          --format json
+          --output results.json
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      - name: Upload results
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: eval-baseline-${{ github.run_id }}
-          path: results-*.json
+          name: tribunal-baseline-${{ github.run_id }}
+          path: results.json
           retention-days: 90
 ```
 
-## Environment Variables
-
-Set API keys as repository secrets:
-
-1. Go to Settings > Secrets and variables > Actions
-2. Add secrets for your LLM providers:
-   - `ANTHROPIC_API_KEY`
-   - `OPENAI_API_KEY`
-   - etc.
-
-Reference in workflows:
-
-```yaml
-env:
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-```
-
-## Tips
-
-### Cache Dependencies
-
-Speed up workflows by caching Mix dependencies:
-
-```yaml
-- name: Cache deps
-  uses: actions/cache@v4
-  with:
-    path: |
-      deps
-      _build
-    key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-    restore-keys: |
-      ${{ runner.os }}-mix-
-```
-
-### Conditional Evaluation
-
-Run evals only when relevant files change:
-
-```yaml
-on:
-  push:
-    paths:
-      - 'lib/**'
-      - 'test/evals/**'
-      - 'mix.exs'
-```
-
-### Different Thresholds per Branch
-
-Use different thresholds for main vs feature branches:
-
-```yaml
-- name: Run evaluations
-  run: |
-    if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-      mix tribunal.eval --threshold 0.9 --format github
-    else
-      mix tribunal.eval --threshold 0.7 --format github
-    fi
-```
-
-### Post Results as PR Comment
-
-```yaml
-- name: Run evaluations
-  run: mix tribunal.eval --format json --output results.json
-  continue-on-error: true
-
-- name: Post results comment
-  uses: actions/github-script@v7
-  if: github.event_name == 'pull_request'
-  with:
-    script: |
-      const fs = require('fs');
-      const results = JSON.parse(fs.readFileSync('results.json', 'utf8'));
-      const summary = results.summary;
-
-      const body = `## LLM Evaluation Results
-
-      | Metric | Value |
-      |--------|-------|
-      | Total | ${summary.total} |
-      | Passed | ${summary.passed} |
-      | Failed | ${summary.failed} |
-      | Pass Rate | ${Math.round(summary.pass_rate * 100)}% |
-      | Duration | ${summary.duration_ms}ms |
-
-      ${summary.failed > 0 ? '⚠️ Some evaluations failed. Check the workflow for details.' : '✅ All evaluations passed!'}`;
-
-      github.rest.issues.createComment({
-        issue_number: context.issue.number,
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        body: body
-      });
-```
+GitHub dependency caching is independent from Tribunal. Tribunal does not currently provide provider-output caching, assertion-result caching, resume, or infrastructure retries.

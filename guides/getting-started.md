@@ -48,7 +48,7 @@ mix deps.get
 Here's a simple evaluation using deterministic assertions:
 
 ```elixir
-alias Tribunal.{TestCase, Assertions}
+alias Tribunal.TestCase
 
 # Create a test case
 test_case = TestCase.new(
@@ -63,9 +63,9 @@ results = Tribunal.evaluate(test_case, [
   {:contains, value: "receipt"}
 ])
 
-# Check results
-Assertions.all_passed?(results)
-# => true
+# Check the complete evaluation result
+results.status
+# => :passed
 ```
 
 ## Initialize Your Project
