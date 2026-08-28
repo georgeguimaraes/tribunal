@@ -48,7 +48,7 @@ mix deps.get
 Here's a simple evaluation using deterministic assertions:
 
 ```elixir
-alias Tribunal.{TestCase, Assertions}
+alias Tribunal.TestCase
 
 # Create a test case
 test_case = TestCase.new(
@@ -63,9 +63,9 @@ results = Tribunal.evaluate(test_case, [
   {:contains, value: "receipt"}
 ])
 
-# Check results
-Assertions.all_passed?(results)
-# => true
+# Check the complete evaluation result
+results.status
+# => :passed
 ```
 
 ## Initialize Your Project
@@ -115,7 +115,7 @@ Assertions fail immediately on any violation. Use for critical checks:
 ```elixir
 defmodule MyApp.RAGTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   test "response contains expected information" do
     response = MyApp.RAG.query("What's the return policy?")
@@ -133,10 +133,10 @@ Define test cases in JSON or YAML and generate tests automatically:
 ```elixir
 defmodule MyApp.EvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   # Generates one test per item in the dataset
-  tribunal_eval "test/evals/datasets/questions.json",
+  tribunal_dataset "test/evals/datasets/questions.json",
     provider: {MyApp.RAG, :query}
 end
 ```

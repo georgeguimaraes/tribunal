@@ -38,7 +38,7 @@ defmodule Tribunal.Judges.Hallucination do
     #{context}
 
     ## Question
-    #{test_case.input}
+    #{Tribunal.TestCase.evaluation_input(test_case)}
 
     ## Output to Evaluate
     #{test_case.actual_output}

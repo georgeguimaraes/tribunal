@@ -405,8 +405,9 @@ results = Tribunal.evaluate(test_case, %{
   relevant: []
 })
 
-# Check all passed
-Assertions.all_passed?(results)  # => true/false
+# Check the complete evaluation result
+results.status  # => :passed or :failed
+results.evaluations  # ordered assertion evidence
 ```
 
 ## Available Assertions

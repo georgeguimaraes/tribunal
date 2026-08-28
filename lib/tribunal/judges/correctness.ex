@@ -28,7 +28,7 @@ defmodule Tribunal.Judges.Correctness do
     Correctness means the output conveys the same factual content and meaning.
 
     ## Question
-    #{test_case.input}
+    #{Tribunal.TestCase.evaluation_input(test_case)}
 
     ## Expected Answer (Ground Truth)
     #{test_case.expected_output}

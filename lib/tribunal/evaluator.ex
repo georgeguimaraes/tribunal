@@ -3,7 +3,7 @@ defmodule Tribunal.Evaluator do
   Evaluates one test case and classifies its outcome.
 
   This module contains the evaluation semantics shared by the Mix task and
-  `Tribunal.EvalCase`. It does not invoke providers, aggregate a suite, format
+  `Tribunal.ExUnit`. It does not invoke providers, aggregate a suite, format
   reports, or interact with ExUnit.
   """
 
@@ -13,6 +13,7 @@ defmodule Tribunal.Evaluator do
 
   @type result :: %{
           input: term(),
+          metadata: map() | nil,
           actual_output: term(),
           status: :passed | :failed,
           failures: [{atom() | String.t(), String.t()}],
@@ -32,13 +33,27 @@ defmodule Tribunal.Evaluator do
   @spec evaluate(TestCase.t(), list() | map(), keyword()) :: result()
   def evaluate(%TestCase{} = test_case, assertions, opts \\ []) do
     started_at = Keyword.get_lazy(opts, :started_at, &now/0)
-    defaults = Keyword.get(opts, :defaults, [])
 
-    evaluations = evaluate_assertions(test_case, assertions, defaults)
+    case TestCase.validate(test_case) do
+      :ok ->
+        evaluate_valid(test_case, assertions, opts, started_at)
+
+      {:error, reason} ->
+        error(
+          test_case,
+          reason,
+          Keyword.merge(opts, started_at: started_at, kind: :input, assertions: assertions)
+        )
+    end
+  end
+
+  defp evaluate_valid(test_case, assertions, opts, started_at) do
+    evaluations = evaluate_assertions(test_case, assertions, Keyword.get(opts, :defaults, []))
     failures = failures(test_case, assertions, evaluations)
 
     %{
       input: test_case.input,
+      metadata: test_case.metadata,
       actual_output: test_case.actual_output,
       status: if(failures == [], do: :passed, else: :failed),
       failures: failures,
@@ -56,14 +71,16 @@ defmodule Tribunal.Evaluator do
   def error(%TestCase{} = test_case, reason, opts \\ []) do
     started_at = Keyword.get_lazy(opts, :started_at, &now/0)
     failure_reason = reason(reason, "Provider failed")
+    kind = Keyword.get(opts, :kind, :provider)
     evaluations = scheduled_errors(Keyword.get(opts, :assertions, []), failure_reason)
     duration_ms = Keyword.get(opts, :duration_ms, now() - started_at)
 
     %{
       input: test_case.input,
+      metadata: test_case.metadata,
       actual_output: test_case.actual_output,
       status: :failed,
-      failures: [{:provider, failure_reason}],
+      failures: [{kind, failure_reason}],
       results: Assertions.summarize(evaluations),
       evaluations: evaluations,
       execution_error: true,

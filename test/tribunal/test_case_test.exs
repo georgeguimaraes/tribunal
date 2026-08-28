@@ -46,6 +46,77 @@ defmodule Tribunal.TestCaseTest do
       assert tc.input == "Hello"
       refute existing_atom?(key)
     end
+
+    test "preserves structured input and its explicit evaluation text" do
+      tc =
+        TestCase.new(%{
+          "input" => %{"query" => "return policy", "account_id" => 42},
+          "evaluation_input" => "return policy for account 42"
+        })
+
+      assert tc.input == %{"query" => "return policy", "account_id" => 42}
+      assert TestCase.evaluation_input(tc) == "return policy for account 42"
+    end
+  end
+
+  describe "input representations" do
+    test "uses JSON as the default judge and display representation for structured input" do
+      tc = TestCase.new(input: %{"query" => "hello", "flags" => [true, 2]})
+
+      assert TestCase.validate(tc) == :ok
+      assert TestCase.evaluation_input(tc) == ~s({"flags":[true,2],"query":"hello"})
+      assert TestCase.display_input(tc) == ~s({"flags":[true,2],"query":"hello"})
+    end
+
+    test "rejects unsupported values and atom map keys" do
+      assert {:error, "input must be JSON-compatible"} =
+               TestCase.validate(%TestCase{input: {:query, "hello"}})
+
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate(%TestCase{input: %{query: "hello"}})
+    end
+
+    test "accepts valid UTF-8 strings in nested values and map keys" do
+      input = %{"pergunta" => ["olá", %{"resposta" => "amanhã"}]}
+
+      assert TestCase.validate_input(input) == :ok
+    end
+
+    test "rejects invalid UTF-8 string values at any depth" do
+      invalid_utf8 = <<255>>
+
+      assert {:error, "input must be JSON-compatible"} =
+               TestCase.validate_input(invalid_utf8)
+
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate_input(%{"nested" => ["valid", invalid_utf8]})
+    end
+
+    test "rejects invalid UTF-8 map keys" do
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate_input(%{<<255>> => "value"})
+    end
+
+    test "rejects improper lists without raising" do
+      improper = ["first" | "invalid tail"]
+
+      assert {:error, "input must be JSON-compatible"} =
+               TestCase.validate_input(improper)
+
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate_input(%{"nested" => improper})
+    end
+
+    test "always produces display text for invalid direct structs" do
+      assert TestCase.display_input(%TestCase{input: {:query, "hello"}}) ==
+               ~s({:query, "hello"})
+    end
+
+    test "prefers a metadata name for generated test labels" do
+      tc = %TestCase{input: %{"query" => "hello"}, metadata: %{"name" => "friendly case"}}
+
+      assert TestCase.display_name(tc) == "friendly case"
+    end
   end
 
   describe "with_output/2" do

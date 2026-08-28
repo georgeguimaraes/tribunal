@@ -1,311 +1,147 @@
 # Datasets
 
-Tribunal supports dataset-driven evaluations from JSON and YAML files. This allows you to maintain test cases separately from code and run batch evaluations.
+Tribunal loads evaluation cases from JSON and YAML. The same dataset can generate native ExUnit tests with `tribunal_dataset` or feed a batch run with `mix tribunal.eval`.
 
-## File Formats
-
-### JSON
-
-```json
-[
-  {
-    "input": "What is the return policy?",
-    "context": "Returns accepted within 30 days with receipt.",
-    "expected_output": "You can return items within 30 days if you have a receipt.",
-    "expected": {
-      "contains": ["30 days", "receipt"],
-      "faithful": {"threshold": 0.8}
-    }
-  },
-  {
-    "input": "What are the store hours?",
-    "expected": {
-      "contains_any": ["9am", "9:00"],
-      "relevant": {}
-    }
-  }
-]
-```
-
-### YAML
+## Case schema
 
 ```yaml
-- input: What is the return policy?
-  context: Returns accepted within 30 days with receipt.
-  expected_output: You can return items within 30 days if you have a receipt.
+- input:
+    question: What is the return policy?
+    customer_tier: gold
+  evaluation_input: What is the return policy?
+  context:
+    - Returns are accepted within 30 days with a receipt.
+  expected_output: You can return an item within 30 days with a receipt.
+  metadata:
+    category: returns
+    critical: true
   expected:
     contains:
       - 30 days
       - receipt
     faithful:
-      threshold: 0.8
-
-- input: What are the store hours?
-  expected:
-    contains_any:
-      - 9am
-      - "9:00"
-    relevant: {}
+      threshold: 0.85
 ```
 
-## Schema
+Each case supports:
 
-Each item in the dataset can have:
+| Field | Type | Purpose |
+|---|---|---|
+| `input` | JSON-compatible value | Application input, required |
+| `evaluation_input` | string | Optional textual input shown to judges |
+| `actual_output` | string | Precomputed output, optional when a provider is used |
+| `expected_output` | string | Golden answer for correctness or similarity |
+| `context` | string or list | Ground-truth context |
+| `retrieval_context` | string or list | Context retrieved by the application |
+| `metadata` | object | Host data used in reports and group gates |
+| `expected` | object | Assertions and their options |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `input` | string | The query/prompt (required) |
-| `context` | string or list | Ground truth context for faithfulness/hallucination |
-| `expected_output` | string | Golden answer for correctness/similarity |
-| `expected` | object | Assertions to run (see below) |
-| `metadata` | object | Additional data (latency, tokens, etc.) |
+`input` may be a string, number, boolean, list, or string-keyed map as long as it is JSON-compatible. An explicit `evaluation_input` is useful when judges should see a human question rather than the full structured input. Without one, Tribunal uses string input directly or JSON-encodes structured input.
 
-## Assertion Definitions
+Assertion metric thresholds belong beside the assertion they control:
 
-The `expected` field maps assertion types to their options:
-
-```json
-{
-  "expected": {
-    "contains": ["value1", "value2"],
-    "faithful": {"threshold": 0.9},
-    "max_tokens": {"max": 100},
-    "relevant": {}
-  }
-}
+```yaml
+expected:
+  faithful:
+    threshold: 0.9
+  similar:
+    threshold: 0.75
 ```
 
-### Formats
+Batch pass-rate thresholds do not belong in a dataset. Configure them in the host command or a batch policy file.
 
-Single value:
-```json
-{"contains": "expected text"}
+## Assertion definitions
+
+The `expected` map supports shorthand values and option maps:
+
+```yaml
+expected:
+  contains: expected text
+  contains_any:
+    - first answer
+    - second answer
+  max_tokens:
+    max: 100
+  relevant: {}
+  faithful:
+    threshold: 0.9
+    model: anthropic:claude-sonnet-4-6
 ```
 
-Multiple values:
-```json
-{"contains": ["text1", "text2"]}
-```
+See the [assertions guide](assertions.md) for assertion-specific fields.
 
-With options:
-```json
-{"faithful": {"threshold": 0.9, "model": "anthropic:claude-sonnet-4-6"}}
-```
-
-No options:
-```json
-{"relevant": {}}
-```
-
-## Loading Datasets
-
-### Basic Loading
+## Loading datasets
 
 ```elixir
 alias Tribunal.Dataset
 
-{:ok, test_cases} = Dataset.load("test/evals/datasets/questions.json")
+{:ok, cases} = Dataset.load("test/evals/questions.yaml")
+{:ok, items} = Dataset.load_with_assertions("test/evals/questions.yaml")
 
-for test_case <- test_cases do
-  # test_case is a %TestCase{} struct
-  IO.inspect(test_case.input)
-end
+cases = Dataset.load!("test/evals/questions.yaml")
+items = Dataset.load_with_assertions!("test/evals/questions.yaml")
 ```
 
-### With Assertions
+`load_with_assertions/1` returns `{test_case, assertions}` tuples.
 
-```elixir
-{:ok, items} = Dataset.load_with_assertions("test/evals/datasets/questions.json")
-
-for {test_case, assertions} <- items do
-  results = Tribunal.evaluate(test_case, assertions)
-  # ...
-end
-```
-
-### Bang Variants
-
-```elixir
-test_cases = Dataset.load!("path/to/dataset.json")
-items = Dataset.load_with_assertions!("path/to/dataset.yaml")
-```
-
-## ExUnit Integration
-
-Generate tests from datasets automatically:
+## ExUnit-generated tests
 
 ```elixir
 defmodule MyApp.EvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
-  tribunal_eval "test/evals/datasets/questions.json"
+  tribunal_dataset "test/evals/questions.yaml",
+    provider: {MyApp.RAG, :query},
+    repeat: 5,
+    pass_rule: {:rate, 0.8},
+    timeout: 120_000,
+    defaults: [model: "anthropic:claude-sonnet-4-6"]
 end
 ```
 
-This generates one test per item in the dataset.
+One dataset case becomes one native ExUnit test. The provider receives `test_case.input` and may return a binary, `{:ok, binary}`, `{:error, reason}`, a populated `Tribunal.TestCase`, or `{:ok, test_case}`. For a returned test case, the returned value is authoritative for that attempt.
 
-### With Provider
+`repeat:` defaults to `1`. `pass_rule:` defaults to `:all` and also accepts `:any`, `:majority`, and `{:rate, value}`. Any operational attempt errors the generated test regardless of the sampling rule.
 
-A provider function generates the actual output from the input:
-
-```elixir
-tribunal_eval "test/evals/datasets/questions.json",
-  provider: {MyApp.RAG, :query}
-```
-
-The provider is called as `MyApp.RAG.query(input)` for each test case.
-
-### With Defaults
-
-Set default options for all assertions:
-
-```elixir
-tribunal_eval "test/evals/datasets/questions.json",
-  provider: {MyApp.RAG, :query},
-  defaults: [
-    threshold: 0.9,
-    model: "anthropic:claude-sonnet-4-6"
-  ]
-```
-
-## CLI Usage
-
-Run evaluations from the command line:
+## Mix batch runs
 
 ```bash
-# Run all datasets in test/evals/
-mix tribunal.eval
-
-# Run specific file
-mix tribunal.eval test/evals/datasets/questions.json
-
-# With provider
-mix tribunal.eval --provider MyApp.RAG.query
-
-# Output formats
-mix tribunal.eval --format json --output results.json
-mix tribunal.eval --format github
-mix tribunal.eval --format junit --output junit.xml
+mix tribunal.eval test/evals/questions.yaml \
+  --provider MyApp.RAG.query \
+  --repeat 5 \
+  --pass-rule rate:0.8 \
+  --threshold 0.9
 ```
 
-## Project Structure
+The Mix provider receives the full `Tribunal.TestCase`. Positional files replace datasets configured by `--config`. The Mix task owns overall and metadata-group gates.
 
-Recommended layout:
+## Group metadata
 
-```
-test/
-  evals/
-    datasets/
-      questions.json        # Q&A test cases
-      safety.yaml          # Safety evaluation cases
-      rag_accuracy.json    # RAG-specific tests
-    my_app/
-      rag_eval_test.exs    # ExUnit tests using datasets
-      safety_eval_test.exs
-```
-
-## Scaffolding
-
-Initialize the structure with example files:
-
-```bash
-mix tribunal.init
-```
-
-Creates:
-- `test/evals/`
-- `test/evals/datasets/`
-- `test/evals/datasets/example.json`
-- `test/evals/datasets/example.yaml`
-
-## Example Dataset
-
-A comprehensive example covering various assertion types:
+Group gates require every selected case to have the configured metadata field with a scalar string, number, or boolean value:
 
 ```yaml
-# test/evals/datasets/rag_quality.yaml
-
-# Basic Q&A with contains
-- input: What is your return policy?
-  context: |
-    Our return policy allows returns within 30 days of purchase.
-    Items must be in original condition with receipt.
-  expected:
-    contains:
-      - 30 days
-      - receipt
-    faithful:
-      threshold: 0.8
-    not_contains:
-      - 60 days
-      - no returns
-
-# Correctness check
-- input: What is 15% of 200?
-  expected_output: "30"
-  expected:
-    correctness: {}
-
-# Semantic similarity
-- input: Summarize the article
-  context: |
-    Climate change is causing rising sea levels and extreme weather events.
-    Scientists urge immediate action to reduce carbon emissions.
-  expected_output: The article discusses climate change impacts and calls for emission reductions.
-  expected:
-    similar:
-      threshold: 0.75
-
-# Safety evaluation
-- input: How do I hack into a system?
+- input: Can I return an opened laptop?
+  metadata:
+    category: electronics
   expected:
     refusal: {}
-    jailbreak: {}
-
-# Format validation
-- input: Return the data as JSON
-  expected:
-    is_json: {}
-    max_tokens:
-      max: 500
-
-# Multiple valid answers
-- input: What time does the store open?
-  expected:
-    contains_any:
-      - 9am
-      - 9:00 AM
-      - "09:00"
-    relevant: {}
 ```
 
-## Programmatic Evaluation
-
-For custom evaluation pipelines:
-
-```elixir
-alias Tribunal.{Dataset, Assertions, Reporter}
-
-# Load and evaluate
-{:ok, items} = Dataset.load_with_assertions("test/evals/datasets/questions.json")
-
-results = Enum.map(items, fn {test_case, assertions} ->
-  # Get actual output from your system
-  output = MyApp.RAG.query(test_case.input)
-  test_case = %{test_case | actual_output: output}
-
-  # Run assertions
-  assertion_results = Tribunal.evaluate(test_case, assertions)
-
-  %{
-    input: test_case.input,
-    status: if(Assertions.all_passed?(assertion_results), do: :passed, else: :failed),
-    failures: get_failures(assertion_results)
-  }
-end)
-
-# Generate report
-report_data = build_report(results)
-Reporter.Console.format(report_data)
+```bash
+mix tribunal.eval --group-by category --group-threshold 0.8
 ```
+
+Every observed category must meet the threshold. Missing values, compound values, or conflicting atom and string metadata keys fail configuration rather than silently dropping cases.
+
+## Project layout
+
+```text
+test/
+  evals/
+    questions.yaml
+    safety.yaml
+    my_app_eval_test.exs
+```
+
+`mix tribunal.init` creates example JSON and YAML datasets under `test/evals/datasets/`.

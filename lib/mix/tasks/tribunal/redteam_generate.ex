@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
   Generates a red-team dataset by invoking one or more plugins.
 
   Generation is separate from running. The output is a regular Tribunal
-  dataset file that you execute with `mix tribunal.eval` or `tribunal_eval/2`,
+  dataset file that you execute with `mix tribunal.eval` or `tribunal_dataset/2`,
   the same as any hand-written eval suite.
 
   ## Usage

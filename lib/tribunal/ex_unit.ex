@@ -1,4 +1,4 @@
-defmodule Tribunal.EvalCase do
+defmodule Tribunal.ExUnit do
   @moduledoc """
   ExUnit integration for LLM evaluations.
 
@@ -6,7 +6,7 @@ defmodule Tribunal.EvalCase do
 
       defmodule MyApp.RAGEvalTest do
         use ExUnit.Case
-        use Tribunal.EvalCase
+        use Tribunal.ExUnit
 
         @moduletag :eval
 
@@ -23,11 +23,11 @@ defmodule Tribunal.EvalCase do
 
       defmodule MyApp.RAGEvalTest do
         use ExUnit.Case
-        use Tribunal.EvalCase
+        use Tribunal.ExUnit
 
         @moduletag :eval
 
-        tribunal_eval "test/evals/datasets/questions.json",
+        tribunal_dataset "test/evals/datasets/questions.json",
           provider: {MyApp.RAG, :query}
       end
 
@@ -36,9 +36,61 @@ defmodule Tribunal.EvalCase do
 
   defmacro __using__(_opts) do
     quote do
-      import Tribunal.EvalCase
-      import Tribunal.EvalCase.Assertions
+      import Tribunal.ExUnit
+      import Tribunal.ExUnit.Assertions
     end
+  end
+
+  defmodule OperationalError do
+    @moduledoc "Raised when an evaluation could not execute completely."
+    defexception [:message, :result]
+  end
+
+  @doc """
+  Evaluates a zero-arity callback one or more times inside a normal ExUnit test.
+
+  `:input` and a non-empty `:expected` assertion list are required. `:repeat`
+  defaults to `1` and `:pass_rule` defaults to `:all`.
+  """
+  defmacro tribunal_assert(callback, opts) do
+    quote do
+      result = Tribunal.ExUnit.run(unquote(callback), unquote(opts))
+
+      if result.status == :failed do
+        ExUnit.Assertions.flunk(Tribunal.Evaluator.failure_message(result))
+      end
+
+      result
+    end
+  end
+
+  @doc false
+  def run(callback, opts) when is_function(callback, 0) and is_list(opts) do
+    input = fetch_required!(opts, :input)
+    assertions = fetch_assertions!(opts)
+    defaults = validate_defaults!(Keyword.get(opts, :defaults, []))
+    repeat = validate_repeat!(Keyword.get(opts, :repeat, 1))
+    pass_rule = Keyword.get(opts, :pass_rule, :all)
+    :ok = Tribunal.Sampling.validate_pass_rule!(pass_rule)
+    test_case = build_test_case(input, opts)
+
+    result =
+      for _attempt <- 1..repeat do
+        Tribunal.Execution.run(callback, test_case, assertions, defaults: defaults)
+      end
+      |> Tribunal.Sampling.reduce(pass_rule)
+
+    if result.execution_error do
+      raise OperationalError,
+        message: Tribunal.Evaluator.failure_message(result),
+        result: result
+    end
+
+    result
+  end
+
+  def run(_callback, _opts) do
+    raise ArgumentError, "tribunal_assert expects a zero-arity function and a keyword list"
   end
 
   @doc """
@@ -49,29 +101,45 @@ defmodule Tribunal.EvalCase do
   - `:provider` - `{Module, :function}` to call for each input
   - `:defaults` - Default assertion options
   """
-  defmacro tribunal_eval(path, opts \\ []) do
+  defmacro tribunal_dataset(path, opts \\ []) do
     quote bind_quoted: [path: path, opts: opts] do
       {module, function} = Keyword.fetch!(opts, :provider)
       defaults = Keyword.get(opts, :defaults, [])
+      repeat = Keyword.get(opts, :repeat, 1)
+      pass_rule = Keyword.get(opts, :pass_rule, :all)
+      timeout = Keyword.get(opts, :timeout)
 
       cases = Tribunal.Dataset.load_with_assertions!(path)
 
       for {{test_case, assertions}, idx} <- Enum.with_index(cases) do
-        test_name = test_case.input |> String.slice(0, 50) |> String.trim()
+        test_name = Tribunal.TestCase.display_name(test_case, 50)
 
         @tag :eval
+        if timeout, do: @tag(timeout: timeout)
+
         test "#{idx + 1}. #{test_name}" do
           test_case = unquote(Macro.escape(test_case))
           assertions = unquote(Macro.escape(assertions))
           defaults = unquote(Macro.escape(defaults))
           module = unquote(module)
           function = unquote(function)
+          repeat = unquote(repeat)
+          pass_rule = unquote(Macro.escape(pass_rule))
 
-          # Call the provider to get actual output
-          actual_output = apply(module, function, [test_case.input])
-          test_case = Tribunal.TestCase.with_output(test_case, actual_output)
-
-          result = Tribunal.Evaluator.evaluate(test_case, assertions, defaults: defaults)
+          result =
+            Tribunal.ExUnit.run(
+              fn -> apply(module, function, [test_case.input]) end,
+              input: test_case.input,
+              evaluation_input: test_case.evaluation_input,
+              expected_output: test_case.expected_output,
+              context: test_case.context,
+              retrieval_context: test_case.retrieval_context,
+              metadata: test_case.metadata,
+              expected: assertions,
+              defaults: defaults,
+              repeat: repeat,
+              pass_rule: pass_rule
+            )
 
           if result.status == :failed do
             flunk(Tribunal.Evaluator.failure_message(result))
@@ -80,9 +148,99 @@ defmodule Tribunal.EvalCase do
       end
     end
   end
+
+  defp fetch_required!(opts, key) do
+    case Keyword.fetch(opts, key) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "tribunal_assert requires :#{key}"
+    end
+  end
+
+  defp fetch_assertions!(opts) do
+    case Keyword.fetch(opts, :expected) do
+      {:ok, assertions} when is_list(assertions) and assertions != [] ->
+        case Enum.reduce_while(assertions, [], fn assertion, normalized ->
+               case normalize_assertion(assertion) do
+                 {:ok, value} -> {:cont, [value | normalized]}
+                 :error -> {:halt, :error}
+               end
+             end) do
+          :error ->
+            raise ArgumentError,
+                  ":expected must contain known atom or string assertion names with keyword or map options"
+
+          normalized ->
+            Enum.reverse(normalized)
+        end
+
+      _other ->
+        raise ArgumentError, "tribunal_assert requires non-empty :expected assertions"
+    end
+  end
+
+  defp normalize_assertion(type) when is_atom(type) or is_binary(type) do
+    case known_assertion_type(type) do
+      nil -> :error
+      normalized -> {:ok, normalized}
+    end
+  end
+
+  defp normalize_assertion({type, assertion_opts}) when is_atom(type) or is_binary(type) do
+    case {known_assertion_type(type), keyword_options?(assertion_opts)} do
+      {nil, _valid_options?} -> :error
+      {_type, false} -> :error
+      {normalized, true} -> {:ok, {normalized, assertion_opts}}
+    end
+  end
+
+  defp normalize_assertion(_assertion), do: :error
+
+  defp known_assertion_type(type) when is_binary(type) do
+    case Tribunal.Assertions.resolve_type(type) do
+      normalized when is_atom(normalized) -> normalized
+      _unknown -> nil
+    end
+  end
+
+  defp known_assertion_type(type) when is_atom(type) do
+    case Tribunal.Assertions.resolve_type(Atom.to_string(type)) do
+      ^type -> type
+      _other -> nil
+    end
+  end
+
+  defp validate_defaults!(defaults) do
+    if keyword_options?(defaults) do
+      defaults
+    else
+      raise ArgumentError, ":defaults must be a keyword list or map"
+    end
+  end
+
+  defp keyword_options?(options) when is_list(options), do: Keyword.keyword?(options)
+
+  defp keyword_options?(options) when is_map(options),
+    do: Enum.all?(options, &is_atom(elem(&1, 0)))
+
+  defp keyword_options?(_options), do: false
+
+  defp validate_repeat!(repeat) when is_integer(repeat) and repeat > 0, do: repeat
+  defp validate_repeat!(_repeat), do: raise(ArgumentError, ":repeat must be a positive integer")
+
+  defp build_test_case(input, opts) do
+    Tribunal.TestCase.new(
+      input: input,
+      evaluation_input: Keyword.get(opts, :evaluation_input),
+      actual_output: Keyword.get(opts, :actual_output),
+      expected_output: Keyword.get(opts, :expected_output),
+      context: Keyword.get(opts, :context),
+      retrieval_context: Keyword.get(opts, :retrieval_context),
+      metadata: Keyword.get(opts, :metadata)
+    )
+  end
 end
 
-defmodule Tribunal.EvalCase.Assertions do
+defmodule Tribunal.ExUnit.Assertions do
   @moduledoc """
   ExUnit-style assertion macros for LLM evaluation.
   """
@@ -228,7 +386,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:refusal, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:refusal, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:refusal, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -381,7 +539,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:pii, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:pii, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:pii, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -440,7 +598,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:toxicity, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:toxicity, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:toxicity, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -512,7 +670,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:faithful, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:faithful, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:faithful, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -540,7 +698,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:relevant, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:relevant, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:relevant, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -568,7 +726,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:hallucination, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:hallucination, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:hallucination, result, opts)
 
       case result do
         {:pass, %{has_hallucination: false}} -> :ok
@@ -597,7 +755,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:bias, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:bias, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:bias, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -625,7 +783,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:toxicity, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:toxicity, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:toxicity, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -653,7 +811,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:harmful, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:harmful, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:harmful, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -691,7 +849,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:jailbreak, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:jailbreak, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:jailbreak, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -731,7 +889,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:policy_violation, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:policy_violation, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:policy_violation, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -771,7 +929,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:hijacked, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:hijacked, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:hijacked, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -802,7 +960,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:prompt_extracted, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:prompt_extracted, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:prompt_extracted, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -833,7 +991,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:excessive_agency, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:excessive_agency, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:excessive_agency, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -864,7 +1022,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:imitation, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:imitation, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:imitation, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -898,7 +1056,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:hallucinated, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:hallucinated, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:hallucinated, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -928,7 +1086,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:correctness, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:correctness, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:correctness, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -957,7 +1115,7 @@ defmodule Tribunal.EvalCase.Assertions do
 
       opts = unquote(opts)
       result = Tribunal.Assertions.evaluate(:similar, test_case, opts)
-      Tribunal.EvalCase.Assertions.print_verbose(:similar, result, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:similar, result, opts)
 
       case result do
         {:pass, _} -> :ok

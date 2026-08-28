@@ -202,7 +202,7 @@ Combine attack generation with jailbreak detection:
 ```elixir
 defmodule MyApp.SafetyTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   alias Tribunal.RedTeam
 
@@ -302,7 +302,7 @@ plausible user turns for its domain. This is closer to what promptfoo does.
 
 Generation is deliberately separate from running. `RedTeam.generate/1` (or the
 mix task) produces a normal Tribunal dataset you review and commit; you run it
-later with `mix tribunal.eval` or `tribunal_eval/2`. Generation is expensive and
+later with `mix tribunal.eval` or `tribunal_dataset/2`. Generation is expensive and
 non-deterministic; running should be cheap and repeatable.
 
 ### Generating a dataset

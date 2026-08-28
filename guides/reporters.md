@@ -1,394 +1,174 @@
 # Reporters
 
-Tribunal provides multiple output formats for evaluation results, suitable for different environments: local development, CI/CD pipelines, and tooling integration.
+`mix tribunal.eval` builds one report and formats it as console, text, JSON, HTML, GitHub annotations, or JUnit XML.
 
-## Available Reporters
-
-| Reporter | Use Case |
-|----------|----------|
-| Console | Local development, human-readable output with unicode |
-| Text | Plain ASCII output, no unicode (for limited terminals) |
-| JSON | Machine-readable, tooling integration |
-| HTML | Shareable reports, dashboards |
-| GitHub | GitHub Actions annotations |
-| JUnit | CI/CD systems (Jenkins, CircleCI, etc.) |
-
-## Console Reporter
-
-Default reporter with colored, human-readable output.
-
-```elixir
-alias Tribunal.Reporter.Console
-
-report = %{
-  summary: %{
-    total: 10,
-    passed: 8,
-    failed: 2,
-    pass_rate: 80.0,
-    duration_ms: 1500
-  },
-  metrics: %{
-    contains: %{passed: 5, total: 5},
-    faithful: %{passed: 3, total: 5}
-  },
-  cases: [
-    %{input: "What is X?", status: :passed, failures: [], duration_ms: 100},
-    %{input: "How do I Y?", status: :failed, failures: [{:faithful, "Not grounded"}], duration_ms: 200}
-  ]
-}
-
-Console.format(report)
-```
-
-Output:
-```
-═══════════════════════════════════════════════════════════════════
-                    Tribunal LLM Evaluation
-═══════════════════════════════════════════════════════════════════
-
-Summary
-───────────────────────────────────────────────────────────────────
-Total: 10 | Passed: 8 | Failed: 2 | Pass Rate: 80.0% | Duration: 1.5s
-
-Metrics by Assertion Type
-───────────────────────────────────────────────────────────────────
-contains        5/5   100.0% ████████████████████
-faithful        3/5    60.0% ████████████
-
-Failed Cases
-───────────────────────────────────────────────────────────────────
-Input: How do I Y?
-  ✗ faithful: Not grounded
-
-═══════════════════════════════════════════════════════════════════
-                         ❌ FAILED
-═══════════════════════════════════════════════════════════════════
-```
-
-## Text Reporter
-
-Plain ASCII output without unicode characters. Use when your terminal or environment doesn't support unicode.
+| Format | Option | Use |
+|---|---|---|
+| Console | `--format console` | Local interactive output, default |
+| Text | `--format text` | Plain ASCII logs |
+| JSON | `--format json` | Machine processing and stored baselines |
+| HTML | `--format html` | Shareable report |
+| GitHub | `--format github` | Workflow annotations |
+| JUnit | `--format junit` | CI test-report ingestion |
 
 ```bash
-mix tribunal.eval --format text
-```
-
-Output:
-```
-Tribunal LLM Evaluation
-===================================================================
-
-Summary
--------------------------------------------------------------------
-Total: 10 | Passed: 8 | Failed: 2 | Pass Rate: 80% | Duration: 1.5s
-
-Metrics by Assertion Type
--------------------------------------------------------------------
-contains        5/5   100%  ####################
-faithful        3/5    60%  ############--------
-
-Failed Cases
--------------------------------------------------------------------
-Input: How do I Y?
-  |- faithful: Not grounded
-
--------------------------------------------------------------------
-FAILED
-```
-
-Key differences from Console:
-- Uses `===` and `---` instead of `═══` and `───`
-- Uses `#` and `-` for progress bars instead of `█` and `░`
-- Uses `PASSED`/`FAILED` instead of `✅`/`❌`
-- Uses `|-` instead of `├─` for failure trees
-
-## JSON Reporter
-
-Machine-readable JSON output. `Tribunal.Reporter.JSON.format/1` is a pass-through formatter for a report map you construct. The versioned schema below is produced by `mix tribunal.eval --format json`, which adds batch summary and gate fields before formatting.
-
-```elixir
-alias Tribunal.Reporter.JSON
-
-output = JSON.format(report)
-# Returns JSON string
-```
-
-Output:
-```json
-{
-  "schema_version": 2,
-  "summary": {
-    "total": 10,
-    "passed": 8,
-    "failed": 2,
-    "errors": 0,
-    "pass_rate": 0.8,
-    "duration_ms": 1500,
-    "gate_status": "not_configured",
-    "threshold_passed": null,
-    "threshold": null,
-    "strict": false
-  },
-  "metrics": {
-    "contains": {"passed": 5, "total": 5},
-    "faithful": {"passed": 3, "total": 5}
-  },
-  "cases": [
-    {
-      "input": "What is X?",
-      "actual_output": "X is the expected answer.",
-      "status": "passed",
-      "execution_error": false,
-      "failures": [],
-      "results": {"contains": {"pass": {"matched": ["X"]}}},
-      "evaluations": [{"contains": {"pass": {"matched": ["X"]}}}],
-      "duration_ms": 100
-    },
-    {
-      "input": "How do I Y?",
-      "status": "failed",
-      "execution_error": false,
-      "failures": [{"faithful": "Not grounded"}],
-      "results": {"faithful": {"fail": {"reason": "Not grounded"}}},
-      "evaluations": [{"faithful": {"fail": {"reason": "Not grounded"}}}],
-      "duration_ms": 200
-    }
-  ]
-}
-```
-
-`results` contains one conservative summary per assertion type. When an assertion type is repeated, a failure or error wins over a pass. `evaluations` preserves every assertion execution in dataset order.
-
-Schema version 2 distinguishes quality-gate state from execution results. Whenever no gate is configured, `summary.threshold_passed` is `null`. A successful report-only run uses `summary.gate_status: "not_configured"`. Provider failures, task exits, timeouts, missing outputs, and assertion errors increment `summary.errors`, set `gate_status` to `"error"`, and exit nonzero. Selecting zero cases also exits nonzero with `gate_status: "failed"`.
-
-## HTML Reporter
-
-Self-contained HTML report with embedded CSS. Great for sharing results or building dashboards.
-
-```bash
-mix tribunal.eval --format html --output report.html
-```
-
-Features:
-- Self-contained (no external dependencies)
-- Color-coded metrics (green ≥90%, yellow ≥70%, red <70%)
-- Visual progress bars
-- Responsive design
-- Failed cases with details
-
-```elixir
-alias Tribunal.Reporter.HTML
-
-output = HTML.format(report)
-File.write!("report.html", output)
-```
-
-The HTML report includes:
-- Summary stats grid (total, passed, failed, pass rate, duration)
-- Metrics table with visual progress bars
-- Failed cases section with failure reasons
-- Overall pass/fail status banner
-
-## GitHub Reporter
-
-Outputs GitHub Actions workflow annotations.
-
-```elixir
-alias Tribunal.Reporter.GitHub
-
-output = GitHub.format(report)
-```
-
-Output:
-```
-::error::Evaluation failed: faithful - Not grounded (Input: How do I Y?)
-::notice::Tribunal Evaluation: 8/10 passed (80.0%)
-```
-
-In GitHub Actions, these appear as:
-- Red error annotations for failures
-- Notice annotations for the summary
-
-## JUnit Reporter
-
-XML format compatible with most CI/CD systems.
-
-```elixir
-alias Tribunal.Reporter.JUnit
-
-output = JUnit.format(report)
-```
-
-Output:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="Tribunal Evaluation" tests="10" failures="2" time="1.5">
-  <testsuite name="LLM Evaluation" tests="10" failures="2" time="1.5">
-    <testcase name="What is X?" time="0.1"/>
-    <testcase name="How do I Y?" time="0.2">
-      <failure message="faithful: Not grounded"/>
-    </testcase>
-  </testsuite>
-</testsuites>
-```
-
-## CLI Usage
-
-Use reporters from the command line:
-
-```bash
-# Console (default, with unicode)
-mix tribunal.eval
-
-# Text (plain ASCII, no unicode)
-mix tribunal.eval --format text
-
-# JSON
-mix tribunal.eval --format json
-
-# JSON to file
 mix tribunal.eval --format json --output results.json
-
-# HTML report
 mix tribunal.eval --format html --output report.html
-
-# GitHub Actions
-mix tribunal.eval --format github
-
-# JUnit
 mix tribunal.eval --format junit --output junit.xml
 ```
 
-## GitHub Actions Example
+## Status semantics
 
-```yaml
-# .github/workflows/eval.yml
-name: LLM Evaluation
+Report status reflects batch execution and host-owned gates:
 
-on: [push, pull_request]
+| `summary.gate_status` | Meaning | Exit |
+|---|---|---|
+| `not_configured` | No quality gate, no operational errors | zero |
+| `passed` | Every configured overall and group gate passed | zero |
+| `failed` | A configured quality gate failed, or zero cases were selected | nonzero |
+| `error` | A provider, task, timeout, input, or assertion operation failed | nonzero |
 
-jobs:
-  eval:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+When no quality gate is configured, `summary.threshold_passed` is `null`, including operational-error runs. When a quality gate is configured, it is `true` only when all configured gates pass and `false` otherwise.
 
-      - name: Setup Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.16'
-          otp-version: '26'
+Ordinary quality failures are report-only when no gate is configured. Operational errors always fail the command. A permissive sampling rule never hides an operational attempt error.
 
-      - name: Install dependencies
-        run: mix deps.get
+## JSON schema v3
 
-      - name: Run evaluations
-        run: mix tribunal.eval --format github
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-```
+The JSON reporter emits `schema_version: 3`. A shortened sampled report looks like this:
 
-## CI/CD with JUnit
-
-Most CI systems can parse JUnit XML for test reporting:
-
-```yaml
-# CircleCI example
-jobs:
-  eval:
-    steps:
-      - run:
-          name: Run evaluations
-          command: mix tribunal.eval --format junit --output test-results/tribunal.xml
-      - store_test_results:
-          path: test-results
-```
-
-## Programmatic Usage
-
-Build report data and format:
-
-```elixir
-alias Tribunal.{Dataset, Assertions, Reporter}
-
-# Run evaluations
-{:ok, items} = Dataset.load_with_assertions("test/evals/datasets/questions.json")
-
-start_time = System.monotonic_time(:millisecond)
-
-case_results = Enum.map(items, fn {test_case, assertions} ->
-  case_start = System.monotonic_time(:millisecond)
-
-  output = MyApp.query(test_case.input)
-  test_case = %{test_case | actual_output: output}
-
-  results = Tribunal.evaluate(test_case, assertions)
-  failures = extract_failures(results)
-
-  %{
-    input: test_case.input,
-    status: if(Assertions.all_passed?(results), do: :passed, else: :failed),
-    failures: failures,
-    duration_ms: System.monotonic_time(:millisecond) - case_start
-  }
-end)
-
-duration_ms = System.monotonic_time(:millisecond) - start_time
-
-# Build report
-passed = Enum.count(case_results, &(&1.status == :passed))
-total = length(case_results)
-
-report = %{
-  summary: %{
-    total: total,
-    passed: passed,
-    failed: total - passed,
-    pass_rate: passed / total * 100,
-    duration_ms: duration_ms
+```json
+{
+  "schema_version": 3,
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "errors": 0,
+    "pass_rate": 0.0,
+    "duration_ms": 120,
+    "attempts": {
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "errors": 0,
+      "pass_rate": 0.6666666666666666
+    },
+    "gate_status": "failed",
+    "threshold_passed": false,
+    "threshold": 0.9,
+    "strict": false
   },
-  metrics: build_metrics(case_results),
-  cases: case_results
-}
-
-# Output in desired format
-case System.get_env("OUTPUT_FORMAT", "console") do
-  "text" -> Reporter.Text.format(report)
-  "json" -> Reporter.JSON.format(report)
-  "html" -> Reporter.HTML.format(report)
-  "github" -> Reporter.GitHub.format(report)
-  "junit" -> Reporter.JUnit.format(report)
-  _ -> Reporter.Console.format(report)
-end
-```
-
-## Report Data Structure
-
-All reporters expect this structure:
-
-```elixir
-%{
-  summary: %{
-    total: integer(),       # Total test cases
-    passed: integer(),      # Passing cases
-    failed: integer(),      # Failing cases
-    pass_rate: float(),     # Percentage (0-100)
-    duration_ms: integer()  # Total duration
+  "gates": {
+    "overall": {
+      "threshold": 0.9,
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "errors": 0,
+      "pass_rate": 0.0,
+      "passed_gate": false
+    },
+    "groups": null
   },
-  metrics: %{
-    assertion_type => %{
-      passed: integer(),
-      total: integer()
+  "metrics": {
+    "relevant": {
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "errors": 0,
+      "pass_rate": 0.6666666666666666
     }
   },
-  cases: [
-    %{
-      input: String.t(),
-      status: :passed | :failed,
-      failures: [{atom(), String.t()}],  # [{type, reason}, ...]
-      duration_ms: integer()
+  "cases": [
+    {
+      "input": {"question": "What is the return policy?"},
+      "actual_output": "Final attempt output",
+      "status": "failed",
+      "execution_error": false,
+      "duration_ms": 120,
+      "sample": {
+        "repeat": 3,
+        "pass_rule": "all",
+        "passed": 2,
+        "failed": 1,
+        "errors": 0,
+        "pass_rate": 0.6666666666666666,
+        "assertions": []
+      },
+      "attempts": [
+        {"status": "passed", "execution_error": false},
+        {"status": "failed", "execution_error": false},
+        {"status": "passed", "execution_error": false}
+      ]
     }
   ]
 }
 ```
+
+`summary.total` counts reduced cases. `summary.attempts.total` and metric totals count individual attempts. Repeating five times does not turn five attempts into five independent cases for an overall or group gate.
+
+Each reduced case keeps ordered `attempts` as the authoritative evidence. Its `sample` object records the rule and attempt counts. For repeated cases, top-level `actual_output`, `results`, and `evaluations` are final-attempt compatibility projections, while status, failures, execution error, and duration are reduced across attempts.
+
+`evaluations` preserves assertion execution order and duplicate assertion types. JSON encodes each item as an object with `type` and `result`. `results` is a conservative summary keyed by assertion type, where a failure or error wins over a pass.
+
+Structured inputs remain structured in JSON. Human reporters use a safe JSON representation for names and failure messages.
+
+## Group gates
+
+With `--group-by category --group-threshold 0.8`, `gates.groups` includes the metadata field, threshold, and one result per observed scalar value:
+
+```json
+{
+  "by": "category",
+  "threshold": 0.8,
+  "results": [
+    {
+      "value": "returns",
+      "total": 10,
+      "passed": 9,
+      "failed": 1,
+      "errors": 0,
+      "pass_rate": 0.9,
+      "threshold": 0.8,
+      "passed_gate": true
+    }
+  ]
+}
+```
+
+Every observed group must pass. Missing or non-scalar group metadata is rejected before execution rather than omitted from the report.
+
+## Human-readable formats
+
+Console and text output show reduced case totals, assertion metrics across attempts, failed cases, sampling counts, and the final gate state. HTML presents the same batch result as a self-contained page. These formats distinguish a completed report-only run from a passed gate.
+
+## GitHub annotations
+
+```bash
+mix tribunal.eval --format github
+```
+
+Every failed reduced case becomes an `::error::` annotation. Sampling counts and the final projected output are included when available. A final `::notice::` contains the reduced case pass rate.
+
+## JUnit
+
+```bash
+mix tribunal.eval --format junit --output junit.xml
+```
+
+JUnit emits one testcase per reduced case. Quality failures use `<failure>`. Operational failures use `<error>`. Failure text includes sampling evidence and the final projected output when available.
+
+## Programmatic formatting
+
+The reporter modules format an existing report map:
+
+```elixir
+Tribunal.Reporter.Console.format(report)
+Tribunal.Reporter.Text.format(report)
+Tribunal.Reporter.JSON.format(report)
+Tribunal.Reporter.HTML.format(report)
+Tribunal.Reporter.GitHub.format(report)
+Tribunal.Reporter.JUnit.format(report)
+```
+
+The batch builder and gate application used by the Mix task remain internal implementation details. Tribunal does not currently expose a public batch runner.

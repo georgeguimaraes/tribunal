@@ -1,7 +1,7 @@
 defmodule Tribunal.DatasetTest do
   use ExUnit.Case, async: false
 
-  alias Tribunal.Dataset
+  alias Tribunal.{Dataset, TestCase}
 
   setup do
     fixtures_path =
@@ -86,7 +86,7 @@ defmodule Tribunal.DatasetTest do
       invalid_expected = Path.join(fixtures_path, "invalid_expected.json")
       invalid_expected_list = Path.join(fixtures_path, "invalid_expected_list.json")
       invalid_context = Path.join(fixtures_path, "invalid_context.json")
-      invalid_input = Path.join(fixtures_path, "invalid_input.json")
+      invalid_evaluation_input = Path.join(fixtures_path, "invalid_evaluation_input.json")
       invalid_options = Path.join(fixtures_path, "invalid_options.yaml")
       invalid_case_keys = Path.join(fixtures_path, "invalid_case_keys.yaml")
 
@@ -101,7 +101,11 @@ defmodule Tribunal.DatasetTest do
       )
 
       File.write!(invalid_context, JSON.encode!([%{"input" => "hello", "context" => 42}]))
-      File.write!(invalid_input, JSON.encode!([%{"input" => 42}]))
+
+      File.write!(
+        invalid_evaluation_input,
+        JSON.encode!([%{"input" => 42, "evaluation_input" => 42}])
+      )
 
       File.write!(invalid_options, "- input: hello\n  expected:\n    contains:\n      1: hello\n")
       File.write!(invalid_case_keys, "- input: hello\n  1: ignored\n")
@@ -119,7 +123,8 @@ defmodule Tribunal.DatasetTest do
       assert {:error, {:invalid_case, 0, "context must be a string or list of strings"}} =
                Dataset.load(invalid_context)
 
-      assert {:error, {:invalid_case, 0, "input must be a string"}} = Dataset.load(invalid_input)
+      assert {:error, {:invalid_case, 0, "evaluation_input must be a string"}} =
+               Dataset.load(invalid_evaluation_input)
 
       assert {:error,
               {:invalid_case, 0,
@@ -140,6 +145,29 @@ defmodule Tribunal.DatasetTest do
   end
 
   describe "load_with_assertions/1" do
+    test "loads structured input and judge-facing evaluation text", %{
+      fixtures_path: fixtures_path
+    } do
+      path = Path.join(fixtures_path, "structured_input.json")
+
+      File.write!(
+        path,
+        JSON.encode!([
+          %{
+            "input" => %{"query" => "hello", "account_id" => 42},
+            "evaluation_input" => "hello for account 42",
+            "expected" => %{"contains" => "hello"}
+          }
+        ])
+      )
+
+      assert {:ok, [{test_case, [{:contains, [value: "hello"]}]}]} =
+               Dataset.load_with_assertions(path)
+
+      assert test_case.input == %{"query" => "hello", "account_id" => 42}
+      assert TestCase.evaluation_input(test_case) == "hello for account 42"
+    end
+
     test "extracts assertions from JSON", %{fixtures_path: fixtures_path} do
       {:ok, cases} = Dataset.load_with_assertions(Path.join(fixtures_path, "test_dataset.json"))
 

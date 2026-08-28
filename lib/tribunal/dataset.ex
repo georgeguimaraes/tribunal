@@ -5,7 +5,8 @@ defmodule Tribunal.Dataset do
   ## Dataset Format
 
   Each item in the dataset should have:
-  - `input` - The query/prompt (required)
+  - `input` - The JSON-compatible input passed to the system under test (required)
+  - `evaluation_input` - Optional text representation shown to judges
   - `context` - Ground truth context (optional)
   - `expected_output` - Golden answer (optional)
   - `expected` - Assertions to run (optional)
@@ -135,7 +136,9 @@ defmodule Tribunal.Dataset do
     expected = field(item, "expected", :expected)
 
     with :ok <- validate_case_keys(item),
-         :ok <- require_string(input, "input"),
+         :ok <- require_input(input),
+         :ok <-
+           optional_string(field(item, "evaluation_input", :evaluation_input), "evaluation_input"),
          :ok <- optional_string(field(item, "actual_output", :actual_output), "actual_output"),
          :ok <-
            optional_string(field(item, "expected_output", :expected_output), "expected_output"),
@@ -165,9 +168,8 @@ defmodule Tribunal.Dataset do
     end
   end
 
-  defp require_string(nil, field), do: {:error, "#{field} is required"}
-  defp require_string(value, _field) when is_binary(value), do: :ok
-  defp require_string(_value, field), do: {:error, "#{field} must be a string"}
+  defp require_input(nil), do: {:error, "input is required"}
+  defp require_input(value), do: TestCase.validate_input(value)
 
   defp optional_string(nil, _field), do: :ok
   defp optional_string(value, _field) when is_binary(value), do: :ok

@@ -84,7 +84,7 @@ defmodule Tribunal.MixProject do
           Tribunal.Assertions.Embedding
         ],
         Testing: [
-          Tribunal.EvalCase,
+          Tribunal.ExUnit,
           Tribunal.Dataset,
           Tribunal.RedTeam
         ],

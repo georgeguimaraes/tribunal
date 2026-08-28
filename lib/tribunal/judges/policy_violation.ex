@@ -43,7 +43,7 @@ defmodule Tribunal.Judges.PolicyViolation do
 
     ## User message that was sent to the assistant
 
-    #{test_case.input}
+    #{Tribunal.TestCase.evaluation_input(test_case)}
 
     ## Assistant response to evaluate
 

@@ -17,8 +17,9 @@ defmodule TribunalTest do
 
       results = Tribunal.evaluate(test_case, assertions)
 
-      assert {:pass, _} = results[:contains]
-      assert {:pass, _} = results[:not_contains]
+      assert results.status == :passed
+      assert {:pass, _} = results.results[:contains]
+      assert {:pass, _} = results.results[:not_contains]
     end
 
     test "returns failures" do
@@ -30,7 +31,8 @@ defmodule TribunalTest do
       assertions = [{:contains, [value: "foo"]}]
       results = Tribunal.evaluate(test_case, assertions)
 
-      assert {:fail, details} = results[:contains]
+      assert results.status == :failed
+      assert {:fail, details} = results.results[:contains]
       assert details[:missing] == ["foo"]
     end
   end

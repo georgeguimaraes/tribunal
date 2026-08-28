@@ -33,7 +33,7 @@ Tribunal offers two modes for different use cases:
 ```elixir
 def deps do
   [
-    {:tribunal, "~> 1.3"},
+    {:tribunal, "~> 2.0"},
 
     # Optional: for LLM-as-judge evaluations
     {:req_llm, ">= 1.2.0 and < 2.0.0"},
@@ -51,7 +51,7 @@ end
 ```elixir
 defmodule MyApp.RAGTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   @context ["Returns are accepted within 30 days with receipt."]
 
@@ -71,12 +71,31 @@ end
 # test/evals/rag_test.exs
 defmodule MyApp.RAGEvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
-  tribunal_eval "test/evals/datasets/questions.json",
-    provider: {MyApp.RAG, :query}
+  tribunal_dataset "test/evals/datasets/questions.json",
+    provider: {MyApp.RAG, :query},
+    repeat: 3,
+    pass_rule: :majority
 end
 ```
+
+### User-Owned Repeated Evaluations
+
+Use `tribunal_assert` when each attempt should invoke application code again:
+
+```elixir
+test "response is consistently grounded" do
+  tribunal_assert fn -> MyApp.RAG.query(question) end,
+    input: question,
+    context: @context,
+    expected: [faithful: [threshold: 0.85]],
+    repeat: 5,
+    pass_rule: {:rate, 0.8}
+end
+```
+
+The zero-arity callback may return a binary, `{:ok, binary}`, `{:error, reason}`, a populated `Tribunal.TestCase`, or `{:ok, test_case}`. A returned test case is authoritative for that attempt. Quality failures become ExUnit failures, while provider and assertion execution failures become ExUnit errors.
 
 ### Evaluation Mode (Mix Task)
 
@@ -96,10 +115,41 @@ mix tribunal.eval --strict
 # Run in parallel for speed
 mix tribunal.eval --concurrency 5
 
+# Sample each case five times and require a majority
+mix tribunal.eval --repeat 5 --pass-rule majority
+
+# Require every metadata group to reach 80%
+mix tribunal.eval --group-by category --group-threshold 0.8
+
+# Load datasets, sampling, and gates from a versioned policy
+mix tribunal.eval --config config/evaluation_policy.yaml
+
 # Output formats
 mix tribunal.eval --format json --output results.json
 mix tribunal.eval --format github  # GitHub Actions annotations
 ```
+
+CLI values override policy values, policy values override defaults, and positional dataset files replace policy datasets. Quality failures are report-only without a host-owned overall or group gate. Operational errors and zero-case runs always exit nonzero.
+
+A version 1 policy looks like this:
+
+```yaml
+version: 1
+datasets:
+  - test/evals/datasets/questions.json
+sampling:
+  repeat: 5
+  pass_rule:
+    rate: 0.8
+gates:
+  overall:
+    threshold: 0.9
+  groups:
+    by: category
+    threshold: 0.8
+```
+
+Dataset inputs may be JSON-compatible structured values. Add `evaluation_input` when judges should see a specific textual representation. Without it, Tribunal uses string input directly or JSON-encodes structured input.
 
 ```
 Tribunal LLM Evaluation
@@ -235,11 +285,15 @@ and plugins plug in via config. See the
 - [x] Hallucination detection
 - [x] LLM-as-judge with configurable models
 - [x] ExUnit integration for test assertions
+- [x] User-owned and dataset-driven repeated sampling
+- [x] Structured inputs and evaluation input projection
+- [x] Versioned batch policies, overall gates, and metadata group gates
+- [x] Schema v3 reports with ordered attempt evidence
 - [x] Red team attack generators (static templates)
 - [x] LLM-driven red team plugin system
 - [ ] Red team strategies (crescendo, iterative jailbreak)
 - [ ] Dataset template variables
-- [ ] Async batch evaluation
+- [ ] Classified infrastructure retries and caching
 
 ## License
 

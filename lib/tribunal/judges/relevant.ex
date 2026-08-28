@@ -19,7 +19,7 @@ defmodule Tribunal.Judges.Relevant do
     Relevance means the output directly addresses what the user is asking.
 
     ## Question/Input
-    #{test_case.input}
+    #{Tribunal.TestCase.evaluation_input(test_case)}
 
     ## Output to Evaluate
     #{test_case.actual_output}
