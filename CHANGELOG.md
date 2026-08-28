@@ -2,31 +2,76 @@
 
 ## [2.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v2.0.0) (2026-08-28)
 
+Tribunal 2.0 gives ExUnit and `mix tribunal.eval` one shared evaluation model while keeping each workflow native. ExUnit owns focused tests and hard requirements. The Mix task owns batch execution, aggregate gates, and reports.
 
-### ⚠ BREAKING CHANGES
+### ExUnit evaluations
 
-* Add evaluation v2 ([#54](https://github.com/georgeguimaraes/tribunal/issues/54))
+`tribunal_assert` runs application code from a normal ExUnit test, repeats it when needed, and reduces the attempts with `:all`, `:any`, `:majority`, or a required pass rate:
 
-### Features
+```elixir
+test "answer is consistently grounded" do
+  tribunal_assert fn -> MyApp.Chat.reply(question) end,
+    input: question,
+    context: @context,
+    expected: [faithful: [threshold: 0.85]],
+    repeat: 5,
+    pass_rule: {:rate, 0.8}
+end
+```
 
-* Add evaluation v2 ([#54](https://github.com/georgeguimaraes/tribunal/issues/54)) ([b2513a8](https://github.com/georgeguimaraes/tribunal/commit/b2513a8541aaf3f10429266640e87882a47c59fd))
+`tribunal_dataset` generates one native ExUnit test per dataset row and supports the same sampling rules. Provider failures and judge errors are reported as ExUnit errors, while ordinary quality failures remain assertion failures.
 
+### Batch policies and gates
 
-### Miscellaneous
+`mix tribunal.eval` now supports repeated sampling, versioned YAML policies, overall pass-rate gates, and metadata-group gates:
 
-* **deps:** bump actions/cache from 5 to 6 ([#47](https://github.com/georgeguimaraes/tribunal/issues/47)) ([10029e0](https://github.com/georgeguimaraes/tribunal/commit/10029e09518ba39f9b638e661c5dfa207719668c))
-* **deps:** bump actions/checkout from 6 to 7 ([#46](https://github.com/georgeguimaraes/tribunal/issues/46)) ([5002038](https://github.com/georgeguimaraes/tribunal/commit/50020381d1de11f14881bac144a2c0018323afb2))
-* Refresh optional dependencies ([#53](https://github.com/georgeguimaraes/tribunal/issues/53)) ([4600194](https://github.com/georgeguimaraes/tribunal/commit/46001942ae9653db0f3aa564dba76e8f371c096a))
+```yaml
+version: 1
+datasets:
+  - test/evals/benchmark.yaml
+sampling:
+  repeat: 5
+  pass_rule: majority
+gates:
+  overall:
+    threshold: 0.9
+  groups:
+    by: category
+    threshold: 0.8
+```
 
+CLI options override policy values, and positional dataset paths replace the policy's dataset list. Quality failures are still report-only when no gate is configured. Operational errors and zero-case runs always exit nonzero.
 
-### Documentation
+### Structured inputs and reports
 
-* Add Why Tribunal section and repeated-sampling plan ([54521af](https://github.com/georgeguimaraes/tribunal/commit/54521af914a4c506fbe6587c7fb6f0a620149b3b))
+Dataset inputs can now be JSON-compatible strings, numbers, booleans, lists, or string-keyed maps. `evaluation_input` lets an application give judges a specific text projection while reports retain the original structured value.
 
+Reports now include sampling evidence. Console, text, HTML, JUnit, and JSON distinguish quality failures from operational errors. JSON reports use schema version 3 with ordered attempts, attempt totals, and overall and group gate results.
 
-### Code Refactoring
+### Migrating from 1.x
 
-* Share evaluation semantics across runners ([#52](https://github.com/georgeguimaraes/tribunal/issues/52)) ([7202f35](https://github.com/georgeguimaraes/tribunal/commit/7202f356aba8340692b46313d638a257d005f960))
+Rename the ExUnit module and dataset macro:
+
+```elixir
+# 1.x
+use Tribunal.EvalCase
+tribunal_eval "test/evals/safety.yaml", provider: {MyApp.Chat, :reply}
+
+# 2.0
+use Tribunal.ExUnit
+tribunal_dataset "test/evals/safety.yaml", provider: {MyApp.Chat, :reply}
+```
+
+Other changes to account for:
+
+- `Tribunal.evaluate/2` now returns a complete case result with `status`, `failures`, `evaluations`, `results`, and `execution_error`. Per-assertion results moved under `result.results`, while `result.evaluations` preserves order and duplicate assertions.
+- Machine consumers need to migrate to JSON report schema version 3.
+- Dataset and assertion configuration is validated more strictly. Missing inputs, malformed options, missing output, and empty assertion sets now fail closed.
+- `--strict` and `--threshold` can no longer be combined.
+- Embedding assertions require `alike >= 0.4.0 and < 0.5.0`.
+- The default judge model changed from `anthropic:claude-3-5-haiku-latest` to `anthropic:claude-haiku-4-5-20251001`. Set `config :tribunal, llm: ...` to keep using a specific model.
+
+See [#54](https://github.com/georgeguimaraes/tribunal/pull/54) for the complete evaluation v2 implementation.
 
 ## [1.4.0](https://github.com/georgeguimaraes/tribunal/compare/v1.3.6...v1.4.0) (2026-07-23)
 
