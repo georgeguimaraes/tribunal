@@ -170,7 +170,7 @@ defmodule Tribunal.SamplingTest do
 
   test "validates attempts with actionable errors" do
     assert_raise ArgumentError, ~r/nonempty ordered list/, fn ->
-      apply(Sampling, :reduce, [[], :all])
+      Sampling.reduce([], :all)
     end
 
     invalid = Map.delete(attempt(:passed, 1), :duration_ms)

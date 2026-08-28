@@ -13,6 +13,7 @@ defmodule Tribunal.Evaluator do
 
   @type result :: %{
           input: term(),
+          metadata: map() | nil,
           actual_output: term(),
           status: :passed | :failed,
           failures: [{atom() | String.t(), String.t()}],
@@ -48,6 +49,7 @@ defmodule Tribunal.Evaluator do
 
     %{
       input: test_case.input,
+      metadata: test_case.metadata,
       actual_output: test_case.actual_output,
       status: if(failures == [], do: :passed, else: :failed),
       failures: failures,
@@ -71,6 +73,7 @@ defmodule Tribunal.Evaluator do
 
     %{
       input: test_case.input,
+      metadata: test_case.metadata,
       actual_output: test_case.actual_output,
       status: :failed,
       failures: [{kind, failure_reason}],

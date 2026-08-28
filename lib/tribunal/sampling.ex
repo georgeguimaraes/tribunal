@@ -259,18 +259,20 @@ defmodule Tribunal.Sampling do
     end)
   end
 
-  defp validate_pass_rule!(rule) when rule in [:all, :any, :majority], do: :ok
+  @doc false
+  @spec validate_pass_rule!(term()) :: :ok
+  def validate_pass_rule!(rule) when rule in [:all, :any, :majority], do: :ok
 
-  defp validate_pass_rule!({:rate, rate}) when is_float(rate) and rate >= 0.0 and rate <= 1.0,
+  def validate_pass_rule!({:rate, rate}) when is_float(rate) and rate >= 0.0 and rate <= 1.0,
     do: :ok
 
-  defp validate_pass_rule!({:rate, rate}) do
+  def validate_pass_rule!({:rate, rate}) do
     raise ArgumentError,
           "rate pass rule must be {:rate, float} with a value between 0.0 and 1.0, " <>
             "got: #{inspect({:rate, rate})}"
   end
 
-  defp validate_pass_rule!(rule) do
+  def validate_pass_rule!(rule) do
     raise ArgumentError,
           "unsupported pass rule #{inspect(rule)}; expected :all, :any, :majority, " <>
             "or {:rate, float}"

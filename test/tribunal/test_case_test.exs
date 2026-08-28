@@ -80,6 +80,12 @@ defmodule Tribunal.TestCaseTest do
       assert TestCase.display_input(%TestCase{input: {:query, "hello"}}) ==
                ~s({:query, "hello"})
     end
+
+    test "prefers a metadata name for generated test labels" do
+      tc = %TestCase{input: %{"query" => "hello"}, metadata: %{"name" => "friendly case"}}
+
+      assert TestCase.display_name(tc) == "friendly case"
+    end
   end
 
   describe "with_output/2" do

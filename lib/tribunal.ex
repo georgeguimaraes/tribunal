@@ -79,7 +79,7 @@ defmodule Tribunal do
 
       def deps do
         [
-          {:tribunal, "~> 1.3"},
+          {:tribunal, "~> 2.0"},
 
           # Optional: LLM-as-judge metrics
           {:req_llm, ">= 1.2.0 and < 2.0.0"},
@@ -90,7 +90,7 @@ defmodule Tribunal do
       end
   """
 
-  alias Tribunal.{Assertions, TestCase}
+  alias Tribunal.{Assertions, Evaluator, TestCase}
 
   @doc """
   Evaluates a test case against assertions.
@@ -109,14 +109,14 @@ defmodule Tribunal do
       ]
 
       Tribunal.evaluate(test_case, assertions)
-      #=> %{contains: {:pass, ...}, faithful: {:pass, ...}}
+      #=> %{status: :passed, evaluations: [...], failures: []}
   """
   def evaluate(%TestCase{} = test_case, assertions) when is_list(assertions) do
-    Assertions.evaluate_all(assertions, test_case)
+    Evaluator.evaluate(test_case, assertions)
   end
 
   def evaluate(%TestCase{} = test_case, assertions) when is_map(assertions) do
-    Assertions.evaluate_all(assertions, test_case)
+    Evaluator.evaluate(test_case, assertions)
   end
 
   @doc """

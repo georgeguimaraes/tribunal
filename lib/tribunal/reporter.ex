@@ -4,18 +4,83 @@ defmodule Tribunal.Reporter do
   """
 
   @type results :: %{
+          schema_version: pos_integer(),
           summary: %{
             total: non_neg_integer(),
             passed: non_neg_integer(),
             failed: non_neg_integer(),
+            errors: non_neg_integer(),
             pass_rate: float(),
             duration_ms: non_neg_integer()
           },
-          metrics: %{atom() => %{passed: non_neg_integer(), total: non_neg_integer()}},
+          metrics: %{
+            (atom() | String.t()) => %{
+              passed: non_neg_integer(),
+              failed: non_neg_integer(),
+              errors: non_neg_integer(),
+              total: non_neg_integer(),
+              pass_rate: float()
+            }
+          },
           cases: [map()]
         }
 
   @callback format(results()) :: String.t()
+end
+
+defmodule Tribunal.Reporter.Format do
+  @moduledoc false
+
+  alias Tribunal.TestCase
+
+  def input(case_result), do: case_result |> Map.fetch!(:input) |> TestCase.display_input()
+
+  def value(value) when is_binary(value), do: value
+  def value(value), do: TestCase.display_input(value)
+
+  def sample(case_result) do
+    case Map.get(case_result, :sample) do
+      %{repeat: repeat, passed: passed, failed: failed, errors: errors, pass_rule: pass_rule} ->
+        error_label = if errors == 1, do: "error", else: "errors"
+
+        "samples: #{passed}/#{repeat} passed, #{failed} failed, #{errors} #{error_label}, " <>
+          "rule: #{pass_rule(pass_rule)}"
+
+      _other ->
+        nil
+    end
+  end
+
+  def gates(%{overall: overall, groups: groups}) do
+    [overall_gate(overall), group_gates(groups)]
+    |> Enum.reject(&is_nil/1)
+    |> List.flatten()
+  end
+
+  def gates(_gates), do: []
+
+  defp overall_gate(nil), do: nil
+
+  defp overall_gate(gate) do
+    "overall: #{percent(gate.pass_rate)} observed, #{percent(gate.threshold)} required, " <>
+      gate_status(gate.passed_gate)
+  end
+
+  defp group_gates(nil), do: nil
+
+  defp group_gates(groups) do
+    Enum.map(groups.results, fn result ->
+      "#{groups.by}=#{value(result.value)}: #{percent(result.pass_rate)} observed, " <>
+        "#{percent(result.threshold)} required, #{gate_status(result.passed_gate)}"
+    end)
+  end
+
+  defp percent(rate), do: "#{round(rate * 100)}%"
+  defp gate_status(true), do: "passed"
+  defp gate_status(false), do: "failed"
+
+  defp pass_rule({:rate, rate}), do: "rate >= #{rate}"
+  defp pass_rule(pass_rule), do: to_string(pass_rule)
 end
 
 defmodule Tribunal.Reporter.Console do
@@ -25,11 +90,14 @@ defmodule Tribunal.Reporter.Console do
 
   @behaviour Tribunal.Reporter
 
+  alias Tribunal.Reporter.Format
+
   @impl true
   def format(results) do
     [
       header(),
       summary_section(results.summary),
+      gates_section(Map.get(results, :gates)),
       metrics_section(results.metrics),
       failures_section(results.cases),
       footer(results.summary)
@@ -54,6 +122,17 @@ defmodule Tribunal.Reporter.Console do
       Failed:    #{summary.failed}
       Duration:  #{format_duration(summary.duration_ms)}
     """
+  end
+
+  defp gates_section(gates) do
+    case Format.gates(gates) do
+      [] ->
+        ""
+
+      rows ->
+        "Gates\n───────────────────────────────────────────────────────────────\n" <>
+          Enum.map_join(rows, "\n", &("  " <> &1)) <> "\n"
+    end
   end
 
   defp metrics_section(metrics) when map_size(metrics) == 0, do: ""
@@ -95,20 +174,24 @@ defmodule Tribunal.Reporter.Console do
   end
 
   defp format_failure_row({c, idx}) do
+    input = Format.input(c)
+
     reasons =
       Enum.map_join(c.failures, "\n", fn {type, reason} -> "     ├─ #{type}: #{reason}" end)
 
+    sample_line = if sample = Format.sample(c), do: "\n     ├─ #{sample}", else: ""
+
     output_line =
       if c[:actual_output] do
-        output = String.slice(to_string(c.actual_output), 0, 200)
+        output = c.actual_output |> Format.value() |> String.slice(0, 200)
         "\n     └─ output: #{output}"
       else
         ""
       end
 
     """
-      #{idx}. "#{c.input}"
-    #{reasons}#{output_line}
+      #{idx}. "#{input}"
+    #{reasons}#{sample_line}#{output_line}
     """
   end
 
@@ -164,11 +247,14 @@ defmodule Tribunal.Reporter.Text do
 
   @behaviour Tribunal.Reporter
 
+  alias Tribunal.Reporter.Format
+
   @impl true
   def format(results) do
     [
       header(),
       summary_section(results.summary),
+      gates_section(Map.get(results, :gates)),
       metrics_section(results.metrics),
       failures_section(results.cases),
       footer(results.summary)
@@ -193,6 +279,17 @@ defmodule Tribunal.Reporter.Text do
       Failed:    #{summary.failed}
       Duration:  #{format_duration(summary.duration_ms)}
     """
+  end
+
+  defp gates_section(gates) do
+    case Format.gates(gates) do
+      [] ->
+        ""
+
+      rows ->
+        "Gates\n-------------------------------------------------------------------\n" <>
+          Enum.map_join(rows, "\n", &("  " <> &1)) <> "\n"
+    end
   end
 
   defp metrics_section(metrics) when map_size(metrics) == 0, do: ""
@@ -234,20 +331,24 @@ defmodule Tribunal.Reporter.Text do
   end
 
   defp format_failure_row({c, idx}) do
+    input = Format.input(c)
+
     reasons =
       Enum.map_join(c.failures, "\n", fn {type, reason} -> "     |- #{type}: #{reason}" end)
 
+    sample_line = if sample = Format.sample(c), do: "\n     |- #{sample}", else: ""
+
     output_line =
       if c[:actual_output] do
-        output = String.slice(to_string(c.actual_output), 0, 200)
+        output = c.actual_output |> Format.value() |> String.slice(0, 200)
         "\n     \\- output: #{output}"
       else
         ""
       end
 
     """
-      #{idx}. "#{c.input}"
-    #{reasons}#{output_line}
+      #{idx}. "#{input}"
+    #{reasons}#{sample_line}#{output_line}
     """
   end
 
@@ -306,6 +407,7 @@ defmodule Tribunal.Reporter.JSON do
   @impl true
   def format(results) do
     results
+    |> Map.put(:schema_version, 3)
     |> convert_for_json()
     |> JSON.encode!()
   end
@@ -313,7 +415,8 @@ defmodule Tribunal.Reporter.JSON do
   defp convert_for_json(data) when is_map(data) do
     Map.new(data, fn {k, v} ->
       key = if is_atom(k), do: Atom.to_string(k), else: k
-      {key, convert_for_json(v)}
+      value = if key == "evaluations", do: convert_evaluations(v), else: convert_for_json(v)
+      {key, value}
     end)
   end
 
@@ -335,6 +438,21 @@ defmodule Tribunal.Reporter.JSON do
   end
 
   defp convert_for_json(data), do: data
+
+  defp convert_evaluations(evaluations) when is_list(evaluations) do
+    Enum.map(evaluations, fn
+      {type, result} ->
+        %{
+          "type" => convert_for_json(type),
+          "result" => convert_for_json(result)
+        }
+
+      evaluation ->
+        convert_for_json(evaluation)
+    end)
+  end
+
+  defp convert_evaluations(evaluations), do: convert_for_json(evaluations)
 end
 
 defmodule Tribunal.Reporter.GitHub do
@@ -344,6 +462,8 @@ defmodule Tribunal.Reporter.GitHub do
 
   @behaviour Tribunal.Reporter
 
+  alias Tribunal.Reporter.Format
+
   @impl true
   def format(results) do
     annotations =
@@ -351,15 +471,30 @@ defmodule Tribunal.Reporter.GitHub do
       |> Enum.filter(&(&1.status == :failed))
       |> Enum.map(fn c ->
         reasons = Enum.map_join(c.failures, "; ", fn {type, reason} -> "#{type}: #{reason}" end)
-        output_suffix = if c[:actual_output], do: " | output: #{c.actual_output}", else: ""
-        "::error::#{c.input}: #{reasons}#{output_suffix}"
+        sample_suffix = if sample = Format.sample(c), do: " | #{sample}", else: ""
+
+        output_suffix =
+          if c[:actual_output], do: " | output: #{Format.value(c.actual_output)}", else: ""
+
+        message = "#{Format.input(c)}: #{reasons}#{sample_suffix}#{output_suffix}"
+        "::error::#{escape_command_data(message)}"
       end)
 
-    summary =
-      "::notice::Tribunal: #{results.summary.passed}/#{results.summary.total} passed (#{round(results.summary.pass_rate * 100)}%)"
+    summary_text =
+      "Tribunal: #{results.summary.passed}/#{results.summary.total} passed " <>
+        "(#{round(results.summary.pass_rate * 100)}%)"
+
+    summary = "::notice::#{escape_command_data(summary_text)}"
 
     (annotations ++ [summary])
     |> Enum.join("\n")
+  end
+
+  defp escape_command_data(data) do
+    data
+    |> String.replace("%", "%25")
+    |> String.replace("\r", "%0D")
+    |> String.replace("\n", "%0A")
   end
 end
 
@@ -370,43 +505,66 @@ defmodule Tribunal.Reporter.JUnit do
 
   @behaviour Tribunal.Reporter
 
+  alias Tribunal.Reporter.Format
+
   @impl true
   def format(results) do
-    test_cases = Enum.map_join(results.cases, "\n", &format_testcase/1)
+    cases = results.cases
+    tests = length(cases)
+    errors = Enum.count(cases, &Map.get(&1, :execution_error, false))
+
+    failures =
+      Enum.count(cases, fn case_result ->
+        case_result.status == :failed and not Map.get(case_result, :execution_error, false)
+      end)
+
+    test_cases = Enum.map_join(cases, "\n", &format_testcase/1)
+    time = results.summary.duration_ms / 1000
 
     """
     <?xml version="1.0" encoding="UTF-8"?>
-    <testsuites name="Tribunal" tests="#{results.summary.total}" failures="#{results.summary.failed}" time="#{results.summary.duration_ms / 1000}">
-      <testsuite name="eval" tests="#{results.summary.total}" failures="#{results.summary.failed}">
+    <testsuites name="Tribunal" tests="#{tests}" failures="#{failures}" errors="#{errors}" time="#{time}">
+      <testsuite name="eval" tests="#{tests}" failures="#{failures}" errors="#{errors}" time="#{time}">
     #{test_cases}
       </testsuite>
     </testsuites>
     """
   end
 
+  defp format_testcase(%{execution_error: true} = c) do
+    format_failed_testcase(c, "error", "Operational error")
+  end
+
   defp format_testcase(%{status: :passed} = c) do
-    name = escape_xml(c.input)
+    name = c |> Format.input() |> escape_xml()
     time = (c.duration_ms || 0) / 1000
     ~s(    <testcase name="#{name}" time="#{time}"/>)
   end
 
   defp format_testcase(c) do
-    name = escape_xml(c.input)
+    format_failed_testcase(c, "failure", "Assertion failed")
+  end
+
+  defp format_failed_testcase(c, element, message) do
+    name = c |> Format.input() |> escape_xml()
     time = (c.duration_ms || 0) / 1000
-
-    output_line = if c[:actual_output], do: "\nOutput: #{c.actual_output}", else: ""
-
-    failure_msg =
-      c.failures
-      |> Enum.map_join("\n", fn {type, reason} -> "#{type}: #{reason}" end)
-      |> Kernel.<>(output_line)
-      |> escape_xml()
+    details = c |> failure_details() |> escape_xml()
 
     """
         <testcase name="#{name}" time="#{time}">
-          <failure message="Assertion failed">#{failure_msg}</failure>
+          <#{element} message="#{message}">#{details}</#{element}>
         </testcase>
     """
+  end
+
+  defp failure_details(c) do
+    reasons = Enum.map_join(c.failures, "\n", fn {type, reason} -> "#{type}: #{reason}" end)
+    sample_line = if sample = Format.sample(c), do: "\n#{sample}", else: ""
+
+    output_line =
+      if c[:actual_output], do: "\nOutput: #{Format.value(c.actual_output)}", else: ""
+
+    reasons <> sample_line <> output_line
   end
 
   defp escape_xml(str) do
@@ -425,6 +583,8 @@ defmodule Tribunal.Reporter.HTML do
   """
 
   @behaviour Tribunal.Reporter
+
+  alias Tribunal.Reporter.Format
 
   @impl true
   def format(results) do
@@ -471,6 +631,7 @@ defmodule Tribunal.Reporter.HTML do
       <div class="container">
         <h1>Tribunal Evaluation Report</h1>
         #{summary_section(results.summary)}
+        #{gates_section(Map.get(results, :gates))}
         #{metrics_section(results.metrics)}
         #{failures_section(results.cases)}
         <div class="footer">Generated by Tribunal</div>
@@ -533,6 +694,17 @@ defmodule Tribunal.Reporter.HTML do
     end
   end
 
+  defp gates_section(gates) do
+    case Format.gates(gates) do
+      [] ->
+        ""
+
+      rows ->
+        items = Enum.map_join(rows, "", &"<li>#{escape_html(&1)}</li>")
+        ~s(<div class="metrics"><h2>Gates</h2><ul>#{items}</ul></div>)
+    end
+  end
+
   defp metrics_section(metrics) when map_size(metrics) == 0, do: ""
 
   defp metrics_section(metrics) do
@@ -586,22 +758,33 @@ defmodule Tribunal.Reporter.HTML do
   end
 
   defp format_failure_row(c) do
+    input = Format.input(c)
+
     reasons =
       Enum.map_join(c.failures, "<br>", fn {type, reason} ->
         "<code>#{escape_html(to_string(type))}</code>: #{escape_html(reason)}"
       end)
 
+    sample_html =
+      if sample = Format.sample(c) do
+        ~s(<div class="failure-sample">#{escape_html(sample)}</div>)
+      else
+        ""
+      end
+
     output_html =
       if c[:actual_output] do
-        ~s(<div class="failure-output"><strong>Output:</strong> #{escape_html(to_string(c.actual_output))}</div>)
+        output = c.actual_output |> Format.value() |> escape_html()
+        ~s(<div class="failure-output"><strong>Output:</strong> #{output}</div>)
       else
         ""
       end
 
     """
     <div class="failure">
-      <div class="failure-input">#{escape_html(c.input)}</div>
+      <div class="failure-input">#{escape_html(input)}</div>
       <div class="failure-reason">#{reasons}</div>
+      #{sample_html}
       #{output_html}
     </div>
     """
@@ -613,6 +796,7 @@ defmodule Tribunal.Reporter.HTML do
     |> String.replace("<", "&lt;")
     |> String.replace(">", "&gt;")
     |> String.replace("\"", "&quot;")
+    |> String.replace("'", "&#39;")
   end
 
   defp format_duration(ms) when ms < 1000, do: "#{ms}ms"

@@ -70,6 +70,7 @@ defmodule Tribunal.ExUnit do
     assertions = fetch_assertions!(opts)
     repeat = validate_repeat!(Keyword.get(opts, :repeat, 1))
     pass_rule = Keyword.get(opts, :pass_rule, :all)
+    :ok = Tribunal.Sampling.validate_pass_rule!(pass_rule)
     test_case = build_test_case(input, opts)
 
     result =

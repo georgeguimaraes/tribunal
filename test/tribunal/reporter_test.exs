@@ -43,6 +43,92 @@ defmodule Tribunal.ReporterTest do
     ]
   }
 
+  @sampled_results %{
+    schema_version: 2,
+    summary: %{
+      total: 2,
+      passed: 0,
+      failed: 2,
+      errors: 1,
+      pass_rate: 0.0,
+      duration_ms: 60,
+      gate_status: :error
+    },
+    metrics: %{},
+    cases: [
+      %{
+        input: %{"question" => "quality <case>", "tier" => "gold"},
+        actual_output: "wrong <answer>",
+        status: :failed,
+        failures: [{:contains, "Attempt 1: missing expected text"}],
+        evaluations: [
+          {:contains, {:fail, %{reason: "missing first value"}}},
+          {:contains, {:pass, %{reason: "matched second value"}}}
+        ],
+        execution_error: false,
+        duration_ms: 20,
+        sample: %{
+          repeat: 2,
+          pass_rule: :all,
+          passed: 1,
+          failed: 1,
+          errors: 0,
+          pass_rate: 0.5,
+          assertions: []
+        },
+        attempts: [
+          %{
+            input: %{"question" => "quality <case>", "tier" => "gold"},
+            actual_output: "first",
+            status: :failed,
+            failures: [{:contains, "missing expected text"}],
+            evaluations: [
+              {:contains, {:fail, %{reason: "missing first value"}}},
+              {:contains, {:pass, %{reason: "matched second value"}}}
+            ],
+            execution_error: false,
+            duration_ms: 10
+          },
+          %{
+            input: %{"question" => "quality <case>", "tier" => "gold"},
+            actual_output: "second",
+            status: :passed,
+            failures: [],
+            evaluations: [
+              {:contains, {:pass, %{reason: "matched first value"}}},
+              {:contains, {:pass, %{reason: "matched second value"}}}
+            ],
+            execution_error: false,
+            duration_ms: 10
+          }
+        ]
+      },
+      %{
+        input: %{"question" => "timeout\n::warning::injected%", "tier" => "standard"},
+        actual_output: "partial\noutput%",
+        status: :failed,
+        failures: [{:provider, "timeout\n::notice::fake%"}],
+        evaluations: [{:contains, {:error, "timeout"}}],
+        execution_error: true,
+        duration_ms: 40,
+        sample: %{
+          repeat: 3,
+          pass_rule: :any,
+          passed: 2,
+          failed: 1,
+          errors: 1,
+          pass_rate: 2 / 3,
+          assertions: []
+        },
+        attempts: [
+          %{actual_output: "attempt one", status: :passed, evaluations: []},
+          %{actual_output: nil, status: :failed, evaluations: []},
+          %{actual_output: "attempt three", status: :passed, evaluations: []}
+        ]
+      }
+    ]
+  }
+
   describe "Console.format/1" do
     test "includes header" do
       output = Console.format(@sample_results)
@@ -123,6 +209,14 @@ defmodule Tribunal.ReporterTest do
       assert Enum.uniq(lengths) |> length() == 1,
              "bar rows have different lengths: #{inspect(bar_parts)}"
     end
+
+    test "renders structured sampled operational failures" do
+      output = Console.format(@sampled_results)
+
+      assert output =~ ~s("question":"timeout)
+      assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
+      assert output =~ "provider: timeout"
+    end
   end
 
   describe "Text.format/1" do
@@ -158,6 +252,14 @@ defmodule Tribunal.ReporterTest do
       assert Enum.uniq(lengths) |> length() == 1,
              "bar rows have different lengths: #{inspect(bar_parts)}"
     end
+
+    test "renders structured sampled operational failures" do
+      output = Text.format(@sampled_results)
+
+      assert output =~ ~s("question":"timeout)
+      assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
+      assert output =~ "provider: timeout"
+    end
   end
 
   describe "HTML.format/1" do
@@ -171,6 +273,14 @@ defmodule Tribunal.ReporterTest do
 
       assert output =~ ">FAILED<"
       refute output =~ "COMPLETED (no gate)"
+    end
+
+    test "escapes structured sampled operational failures" do
+      output = HTML.format(@sampled_results)
+
+      assert output =~ ~s(&quot;question&quot;)
+      assert output =~ "quality &lt;case&gt;"
+      assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
     end
   end
 
@@ -186,6 +296,7 @@ defmodule Tribunal.ReporterTest do
     test "includes summary" do
       output = JSON.format(@sample_results)
       {:ok, parsed} = json_decode(output)
+      assert parsed["schema_version"] == 3
       assert parsed["summary"]["total"] == 10
       assert parsed["summary"]["passed"] == 8
     end
@@ -202,6 +313,32 @@ defmodule Tribunal.ReporterTest do
 
       assert %{"faithful" => "Score 0.5 below threshold 0.8"} =
                get_in(parsed, ["cases", Access.at(1), "failures", Access.at(0)])
+    end
+
+    test "preserves structured input, ordered attempts, sample stats, and duplicate evaluations" do
+      output = JSON.format(@sampled_results)
+      {:ok, parsed} = json_decode(output)
+
+      assert parsed["schema_version"] == 3
+
+      assert %{"question" => "quality <case>", "tier" => "gold"} =
+               get_in(parsed, ["cases", Access.at(0), "input"])
+
+      assert [
+               %{"actual_output" => "first"},
+               %{"actual_output" => "second"}
+             ] =
+               parsed
+               |> get_in(["cases", Access.at(0), "attempts"])
+               |> Enum.map(&Map.take(&1, ["actual_output"]))
+
+      assert %{"repeat" => 2, "passed" => 1, "failed" => 1, "errors" => 0} =
+               get_in(parsed, ["cases", Access.at(0), "sample"])
+
+      assert [
+               %{"type" => "contains", "result" => %{"fail" => _}},
+               %{"type" => "contains", "result" => %{"pass" => _}}
+             ] = get_in(parsed, ["cases", Access.at(0), "evaluations"])
     end
   end
 
@@ -221,7 +358,7 @@ defmodule Tribunal.ReporterTest do
 
     test "outputs notice with summary" do
       output = GitHub.format(@sample_results)
-      assert output =~ "::notice::Tribunal: 8/10 passed (80%)"
+      assert output =~ "::notice::Tribunal: 8/10 passed (80%25)"
     end
 
     test "includes failure reasons" do
@@ -232,6 +369,16 @@ defmodule Tribunal.ReporterTest do
     test "includes actual output in annotations" do
       output = GitHub.format(@sample_results)
       assert output =~ "output: We ship worldwide to over 100 countries."
+    end
+
+    test "escapes structured sampled failures as one workflow command" do
+      output = GitHub.format(@sampled_results)
+
+      assert output =~ ~s("question":"timeout\\n::warning::injected%25")
+      assert output =~ "timeout%0A::notice::fake%25"
+      assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
+      refute output =~ "\n::warning::injected"
+      refute output =~ "\n::notice::fake"
     end
   end
 
@@ -246,8 +393,9 @@ defmodule Tribunal.ReporterTest do
 
     test "includes test count" do
       output = JUnit.format(@sample_results)
-      assert output =~ ~s(tests="10")
+      assert output =~ ~s(tests="3")
       assert output =~ ~s(failures="2")
+      assert output =~ ~s(errors="0")
     end
 
     test "includes test cases" do
@@ -283,6 +431,21 @@ defmodule Tribunal.ReporterTest do
       assert output =~ "&lt;special&gt;"
       assert output =~ "&amp;"
       assert output =~ "&quot;"
+    end
+
+    test "counts reduced cases and separates operational errors from quality failures" do
+      output = JUnit.format(@sampled_results)
+
+      assert output =~
+               ~s(<testsuites name="Tribunal" tests="2" failures="1" errors="1" time="0.06">)
+
+      assert output =~
+               ~s(<testsuite name="eval" tests="2" failures="1" errors="1" time="0.06">)
+
+      assert output =~ "<failure message=\"Assertion failed\">"
+      assert output =~ "<error message=\"Operational error\">"
+      assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
+      assert output =~ "quality &lt;case&gt;"
     end
   end
 end

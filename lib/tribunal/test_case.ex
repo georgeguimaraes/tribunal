@@ -101,9 +101,9 @@ defmodule Tribunal.TestCase do
   def validate(%__MODULE__{input: nil}), do: {:error, "input is required"}
 
   def validate(%__MODULE__{input: input, evaluation_input: evaluation_input}) do
-    with :ok <- validate_input(input),
-         :ok <- validate_evaluation_input(evaluation_input) do
-      :ok
+    case validate_input(input) do
+      :ok -> validate_evaluation_input(evaluation_input)
+      error -> error
     end
   end
 
@@ -164,10 +164,19 @@ defmodule Tribunal.TestCase do
   @doc false
   def display_name(%__MODULE__{} = test_case, max_length \\ 80) do
     test_case
-    |> display_input()
+    |> preferred_name()
     |> String.slice(0, max_length)
     |> String.trim()
   end
+
+  defp preferred_name(%__MODULE__{metadata: metadata} = test_case) when is_map(metadata) do
+    case Map.get(metadata, "name") || Map.get(metadata, :name) do
+      value when is_binary(value) -> value
+      _value -> display_input(test_case)
+    end
+  end
+
+  defp preferred_name(test_case), do: display_input(test_case)
 
   defp normalize_keys(map) do
     fields = MapSet.new(__struct__() |> Map.from_struct() |> Map.keys())
