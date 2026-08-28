@@ -290,6 +290,7 @@ defmodule Tribunal.ReporterTest do
       assert output =~
                ~r/<div class="stat-value">1<\/div>\s+<div class="stat-label">Errors<\/div>/
 
+      assert output =~ ~s(<div class="failures errors">)
       assert output =~ ~s(&quot;question&quot;)
       assert output =~ "quality &lt;case&gt;"
       assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"

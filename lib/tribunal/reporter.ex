@@ -773,7 +773,10 @@ defmodule Tribunal.Reporter.HTML do
 
     errors = Enum.filter(cases, &Map.get(&1, :execution_error, false))
 
-    [case_section("failures", "Failed Cases", failures), case_section("errors", "Errors", errors)]
+    [
+      case_section("failures", "Failed Cases", failures),
+      case_section("failures errors", "Errors", errors)
+    ]
   end
 
   defp case_section(_class, _title, []), do: ""
