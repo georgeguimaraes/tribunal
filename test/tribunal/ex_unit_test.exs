@@ -86,6 +86,25 @@ defmodule Tribunal.ExUnitTest do
       end
 
       refute_received :invoked
+
+      assert_raise ArgumentError, ~r/:expected must be a non-empty assertion list/, fn ->
+        tribunal_assert(fn -> send(self(), :invoked) end,
+          input: "query",
+          expected: [contains: "hello"]
+        )
+      end
+
+      refute_received :invoked
+
+      assert_raise ArgumentError, ~r/:defaults must be a keyword list or map/, fn ->
+        tribunal_assert(fn -> send(self(), :invoked) end,
+          input: "query",
+          expected: [contains: [value: "hello"]],
+          defaults: "invalid"
+        )
+      end
+
+      refute_received :invoked
     end
 
     test "accepts an authoritative test case from the callback" do

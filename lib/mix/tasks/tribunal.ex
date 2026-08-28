@@ -94,17 +94,23 @@ defmodule Mix.Tasks.Tribunal.Eval do
 
     start_time = System.monotonic_time(:millisecond)
 
-    results =
+    cases =
       files
       |> Enum.flat_map(&load_dataset/1)
       |> Enum.drop(settings.offset)
       |> then(&limit_cases(&1, settings.limit))
-      |> tap(&validate_group_cases!(&1, settings.group_by))
+
+    group_values = validate_group_cases!(cases, settings.group_by)
+
+    results =
+      cases
       |> run_cases(
         settings.provider,
         settings.concurrency,
         settings.repeat,
-        settings.pass_rule
+        settings.pass_rule,
+        settings.group_by,
+        group_values
       )
       |> Report.build(start_time)
 
@@ -272,15 +278,15 @@ defmodule Mix.Tasks.Tribunal.Eval do
     Tribunal.Dataset.load_with_assertions!(path)
   end
 
-  defp run_cases(cases, provider, concurrency, repeat, pass_rule) do
+  defp run_cases(cases, provider, concurrency, repeat, pass_rule, group_by, group_values) do
     timeout = Application.get_env(:tribunal, :eval_timeout, 120_000)
-    jobs = expand_attempts(cases, repeat)
+    jobs = expand_attempts(cases, repeat, group_values)
 
     task_results =
       Task.Supervisor.async_stream_nolink(
         Tribunal.TaskSupervisor,
         jobs,
-        fn {_case_index, _attempt_index, test_case, assertions} ->
+        fn {_case_index, _attempt_index, test_case, assertions, _group_value} ->
           run_case(test_case, assertions, provider)
         end,
         max_concurrency: concurrency,
@@ -291,34 +297,41 @@ defmodule Mix.Tasks.Tribunal.Eval do
     jobs
     |> Enum.zip(task_results)
     |> Enum.map(fn
-      {{case_index, attempt_index, _test_case, _assertions}, {:ok, result}} ->
-        {case_index, attempt_index, result}
+      {{case_index, attempt_index, _test_case, _assertions, group_value}, {:ok, result}} ->
+        {case_index, attempt_index, group_value, result}
 
-      {{case_index, attempt_index, test_case, assertions}, {:exit, reason}} ->
+      {{case_index, attempt_index, test_case, assertions, group_value}, {:exit, reason}} ->
         result =
           Tribunal.Evaluator.error(test_case, "Evaluation task failed: #{inspect(reason)}",
             assertions: assertions,
             duration_ms: task_error_duration(reason, timeout)
           )
 
-        {case_index, attempt_index, result}
+        {case_index, attempt_index, group_value, result}
     end)
     |> Enum.group_by(&elem(&1, 0), & &1)
     |> Enum.sort_by(&elem(&1, 0))
     |> Enum.map(fn {_case_index, attempts} ->
+      attempts = Enum.sort_by(attempts, &elem(&1, 1))
+      group_value = attempts |> hd() |> elem(2)
+
       attempts
-      |> Enum.sort_by(&elem(&1, 1))
-      |> Enum.map(&elem(&1, 2))
+      |> Enum.map(&elem(&1, 3))
       |> Tribunal.Sampling.reduce(pass_rule)
+      |> put_group(group_by, group_value)
     end)
   end
 
-  defp expand_attempts(cases, repeat) do
-    for {{test_case, assertions}, case_index} <- Enum.with_index(cases),
+  defp expand_attempts(cases, repeat, group_values) do
+    for {{{test_case, assertions}, group_value}, case_index} <-
+          cases |> Enum.zip(group_values) |> Enum.with_index(),
         attempt_index <- 0..(repeat - 1) do
-      {case_index, attempt_index, test_case, assertions}
+      {case_index, attempt_index, test_case, assertions, group_value}
     end
   end
+
+  defp put_group(result, nil, _value), do: result
+  defp put_group(result, field, value), do: Map.put(result, :group, %{by: field, value: value})
 
   defp task_error_duration(:timeout, timeout), do: timeout
   defp task_error_duration(_reason, _timeout), do: 0

@@ -261,6 +261,42 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     assert Agent.get(Tribunal.GroupProviderCounter, & &1) == 0
   end
 
+  test "keeps dataset group membership when a provider returns authoritative metadata", %{
+    tmp_dir: tmp_dir
+  } do
+    path = Path.join(tmp_dir, "provider_metadata.json")
+    report_path = Path.join(tmp_dir, "provider_metadata_report.json")
+
+    File.write!(
+      path,
+      ~s([{"input":"hello","metadata":{"kind":"core"},"expected":{"contains":["hello"]}}])
+    )
+
+    Mix.Task.reenable("tribunal.eval")
+    Mix.Task.reenable("app.start")
+
+    capture_io(fn ->
+      Eval.run([
+        path,
+        "--provider",
+        "Mix.Tasks.TribunalEvalIntegrationTest.metadata_replacing_provider",
+        "--repeat",
+        "2",
+        "--group-by",
+        "kind",
+        "--group-threshold",
+        "1.0",
+        "--format",
+        "json",
+        "--output",
+        report_path
+      ])
+    end)
+
+    report = report_path |> File.read!() |> JSON.decode!()
+    assert [%{"value" => "core", "total" => 1}] = report["gates"]["groups"]["results"]
+  end
+
   test "fails when no eval files exist", %{tmp_dir: tmp_dir} do
     File.cd!(tmp_dir, fn ->
       Mix.Task.reenable("tribunal.eval")
@@ -424,6 +460,10 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
   def counting_provider(_test_case) do
     Agent.update(Tribunal.GroupProviderCounter, &(&1 + 1))
     "hello"
+  end
+
+  def metadata_replacing_provider(_test_case) do
+    %Tribunal.TestCase{input: "returned", actual_output: "hello", metadata: %{"kind" => "edge"}}
   end
 
   def killing_provider(%Tribunal.TestCase{input: "kill"}), do: Process.exit(self(), :kill)

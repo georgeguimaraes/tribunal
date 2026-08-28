@@ -51,6 +51,13 @@ defmodule Tribunal.ExecutionTest do
              Execution.run(fn -> 42 end, base, @assertions)
 
     assert reason =~ "provider must return a binary"
+
+    returned = %TestCase{input: "query", actual_output: 123}
+
+    assert %{execution_error: true, failures: [{:provider, reason}]} =
+             Execution.run(fn -> returned end, base, equals: [value: 123])
+
+    assert reason =~ "must have a binary actual_output"
   end
 
   test "turns exceptions and catchable exits into operational failures" do

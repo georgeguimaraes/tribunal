@@ -16,6 +16,7 @@ defmodule Tribunal.Batch.ReportTest do
 
   test "applies overall and observed group gates to reduced cases" do
     cases = [sampled_case(), failed_case("edge")]
+    cases = Enum.map(cases, &Map.put(&1, :group, %{by: "kind", value: &1.metadata["kind"]}))
     report = Report.build(cases, System.monotonic_time(:millisecond))
 
     {report, passed?} =
@@ -53,6 +54,18 @@ defmodule Tribunal.Batch.ReportTest do
     assert_raise ArgumentError, ~r/conflicting string and atom metadata keys/, fn ->
       Report.validate_group_cases!(ambiguous, :kind)
     end
+  end
+
+  test "group gates use the group captured before provider execution" do
+    core =
+      sampled_case() |> Map.put(:metadata, %{}) |> Map.put(:group, %{by: "kind", value: "core"})
+
+    report = Report.build([core], System.monotonic_time(:millisecond))
+
+    {report, true} =
+      Report.apply_gates(report, %{groups: %{by: "kind", pass_rate: 1.0}})
+
+    assert [%{value: "core", passed_gate: true}] = report.gates.groups.results
   end
 
   defp sampled_case do

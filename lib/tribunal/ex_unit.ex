@@ -68,6 +68,7 @@ defmodule Tribunal.ExUnit do
   def run(callback, opts) when is_function(callback, 0) and is_list(opts) do
     input = fetch_required!(opts, :input)
     assertions = fetch_assertions!(opts)
+    defaults = validate_defaults!(Keyword.get(opts, :defaults, []))
     repeat = validate_repeat!(Keyword.get(opts, :repeat, 1))
     pass_rule = Keyword.get(opts, :pass_rule, :all)
     :ok = Tribunal.Sampling.validate_pass_rule!(pass_rule)
@@ -75,9 +76,7 @@ defmodule Tribunal.ExUnit do
 
     result =
       for _attempt <- 1..repeat do
-        Tribunal.Execution.run(callback, test_case, assertions,
-          defaults: Keyword.get(opts, :defaults, [])
-        )
+        Tribunal.Execution.run(callback, test_case, assertions, defaults: defaults)
       end
       |> Tribunal.Sampling.reduce(pass_rule)
 
@@ -159,10 +158,41 @@ defmodule Tribunal.ExUnit do
 
   defp fetch_assertions!(opts) do
     case Keyword.fetch(opts, :expected) do
-      {:ok, assertions} when assertions != [] and assertions != %{} -> assertions
-      _other -> raise ArgumentError, "tribunal_assert requires non-empty :expected assertions"
+      {:ok, assertions} when is_list(assertions) and assertions != [] ->
+        if Enum.all?(assertions, &valid_assertion?/1) do
+          assertions
+        else
+          raise ArgumentError,
+                ":expected must be a non-empty assertion list with atom or string names and keyword or map options"
+        end
+
+      _other ->
+        raise ArgumentError, "tribunal_assert requires non-empty :expected assertions"
     end
   end
+
+  defp valid_assertion?(type) when is_atom(type) or is_binary(type), do: true
+
+  defp valid_assertion?({type, assertion_opts}) when is_atom(type) or is_binary(type) do
+    keyword_options?(assertion_opts)
+  end
+
+  defp valid_assertion?(_assertion), do: false
+
+  defp validate_defaults!(defaults) do
+    if keyword_options?(defaults) do
+      defaults
+    else
+      raise ArgumentError, ":defaults must be a keyword list or map"
+    end
+  end
+
+  defp keyword_options?(options) when is_list(options), do: Keyword.keyword?(options)
+
+  defp keyword_options?(options) when is_map(options),
+    do: Enum.all?(options, &is_atom(elem(&1, 0)))
+
+  defp keyword_options?(_options), do: false
 
   defp validate_repeat!(repeat) when is_integer(repeat) and repeat > 0, do: repeat
   defp validate_repeat!(_repeat), do: raise(ArgumentError, ":repeat must be a positive integer")

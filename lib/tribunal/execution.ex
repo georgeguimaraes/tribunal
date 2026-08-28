@@ -46,10 +46,25 @@ defmodule Tribunal.Execution do
     {:ok, TestCase.with_output(test_case, output)}
   end
 
-  defp normalize({:returned, %TestCase{} = returned_case}, _test_case), do: {:ok, returned_case}
+  defp normalize(
+         {:returned, %TestCase{actual_output: output} = returned_case},
+         _test_case
+       )
+       when is_binary(output),
+       do: {:ok, returned_case}
 
-  defp normalize({:returned, {:ok, %TestCase{} = returned_case}}, _test_case),
-    do: {:ok, returned_case}
+  defp normalize(
+         {:returned, {:ok, %TestCase{actual_output: output} = returned_case}},
+         _test_case
+       )
+       when is_binary(output),
+       do: {:ok, returned_case}
+
+  defp normalize({:returned, %TestCase{actual_output: output}}, _test_case),
+    do: invalid_test_case_output(output)
+
+  defp normalize({:returned, {:ok, %TestCase{actual_output: output}}}, _test_case),
+    do: invalid_test_case_output(output)
 
   defp normalize({:returned, {:error, reason}}, _test_case), do: {:error, reason, :provider}
 
@@ -63,6 +78,12 @@ defmodule Tribunal.Execution do
 
   defp normalize({:caught, kind, reason}, _test_case),
     do: {:error, "provider #{kind}: #{inspect(reason)}", :provider}
+
+  defp invalid_test_case_output(output) do
+    {:error,
+     "provider-returned Tribunal.TestCase must have a binary actual_output; got: #{inspect(output)}",
+     :provider}
+  end
 
   defp evaluation_error(test_case, assertions, reason, kind, started_at) do
     Evaluator.error(test_case, reason,

@@ -41,14 +41,15 @@ defmodule Tribunal.Batch.Report do
     {report, gate_status in [:passed, :not_configured]}
   end
 
-  @spec validate_group_cases!([{Tribunal.TestCase.t(), term()}], String.t() | atom() | nil) :: :ok
-  def validate_group_cases!(_cases, nil), do: :ok
+  @spec validate_group_cases!([{Tribunal.TestCase.t(), term()}], String.t() | atom() | nil) ::
+          [term()]
+  def validate_group_cases!(cases, nil), do: List.duplicate(nil, length(cases))
 
   def validate_group_cases!(cases, field) when is_binary(field) or is_atom(field) do
-    Enum.each(Enum.with_index(cases, 1), fn {{test_case, _assertions}, index} ->
+    Enum.map(Enum.with_index(cases, 1), fn {{test_case, _assertions}, index} ->
       case metadata_value(test_case.metadata, field) do
         {:ok, value} when is_binary(value) or is_number(value) or is_boolean(value) ->
-          :ok
+          value
 
         {:ok, nil} ->
           raise ArgumentError, "case #{index} is missing metadata group #{inspect(field)}"
@@ -62,8 +63,6 @@ defmodule Tribunal.Batch.Report do
                 "case #{index} has conflicting string and atom metadata keys for #{inspect(field)}"
       end
     end)
-
-    :ok
   end
 
   defp summarize(cases, duration_ms) do
@@ -139,10 +138,7 @@ defmodule Tribunal.Batch.Report do
   defp group_gates(cases, %{by: field, pass_rate: threshold}) do
     results =
       cases
-      |> Enum.group_by(fn result ->
-        {:ok, value} = metadata_value(result.metadata, field)
-        value
-      end)
+      |> Enum.group_by(fn %{group: %{by: ^field, value: value}} -> value end)
       |> Enum.map(fn {value, group_cases} ->
         total = length(group_cases)
         passed = Enum.count(group_cases, &(&1.status == :passed))
