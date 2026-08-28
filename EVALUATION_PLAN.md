@@ -45,6 +45,127 @@ The word "threshold" currently covers several different decisions. New APIs and 
 
 Metric thresholds and sample policies are shared semantics. Batch gates belong to the Mix batch interface. ExUnit should never hide a suite-wide percentage gate inside independently scheduled tests.
 
+## Proposed configuration
+
+The examples in this section describe the target API from this plan. They are not all implemented yet.
+
+### Dataset YAML: cases and metric thresholds
+
+The dataset owns case data, assertion configuration, and metadata used for grouping. A metric threshold stays next to the metric it controls:
+
+```yaml
+# test/evals/support.yaml
+- input:
+    question: Can I return an opened laptop?
+    customer_tier: gold
+  evaluation_input: Can I return an opened laptop?
+  context:
+    - Opened laptops can be returned within 14 days with a receipt.
+  metadata:
+    error_case: returns
+  expected:
+    faithful:
+      threshold: 0.85
+    relevant:
+      threshold: 0.80
+
+- input:
+    question: Delete my account now
+    customer_tier: standard
+  evaluation_input: Delete my account now
+  expected_output: Ask for confirmation before deleting the account.
+  metadata:
+    error_case: account_deletion
+  expected:
+    contains:
+      - confirmation
+    similar:
+      threshold: 0.80
+```
+
+Each assertion owns its threshold and verdict semantics. Similarity uses a minimum score, while current LLM judges consult the score threshold only for a `partial` verdict. The applied decision rule, verdict, score, and threshold must be preserved in the result so the decision is inspectable.
+
+Dataset YAML does not contain a suite-wide gate. The same cases can be required to pass individually in ExUnit and evaluated statistically through the Mix task.
+
+### ExUnit: one test per case
+
+ExUnit reads metric thresholds from the dataset. The macro configures repeated sampling for each generated test:
+
+```elixir
+defmodule MyApp.SupportEvalTest do
+  use ExUnit.Case, async: false
+  use Tribunal.EvalCase
+
+  @moduletag :eval
+
+  tribunal_eval "test/evals/support.yaml",
+    provider: {MyApp.SupportEvalProvider, :run},
+    repeat: 5,
+    pass_rule: {:rate, 0.80},
+    timeout: 300_000
+end
+```
+
+This creates one ExUnit test per YAML case. Each test runs five attempts and passes when at least four attempts pass and none ends in an operational error. It remains a normal ExUnit failure or error. There is no overall `90% of the file` gate because ExUnit schedules and reports each test independently.
+
+For deterministic safety requirements, use `pass_rule: :all`. For a single attempt, omit `repeat` and `pass_rule`.
+
+### Mix policy YAML: sampling and batch gates
+
+Batch requirements should be version-controlled without turning the dataset into an execution manifest. A separate Mix policy file points to one or more datasets and owns sampling and gate configuration:
+
+```yaml
+# config/tribunal_eval.yaml
+version: 1
+
+datasets:
+  - test/evals/support.yaml
+
+sampling:
+  repeat: 5
+  pass_rule:
+    rate: 0.80
+
+gates:
+  overall:
+    pass_rate: 0.90
+  groups:
+    by: error_case
+    pass_rate: 0.80
+```
+
+Run it with:
+
+```bash
+mix tribunal.eval \
+  --config config/tribunal_eval.yaml \
+  --provider MyApp.SupportEvalProvider.run
+```
+
+This means:
+
+- run every selected case five times
+- reduce each case using an 80% sample pass rate
+- require at least 90% of reduced cases to pass overall
+- group cases by `metadata.error_case` and require every observed group to pass at least 80%
+- fail on any operational error regardless of the quality thresholds
+
+The equivalent explicit command remains available for ad hoc runs:
+
+```bash
+mix tribunal.eval test/evals/support.yaml \
+  --provider MyApp.SupportEvalProvider.run \
+  --repeat 5 \
+  --pass-rule rate:0.80 \
+  --threshold 0.90 \
+  --group-by error_case \
+  --group-threshold 0.80
+```
+
+Explicit CLI options override policy-file values. Policy-file values override Tribunal defaults. Assertion options on an individual dataset case override assertion defaults, but they do not override sampling or batch gates.
+
+The Mix policy file is not loaded by `tribunal_eval`. ExUnit intentionally uses its macro options and native test semantics instead of applying suite-wide gates.
+
 ## Design rules
 
 - Keep `Tribunal.Evaluator` pure and limited to one populated output.
@@ -230,12 +351,14 @@ Ordinary assertion macros continue to grade one already-computed output. They do
 
 ### Mix behavior
 
-The Mix task accepts:
+The Mix task accepts direct flags:
 
 ```text
 --repeat N
 --pass-rule all|any|majority|rate:P
 ```
+
+It also accepts `--config path`. The first version of the policy loader supports `version`, `datasets`, and `sampling`. Stage 5 adds the `gates` section shown in the proposed configuration example. Unknown keys and invalid combinations fail before execution. Explicit positional dataset paths and CLI options override their policy-file counterparts.
 
 Mix expands work into indexed `{case, attempt}` jobs, executes them under one bounded concurrency limit, then regroups attempts in dataset order before reduction.
 
@@ -262,6 +385,7 @@ Precomputed-output datasets may have zero target-provider calls while still repe
 - Attempt-evaluation counts match `selected cases x repeat` exactly.
 - Target-provider call counts are accurate for live providers and precomputed outputs.
 - `--limit` and `--offset` apply to cases before repeat expansion.
+- A policy file and its equivalent explicit CLI invocation produce the same selected cases, sample rule, and attempt counts.
 
 ## Stage 4: complete attempt reporting
 
@@ -325,6 +449,8 @@ mix tribunal.eval --threshold 0.90 --group-by error_case --group-threshold 0.80
 mix tribunal.eval --group-by plugin --group-threshold 1.0
 ```
 
+The same values can be committed under `gates.overall` and `gates.groups` in the Mix policy YAML shown above.
+
 The group key is read from `TestCase.metadata` using safe string-or-atom lookup without creating atoms. Allowed group values are strings, numbers, and booleans. Missing keys, `nil`, maps, and lists are configuration errors that fail the run and identify every affected case. This prevents a typo or missing label from silently removing a critical case from the denominator.
 
 Every observed valid group must meet the same configured group threshold. This directly prevents one error category or red-team plugin from failing completely while the overall run stays green. Observed-only grouping cannot prove that an expected group is absent, so an explicit required-group list can be added later if that becomes a real requirement.
@@ -340,7 +466,7 @@ Global and group gates produce one authoritative batch decision:
 - `gate_status: :passed` when at least one quality gate is configured and every configured gate passes
 - `gate_status: :not_configured` when no global or group quality gate is configured
 
-`threshold_passed` remains the compatibility boolean for the combined configured quality gates. It is `true` only when all configured global and group gates pass, `false` when any configured quality gate fails, and `nil` when no quality gate is configured. Operational errors continue to be represented by `gate_status: :error` and a nonzero exit.
+`threshold_passed` remains the compatibility boolean for the combined configured quality gates. It is `true` only when all configured global and group gates pass without an operational error, `false` when any configured quality gate fails or an operational error occurs during a gated run, and `nil` when no quality gate is configured. Operational errors also produce `gate_status: :error` and a nonzero exit.
 
 The versioned report adds a structured group-gate object containing the metadata key, configured threshold, invalid or missing case count, and one entry per observed group with its original scalar value, totals, pass rate, and status. Human reporters show the same group outcomes. Adding group gates therefore bumps the JSON schema and updates JSON, JUnit, Console, Text, GitHub, and HTML together.
 
