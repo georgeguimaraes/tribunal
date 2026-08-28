@@ -114,10 +114,11 @@ defmodule Tribunal.Reporter.Console do
 
   defp footer(summary) do
     status =
-      case Map.get(summary, :threshold_passed, summary.failed == 0) do
-        nil -> "✅ COMPLETED (no gate)"
-        true -> "✅ PASSED"
-        false -> "❌ FAILED"
+      case Map.get(summary, :gate_status) do
+        status when status in [:error, :failed] -> "❌ FAILED"
+        :passed -> "✅ PASSED"
+        :not_configured -> "✅ COMPLETED (no gate)"
+        _ -> legacy_console_status(summary)
       end
 
     threshold_info =
@@ -131,6 +132,14 @@ defmodule Tribunal.Reporter.Console do
     ───────────────────────────────────────────────────────────────
     #{status}#{threshold_info}
     """
+  end
+
+  defp legacy_console_status(summary) do
+    case Map.get(summary, :threshold_passed, summary.failed == 0) do
+      nil -> "✅ COMPLETED (no gate)"
+      true -> "✅ PASSED"
+      false -> "❌ FAILED"
+    end
   end
 
   defp progress_bar(rate, width) do
@@ -244,10 +253,11 @@ defmodule Tribunal.Reporter.Text do
 
   defp footer(summary) do
     status =
-      case Map.get(summary, :threshold_passed, summary.failed == 0) do
-        nil -> "COMPLETED (no gate)"
-        true -> "PASSED"
-        false -> "FAILED"
+      case Map.get(summary, :gate_status) do
+        status when status in [:error, :failed] -> "FAILED"
+        :passed -> "PASSED"
+        :not_configured -> "COMPLETED (no gate)"
+        _ -> legacy_text_status(summary)
       end
 
     threshold_info =
@@ -261,6 +271,14 @@ defmodule Tribunal.Reporter.Text do
     -------------------------------------------------------------------
     #{status}#{threshold_info}
     """
+  end
+
+  defp legacy_text_status(summary) do
+    case Map.get(summary, :threshold_passed, summary.failed == 0) do
+      nil -> "COMPLETED (no gate)"
+      true -> "PASSED"
+      false -> "FAILED"
+    end
   end
 
   defp progress_bar(rate, width) do
@@ -464,10 +482,11 @@ defmodule Tribunal.Reporter.HTML do
 
   defp summary_section(summary) do
     {status_class, status_text} =
-      case Map.get(summary, :threshold_passed, summary.failed == 0) do
-        nil -> {"completed", "COMPLETED (no gate)"}
-        true -> {"passed", "PASSED"}
-        false -> {"failed", "FAILED"}
+      case Map.get(summary, :gate_status) do
+        status when status in [:error, :failed] -> {"failed", "FAILED"}
+        :passed -> {"passed", "PASSED"}
+        :not_configured -> {"completed", "COMPLETED (no gate)"}
+        _ -> legacy_html_status(summary)
       end
 
     threshold_info =
@@ -504,6 +523,14 @@ defmodule Tribunal.Reporter.HTML do
       <div class="status #{status_class}">#{status_text}#{threshold_info}</div>
     </div>
     """
+  end
+
+  defp legacy_html_status(summary) do
+    case Map.get(summary, :threshold_passed, summary.failed == 0) do
+      nil -> {"completed", "COMPLETED (no gate)"}
+      true -> {"passed", "PASSED"}
+      false -> {"failed", "FAILED"}
+    end
   end
 
   defp metrics_section(metrics) when map_size(metrics) == 0, do: ""

@@ -84,7 +84,7 @@ end
 # Initialize evaluation structure
 mix tribunal.init
 
-# Run evaluations (default: always exit 0, just report)
+# Run evaluations (quality failures are report-only by default)
 mix tribunal.eval
 
 # Set pass threshold (fail if pass rate < 80%)

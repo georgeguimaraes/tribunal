@@ -131,6 +131,13 @@ defmodule Tribunal.AssertionsTest do
 
       assert [{:contains, {:pass, _}}, {:contains, {:fail, _}}] = results
     end
+
+    test "returns an error for non-keyword assertion options" do
+      test_case = %TestCase{input: "test", actual_output: "Hello world"}
+
+      assert [contains: {:error, "Assertion options must be a keyword list"}] =
+               Assertions.evaluate_each([{:contains, 42}], test_case)
+    end
   end
 
   describe "all_passed?/1" do

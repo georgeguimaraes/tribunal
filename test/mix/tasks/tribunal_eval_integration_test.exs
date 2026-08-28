@@ -59,6 +59,27 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     assert output =~ "provider: provider exploded"
   end
 
+  test "leaves threshold result unset for an ungated operational error", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "missing_output.json")
+    report_path = Path.join(tmp_dir, "report.json")
+
+    File.write!(path, ~s([{"input":"hello","expected":{"contains":["hello"]}}]))
+
+    Mix.Task.reenable("tribunal.eval")
+    Mix.Task.reenable("app.start")
+
+    capture_io(fn ->
+      assert_raise Mix.Error, "Evaluation failed", fn ->
+        Eval.run([path, "--format", "json", "--output", report_path])
+      end
+    end)
+
+    report = report_path |> File.read!() |> JSON.decode!()
+
+    assert report["summary"]["gate_status"] == "error"
+    assert report["summary"]["threshold_passed"] == nil
+  end
+
   test "keeps ordinary quality failures report-only without a gate", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "quality_failure.json")
 
@@ -91,6 +112,46 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
       assert_raise Mix.Error, ~r/No eval files found/, fn -> Eval.run([]) end
     end)
+  end
+
+  test "fails when a dataset contains no cases", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "empty.json")
+    File.write!(path, "[]")
+
+    Mix.Task.reenable("tribunal.eval")
+    Mix.Task.reenable("app.start")
+
+    output =
+      capture_io(fn ->
+        assert_raise Mix.Error, "Evaluation failed", fn ->
+          Eval.run([path, "--format", "text"])
+        end
+      end)
+
+    assert output =~ "Total:     0 test cases"
+    assert output =~ "FAILED"
+  end
+
+  test "fails when offset skips every case", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "offset.json")
+
+    File.write!(
+      path,
+      ~s([{"input":"hello","actual_output":"hello","expected":{"contains":["hello"]}}])
+    )
+
+    Mix.Task.reenable("tribunal.eval")
+    Mix.Task.reenable("app.start")
+
+    output =
+      capture_io(fn ->
+        assert_raise Mix.Error, "Evaluation failed", fn ->
+          Eval.run([path, "--format", "text", "--offset", "1"])
+        end
+      end)
+
+    assert output =~ "Total:     0 test cases"
+    assert output =~ "FAILED"
   end
 
   @tag capture_log: true
@@ -156,13 +217,13 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     )
 
     previous_timeout = Application.get_env(:tribunal, :eval_timeout)
-    Application.put_env(:tribunal, :eval_timeout, 10)
+    Application.put_env(:tribunal, :eval_timeout, 50)
 
     on_exit(fn ->
-      if previous_timeout do
-        Application.put_env(:tribunal, :eval_timeout, previous_timeout)
-      else
+      if is_nil(previous_timeout) do
         Application.delete_env(:tribunal, :eval_timeout)
+      else
+        Application.put_env(:tribunal, :eval_timeout, previous_timeout)
       end
     end)
 
@@ -199,7 +260,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
   def killing_provider(%Tribunal.TestCase{input: "pass"}), do: "ok"
 
   def slow_provider(%Tribunal.TestCase{input: "slow"}) do
-    Process.sleep(100)
+    Process.sleep(500)
     "ok"
   end
 

@@ -2,6 +2,7 @@ defmodule Tribunal.EvaluatorTest do
   use ExUnit.Case, async: true
 
   alias Tribunal.{Evaluator, TestCase}
+  alias Tribunal.Reporter.JSON, as: JSONReporter
 
   test "passes when every assertion passes" do
     test_case = %TestCase{input: "hello", actual_output: "hello world"}
@@ -116,5 +117,27 @@ defmodule Tribunal.EvaluatorTest do
     result = Evaluator.error(test_case, "timeout", duration_ms: 120_000)
 
     assert result.duration_ms == 120_000
+  end
+
+  test "preserves exception messages in execution failures" do
+    test_case = %TestCase{input: "hello"}
+
+    result =
+      Evaluator.error(test_case, RuntimeError.exception("provider exploded"),
+        assertions: [{:contains, [value: "hello"]}]
+      )
+
+    assert result.failures == [{:provider, "provider exploded"}]
+    assert result.evaluations == [{:contains, {:error, "provider exploded"}}]
+    assert JSONReporter.format(%{cases: [result]}) =~ "provider exploded"
+  end
+
+  test "formats non-string reason values safely" do
+    test_case = %TestCase{input: "hello"}
+
+    result = Evaluator.error(test_case, %{"reason" => %{code: 7}})
+
+    assert result.failures == [{:provider, "%{code: 7}"}]
+    assert Evaluator.failure_message(result) == "provider: %{code: 7}"
   end
 end

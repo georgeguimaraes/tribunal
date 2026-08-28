@@ -55,12 +55,16 @@ defmodule Tribunal.Assertions.Deterministic do
   def evaluate(:contains_any, output, opts) do
     values = List.wrap(opts[:value] || opts[:values])
 
-    found = Enum.find(values, &String.contains?(output, &1))
-
-    if found do
-      {:pass, %{matched: found}}
+    if values == [] do
+      {:error, "contains_any requires :value or :values"}
     else
-      {:fail, %{expected_any: values, reason: "Output contains none of: #{inspect(values)}"}}
+      found = Enum.find(values, &String.contains?(output, &1))
+
+      if found do
+        {:pass, %{matched: found}}
+      else
+        {:fail, %{expected_any: values, reason: "Output contains none of: #{inspect(values)}"}}
+      end
     end
   end
 

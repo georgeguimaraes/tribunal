@@ -88,14 +88,14 @@ Use JUnit format for GitHub's built-in test reporting:
 
 ## Pass/Fail Strategies
 
-### Always Pass (Baseline Tracking)
+### Report-Only Quality Tracking
 
-By default, `mix tribunal.eval` exits 0 regardless of results. Use this for tracking baselines without blocking PRs:
+By default, ordinary quality failures do not block the workflow. Execution and configuration errors still exit nonzero, including provider failures, timeouts, and runs that select zero cases.
 
 ```yaml
 - name: Run evaluations (tracking only)
   run: mix tribunal.eval --format json --output results.json
-  # Always succeeds, results stored for comparison
+  # Quality failures are stored for comparison without blocking
 ```
 
 ### Threshold-Based Gating

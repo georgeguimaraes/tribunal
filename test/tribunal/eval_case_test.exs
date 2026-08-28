@@ -22,6 +22,15 @@ defmodule Tribunal.EvalCaseTest do
         assert_contains("Hello world", "foo")
       end
     end
+
+    test "reports invalid configuration as an assertion failure" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_contains("Hello world", [])
+        end
+
+      assert Exception.message(error) =~ "contains requires :value or :values"
+    end
   end
 
   describe "refute_contains/2" do
@@ -33,6 +42,15 @@ defmodule Tribunal.EvalCaseTest do
       assert_raise ExUnit.AssertionError, fn ->
         refute_contains("Hello world", "world")
       end
+    end
+
+    test "reports invalid configuration as an assertion failure" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          refute_contains("Hello world", [])
+        end
+
+      assert Exception.message(error) =~ "not_contains requires :value or :values"
     end
   end
 
@@ -46,6 +64,15 @@ defmodule Tribunal.EvalCaseTest do
         assert_contains_any("Hello world", ["foo", "bar"])
       end
     end
+
+    test "reports invalid configuration as an assertion failure" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_contains_any("Hello world", [])
+        end
+
+      assert Exception.message(error) =~ "contains_any requires :value or :values"
+    end
   end
 
   describe "assert_contains_all/2" do
@@ -57,6 +84,15 @@ defmodule Tribunal.EvalCaseTest do
       assert_raise ExUnit.AssertionError, fn ->
         assert_contains_all("Hello world", ["Hello", "foo"])
       end
+    end
+
+    test "reports invalid configuration as an assertion failure" do
+      error =
+        assert_raise ExUnit.AssertionError, fn ->
+          assert_contains_all("Hello world", [])
+        end
+
+      assert Exception.message(error) =~ "contains_all requires :value or :values"
     end
   end
 

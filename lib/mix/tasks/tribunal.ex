@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     * `--format` - Output format: console (default), text, json, html, github, junit
     * `--output` - Write results to file instead of stdout
     * `--provider` - Module.function to call for each test case (e.g. MyApp.Agent.query)
-    * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (non-empty runs exit 0 after reporting)
+    * `--threshold` - Minimum pass rate (0.0-1.0) required. Default: none (quality failures are report-only)
     * `--strict` - Fail on any failure, equivalent to --threshold 1.0 (for CI gates)
     * `--concurrency` - Number of test cases to run in parallel. Default: 1 (sequential)
     * `--limit` - Maximum number of test cases to evaluate
@@ -149,7 +149,9 @@ defmodule Mix.Tasks.Tribunal.Eval do
   defp apply_gate(results, settings) do
     gate_status = gate_status(results.summary, settings.strict, settings.threshold)
     passed = gate_status in [:passed, :not_configured]
-    threshold_passed = if gate_status == :not_configured, do: nil, else: passed
+
+    threshold_passed =
+      if settings.strict or is_number(settings.threshold), do: gate_status == :passed, else: nil
 
     results = put_in(results, [:summary, :threshold_passed], threshold_passed)
     results = put_in(results, [:summary, :gate_status], gate_status)

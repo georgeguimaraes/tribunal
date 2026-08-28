@@ -137,8 +137,12 @@ Output:
   "cases": [
     {
       "input": "What is X?",
+      "actual_output": "X is the expected answer.",
       "status": "passed",
+      "execution_error": false,
       "failures": [],
+      "results": {"contains": {"pass": {"matched": ["X"]}}},
+      "evaluations": [{"contains": {"pass": {"matched": ["X"]}}}],
       "duration_ms": 100
     },
     {
@@ -156,7 +160,7 @@ Output:
 
 `results` contains one conservative summary per assertion type. When an assertion type is repeated, a failure or error wins over a pass. `evaluations` preserves every assertion execution in dataset order.
 
-Schema version 2 distinguishes quality-gate state from execution results. `summary.threshold_passed` is `null` when no gate was configured, and `summary.gate_status` is `"not_configured"`. This keeps report-only runs from being labeled as passing gates while they still exit successfully. Provider failures, task exits, timeouts, missing outputs, and assertion errors increment `summary.errors`, set `gate_status` to `"error"`, and exit nonzero even in report-only mode.
+Schema version 2 distinguishes quality-gate state from execution results. Whenever no gate is configured, `summary.threshold_passed` is `null`. A successful report-only run uses `summary.gate_status: "not_configured"`. Provider failures, task exits, timeouts, missing outputs, and assertion errors increment `summary.errors`, set `gate_status` to `"error"`, and exit nonzero. Selecting zero cases also exits nonzero with `gate_status: "failed"`.
 
 ## HTML Reporter
 

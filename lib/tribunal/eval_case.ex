@@ -136,6 +136,7 @@ defmodule Tribunal.EvalCase.Assertions do
       case Deterministic.evaluate(:contains, output, opts) do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
+        {:error, reason} -> flunk(reason)
       end
     end
   end
@@ -149,6 +150,7 @@ defmodule Tribunal.EvalCase.Assertions do
       case Deterministic.evaluate(:not_contains, output, opts) do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
+        {:error, reason} -> flunk(reason)
       end
     end
   end
@@ -162,6 +164,7 @@ defmodule Tribunal.EvalCase.Assertions do
       case Deterministic.evaluate(:contains_any, output, opts) do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
+        {:error, reason} -> flunk(reason)
       end
     end
   end
@@ -175,6 +178,7 @@ defmodule Tribunal.EvalCase.Assertions do
       case Deterministic.evaluate(:contains_all, output, opts) do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
+        {:error, reason} -> flunk(reason)
       end
     end
   end

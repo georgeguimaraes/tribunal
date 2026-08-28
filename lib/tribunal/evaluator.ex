@@ -55,14 +55,15 @@ defmodule Tribunal.Evaluator do
   @spec error(TestCase.t(), term(), keyword()) :: result()
   def error(%TestCase{} = test_case, reason, opts \\ []) do
     started_at = Keyword.get_lazy(opts, :started_at, &now/0)
-    evaluations = scheduled_errors(Keyword.get(opts, :assertions, []), reason)
+    failure_reason = reason(reason, "Provider failed")
+    evaluations = scheduled_errors(Keyword.get(opts, :assertions, []), failure_reason)
     duration_ms = Keyword.get(opts, :duration_ms, now() - started_at)
 
     %{
       input: test_case.input,
       actual_output: test_case.actual_output,
       status: :failed,
-      failures: [{:provider, reason(reason, "Provider failed")}],
+      failures: [{:provider, failure_reason}],
       results: Assertions.summarize(evaluations),
       evaluations: evaluations,
       execution_error: true,
@@ -108,11 +109,19 @@ defmodule Tribunal.Evaluator do
     end)
   end
 
-  defp reason(%{reason: reason}, _fallback) when is_binary(reason), do: reason
-  defp reason(details, fallback) when is_map(details), do: Map.get(details, "reason", fallback)
+  defp reason(%{__exception__: true} = exception, _fallback), do: Exception.message(exception)
+  defp reason(%{reason: reason}, fallback), do: normalize_reason(reason, fallback)
+
+  defp reason(details, fallback) when is_map(details),
+    do: normalize_reason(Map.get(details, "reason"), fallback)
+
   defp reason(reason, _fallback) when is_binary(reason), do: reason
   defp reason(reason, fallback) when is_nil(reason), do: fallback
   defp reason(reason, _fallback), do: inspect(reason)
+
+  defp normalize_reason(reason, _fallback) when is_binary(reason), do: reason
+  defp normalize_reason(reason, fallback) when is_nil(reason), do: fallback
+  defp normalize_reason(reason, _fallback), do: inspect(reason)
 
   defp scheduled_errors(assertions, reason) when is_map(assertions) do
     assertions

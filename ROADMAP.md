@@ -118,7 +118,7 @@ The next work is organized around one rule: Mix and ExUnit share evaluation sema
 
 `mix tribunal.eval` stays the batch interface. Providers continue receiving the full `Tribunal.TestCase`, while the Mix task owns dataset execution, concurrency, aggregation, quality gates, reports, and exit codes.
 
-### Phase 1: trustworthy shared evaluation
+### Current: trustworthy shared evaluation
 
 - Route both `tribunal_eval` and `mix tribunal.eval` through `Tribunal.Evaluator`.
 - Preserve the existing public APIs and provider contracts.
@@ -127,13 +127,13 @@ The next work is organized around one rule: Mix and ExUnit share evaluation sema
 - Apply `tribunal_eval` defaults with case-specific options taking precedence.
 - Fix the remaining unsafe dataset and CLI boundaries before adding more features.
 
-### Phase 2: structured inputs
+### Next: structured inputs
 
 Tracking [issue #32](https://github.com/georgeguimaraes/tribunal/issues/32). Dataset input should accept structured JSON-compatible data, usually a map of variables. The application provider owns prompt rendering because the prompt is application code.
 
 Tribunal will not add its own template language. Existing string inputs remain valid, and the two provider contracts stay unchanged: ExUnit receives `test_case.input`, while the Mix provider receives the full test case.
 
-### Phase 3: repeated runs and batch gates
+### Later: repeated runs and batch gates
 
 Tracking [issue #35](https://github.com/georgeguimaraes/tribunal/issues/35). Repeated attempts and their reduction belong in the shared single-case evaluation model. Dataset-wide and per-group thresholds belong in `mix tribunal.eval`, where Tribunal owns the batch.
 

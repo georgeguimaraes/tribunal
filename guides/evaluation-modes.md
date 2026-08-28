@@ -96,7 +96,7 @@ Use the mix task when you want to track aggregate performance across many test c
 ### Running with Thresholds
 
 ```bash
-# Default: always exit 0, just report results
+# Default: report quality failures without blocking
 mix tribunal.eval
 
 # Pass if 80% of tests succeed
@@ -108,6 +108,8 @@ mix tribunal.eval --threshold 0.9 --concurrency 5
 # Strict mode: fail on any failure (like ExUnit)
 mix tribunal.eval --strict
 ```
+
+Provider failures, task exits, timeouts, invalid evaluation configuration, and runs that select zero cases still exit nonzero without a quality gate.
 
 ### Output
 

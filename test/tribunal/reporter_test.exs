@@ -1,7 +1,7 @@
 defmodule Tribunal.ReporterTest do
   use ExUnit.Case, async: true
 
-  alias Tribunal.Reporter.{Console, GitHub, JSON, JUnit}
+  alias Tribunal.Reporter.{Console, GitHub, HTML, JSON, JUnit, Text}
 
   @sample_results %{
     summary: %{
@@ -93,6 +93,18 @@ defmodule Tribunal.ReporterTest do
       refute output =~ "PASSED"
     end
 
+    test "shows FAILED for an ungated operational error" do
+      results =
+        @sample_results
+        |> put_in([:summary, :gate_status], :error)
+        |> put_in([:summary, :threshold_passed], nil)
+
+      output = Console.format(results)
+
+      assert output =~ "FAILED"
+      refute output =~ "COMPLETED (no gate)"
+    end
+
     test "aligns metric bars across rows" do
       results = %{
         @sample_results
@@ -114,6 +126,18 @@ defmodule Tribunal.ReporterTest do
   end
 
   describe "Text.format/1" do
+    test "shows FAILED for an ungated operational error" do
+      results =
+        @sample_results
+        |> put_in([:summary, :gate_status], :error)
+        |> put_in([:summary, :threshold_passed], nil)
+
+      output = Text.format(results)
+
+      assert output =~ "FAILED"
+      refute output =~ "COMPLETED (no gate)"
+    end
+
     test "aligns metric bars across rows" do
       alias Tribunal.Reporter.Text
 
@@ -133,6 +157,20 @@ defmodule Tribunal.ReporterTest do
 
       assert Enum.uniq(lengths) |> length() == 1,
              "bar rows have different lengths: #{inspect(bar_parts)}"
+    end
+  end
+
+  describe "HTML.format/1" do
+    test "shows FAILED for an ungated operational error" do
+      results =
+        @sample_results
+        |> put_in([:summary, :gate_status], :error)
+        |> put_in([:summary, :threshold_passed], nil)
+
+      output = HTML.format(results)
+
+      assert output =~ ">FAILED<"
+      refute output =~ "COMPLETED (no gate)"
     end
   end
 

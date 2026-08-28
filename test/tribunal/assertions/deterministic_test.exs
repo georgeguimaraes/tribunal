@@ -56,6 +56,11 @@ defmodule Tribunal.Assertions.DeterministicTest do
       assert {:fail, _} =
                Deterministic.evaluate(:contains_any, "Hello world", values: ["foo", "bar"])
     end
+
+    test "errors when no expected values are configured" do
+      assert {:error, reason} = Deterministic.evaluate(:contains_any, "Hello", [])
+      assert reason =~ "requires"
+    end
   end
 
   describe "contains_all" do

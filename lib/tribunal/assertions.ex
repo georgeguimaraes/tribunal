@@ -270,7 +270,7 @@ defmodule Tribunal.Assertions do
   defp normalize_opts(opts) when is_map(opts), do: Map.to_list(opts)
   defp normalize_opts(opts) when is_list(opts), do: opts
 
-  defp merge_opts(defaults, opts) do
+  defp merge_opts(defaults, opts) when is_map(opts) or is_list(opts) do
     opts = normalize_opts(opts)
 
     if Keyword.keyword?(defaults) and Keyword.keyword?(opts) do
@@ -279,6 +279,8 @@ defmodule Tribunal.Assertions do
       {:error, "Assertion options must use known atom keys"}
     end
   end
+
+  defp merge_opts(_defaults, _opts), do: {:error, "Assertion options must be a keyword list"}
 
   defp worst_result({:error, _} = error, _result), do: error
   defp worst_result(_existing, {:error, _} = error), do: error
