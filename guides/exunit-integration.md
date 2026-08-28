@@ -1,17 +1,17 @@
 # ExUnit Integration
 
-Tribunal integrates with ExUnit through the `Tribunal.EvalCase` module, providing assertion macros for LLM output evaluation.
+Tribunal integrates with ExUnit through the `Tribunal.ExUnit` module, providing assertion macros for LLM output evaluation.
 
 > **Test Mode**: ExUnit assertions fail immediately on any violation. This is intentional: use Test Mode for critical checks that must pass (safety, compliance, CI gates). For threshold-based evaluation with reporting, use [Evaluation Mode](evaluation-modes.md#evaluation-mode-mix-task) instead.
 
 ## Setup
 
-Add `use Tribunal.EvalCase` to your test module:
+Add `use Tribunal.ExUnit` to your test module:
 
 ```elixir
 defmodule MyApp.LLMTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   test "response quality" do
     response = MyApp.generate("What is Elixir?")
@@ -193,9 +193,9 @@ Generate tests automatically from JSON or YAML datasets.
 ```elixir
 defmodule MyApp.EvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
-  tribunal_eval "test/evals/datasets/questions.json"
+  tribunal_dataset "test/evals/datasets/questions.json"
 end
 ```
 
@@ -204,14 +204,14 @@ end
 The provider function receives each input and returns the actual output:
 
 ```elixir
-tribunal_eval "test/evals/datasets/questions.json",
+tribunal_dataset "test/evals/datasets/questions.json",
   provider: {MyApp.RAG, :query}
 ```
 
 ### With Default Options
 
 ```elixir
-tribunal_eval "test/evals/datasets/questions.json",
+tribunal_dataset "test/evals/datasets/questions.json",
   provider: {MyApp.RAG, :query},
   defaults: [threshold: 0.9]
 ```
@@ -273,12 +273,12 @@ Example test file:
 # test/evals/my_app/rag_test.exs
 defmodule MyApp.RAGEvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   @moduletag :eval
 
   # Dataset-driven tests
-  tribunal_eval "test/evals/datasets/questions.json",
+  tribunal_dataset "test/evals/datasets/questions.json",
     provider: {MyApp.RAG, :query}
 
   # Manual tests for edge cases

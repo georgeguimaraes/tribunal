@@ -11,7 +11,7 @@ defmodule Tribunal do
 
       defmodule MyApp.RAGEvalTest do
         use ExUnit.Case
-        use Tribunal.EvalCase
+        use Tribunal.ExUnit
 
         @moduletag :eval
 

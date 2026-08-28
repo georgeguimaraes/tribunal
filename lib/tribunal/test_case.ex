@@ -4,7 +4,8 @@ defmodule Tribunal.TestCase do
 
   ## Fields
 
-  - `input` - The user query/prompt (required)
+  - `input` - The JSON-compatible input passed to the system under test (required)
+  - `evaluation_input` - Optional text representation shown to judges
   - `actual_output` - The LLM response to evaluate (required for evaluation)
   - `expected_output` - Golden/ideal answer for comparison (optional)
   - `context` - Ground truth context for faithfulness checks (optional)
@@ -22,7 +23,8 @@ defmodule Tribunal.TestCase do
   """
 
   @type t :: %__MODULE__{
-          input: String.t(),
+          input: json_value(),
+          evaluation_input: String.t() | nil,
           actual_output: String.t() | nil,
           expected_output: String.t() | nil,
           context: [String.t()] | String.t() | nil,
@@ -30,8 +32,12 @@ defmodule Tribunal.TestCase do
           metadata: map() | nil
         }
 
+  @type json_scalar :: String.t() | number() | boolean() | nil
+  @type json_value :: json_scalar() | [json_value()] | %{String.t() => json_value()}
+
   defstruct [
     :input,
+    :evaluation_input,
     :actual_output,
     :expected_output,
     :context,
@@ -52,6 +58,7 @@ defmodule Tribunal.TestCase do
 
     %__MODULE__{
       input: attrs[:input],
+      evaluation_input: attrs[:evaluation_input],
       actual_output: attrs[:actual_output],
       expected_output: attrs[:expected_output],
       context: normalize_context(attrs[:context]),
@@ -87,6 +94,81 @@ defmodule Tribunal.TestCase do
     %{test_case | metadata: Map.merge(existing, metadata)}
   end
 
+  @doc """
+  Validates the fields required before a test case is passed to a provider or evaluator.
+  """
+  @spec validate(t()) :: :ok | {:error, String.t()}
+  def validate(%__MODULE__{input: nil}), do: {:error, "input is required"}
+
+  def validate(%__MODULE__{input: input, evaluation_input: evaluation_input}) do
+    with :ok <- validate_input(input),
+         :ok <- validate_evaluation_input(evaluation_input) do
+      :ok
+    end
+  end
+
+  @doc """
+  Validates that an input can be represented in JSON without changing its shape.
+  """
+  @spec validate_input(term()) :: :ok | {:error, String.t()}
+  def validate_input(value)
+      when is_nil(value) or is_binary(value) or is_integer(value) or is_boolean(value),
+      do: :ok
+
+  def validate_input(value) when is_float(value) do
+    case encode_json(value) do
+      {:ok, _encoded} -> :ok
+      {:error, _reason} -> {:error, "input must be JSON-compatible"}
+    end
+  end
+
+  def validate_input(values) when is_list(values) do
+    if Enum.all?(values, &(validate_input(&1) == :ok)),
+      do: :ok,
+      else: {:error, "input must be JSON-compatible"}
+  end
+
+  def validate_input(value) when is_map(value) do
+    if Enum.all?(value, fn {key, item} -> is_binary(key) and validate_input(item) == :ok end),
+      do: :ok,
+      else: {:error, "input maps must use string keys and JSON-compatible values"}
+  end
+
+  def validate_input(_value), do: {:error, "input must be JSON-compatible"}
+
+  @doc """
+  Returns the text judges should evaluate for a test case.
+
+  An explicit `evaluation_input` wins. String inputs remain unchanged and structured
+  inputs use their JSON representation.
+  """
+  @spec evaluation_input(t()) :: String.t()
+  def evaluation_input(%__MODULE__{evaluation_input: value}) when is_binary(value), do: value
+  def evaluation_input(%__MODULE__{input: value}) when is_binary(value), do: value
+  def evaluation_input(%__MODULE__{input: value}), do: JSON.encode!(value)
+
+  @doc """
+  Returns a safe, human-readable representation of an input for reports and test names.
+  """
+  @spec display_input(t() | term()) :: String.t()
+  def display_input(%__MODULE__{} = test_case), do: display_input(test_case.input)
+  def display_input(value) when is_binary(value), do: value
+
+  def display_input(value) do
+    case encode_json(value) do
+      {:ok, encoded} -> encoded
+      {:error, _reason} -> inspect(value)
+    end
+  end
+
+  @doc false
+  def display_name(%__MODULE__{} = test_case, max_length \\ 80) do
+    test_case
+    |> display_input()
+    |> String.slice(0, max_length)
+    |> String.trim()
+  end
+
   defp normalize_keys(map) do
     fields = MapSet.new(__struct__() |> Map.from_struct() |> Map.keys())
 
@@ -105,4 +187,16 @@ defmodule Tribunal.TestCase do
   defp normalize_context(nil), do: nil
   defp normalize_context(ctx) when is_binary(ctx), do: [ctx]
   defp normalize_context(ctx) when is_list(ctx), do: ctx
+
+  defp validate_evaluation_input(nil), do: :ok
+  defp validate_evaluation_input(value) when is_binary(value), do: :ok
+  defp validate_evaluation_input(_value), do: {:error, "evaluation_input must be a string"}
+
+  defp encode_json(value) do
+    {:ok, JSON.encode!(value)}
+  rescue
+    _exception -> {:error, :invalid_json_value}
+  catch
+    _kind, _reason -> {:error, :invalid_json_value}
+  end
 end

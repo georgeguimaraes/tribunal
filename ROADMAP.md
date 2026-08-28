@@ -27,7 +27,7 @@ Goal: bring promptfoo-grade red-team coverage into **tribunal** (the user's own 
   - **Encoding:** base64, leetspeak, rot13, pig latin, reversed.
   - **Injection:** ignore_instructions, system_prompt_extraction, role_switch, delimiter_injection.
   - **Jailbreak:** DAN, STAN, developer_mode, hypothetical, character_roleplay, research_framing.
-- ExUnit integration via `use Tribunal.EvalCase` plus a `provider` function callback.
+- ExUnit integration via `use Tribunal.ExUnit` plus a `provider` function callback.
 - LLM-as-judge assertions: `refute_jailbreak`, `refute_pii`, `refute_toxicity`, `refute_hallucination`, `assert_faithful`, `assert_relevant`, `assert_judge :custom`.
 - Two operating modes: ExUnit test mode + `mix tribunal.eval` benchmark mode.
 - Has `req_llm` and `alike` as optional deps for judge / similarity.
@@ -67,7 +67,7 @@ So "porting promptfoo's catalog" means three different kinds of work:
 
 ## Locked for Phase 1 (decided 2026-05-03)
 
-- **Generation and running stay separate.** Generation produces a regular tribunal dataset YAML; running uses the existing `mix tribunal.eval` and `tribunal_eval` paths. No new runner. Mirrors promptfoo's `redteam generate` / `redteam run` split: generation is expensive, attacks should be reviewable and committable, execution should be cheap and repeatable.
+- **Generation and running stay separate.** Generation produces a regular tribunal dataset YAML; running uses the existing `mix tribunal.eval` and `tribunal_dataset` paths. No new runner. Mirrors promptfoo's `redteam generate` / `redteam run` split: generation is expensive, attacks should be reviewable and committable, execution should be cheap and repeatable.
 - **YAML schema is slim and fits `Tribunal.Dataset` directly.** Each generated case is a normal dataset entry with `input`, `metadata.{plugin, goal, severity}`, and `expected.policy_violation: {policy: "..."}`. No promptfoo-style anchors, no `pluginConfig`, no `modifiers`. Loader needs no changes.
 - **No YAML variables.** Promptfoo uses `{{env.X}}` and `{{prompt}}` because its YAML defines the provider and has to assemble HTTP requests itself. Tribunal's provider is `{Module, :function}` receiving a `TestCase` struct directly, and per-store parameterisation lives at the Elixir call site (`Tribunal.RedTeam.generate(purpose:, policy:, ...)`). Generated YAMLs are fully concrete.
 - **Plugin contract is a behaviour.** `Tribunal.RedTeam.Plugin` with `id/0`, `severity/0`, `generate/1`. Built-in list plus `config :tribunal, :red_team_plugins, [...]` for custom plugins. Same shape as `Tribunal.Judge`.

@@ -137,9 +137,9 @@ Generate tests from datasets automatically:
 ```elixir
 defmodule MyApp.EvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
-  tribunal_eval "test/evals/datasets/questions.json"
+  tribunal_dataset "test/evals/datasets/questions.json"
 end
 ```
 
@@ -150,7 +150,7 @@ This generates one test per item in the dataset.
 A provider function generates the actual output from the input:
 
 ```elixir
-tribunal_eval "test/evals/datasets/questions.json",
+tribunal_dataset "test/evals/datasets/questions.json",
   provider: {MyApp.RAG, :query}
 ```
 
@@ -161,7 +161,7 @@ The provider is called as `MyApp.RAG.query(input)` for each test case.
 Set default options for all assertions:
 
 ```elixir
-tribunal_eval "test/evals/datasets/questions.json",
+tribunal_dataset "test/evals/datasets/questions.json",
   provider: {MyApp.RAG, :query},
   defaults: [
     threshold: 0.9,

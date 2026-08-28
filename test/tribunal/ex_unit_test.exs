@@ -1,11 +1,90 @@
-defmodule Tribunal.EvalCaseTest do
+defmodule Tribunal.ExUnitTest do
   use ExUnit.Case, async: true
 
   # Test the assertion macros directly
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   defp mock_client(response) do
     fn _model, _messages, _opts -> response end
+  end
+
+  describe "tribunal_assert/2" do
+    test "runs a callback and returns the complete evaluation result" do
+      result =
+        tribunal_assert fn ->
+          "hello world"
+        end,
+          input: %{"query" => "hello"},
+          expected: [contains: [value: "hello"]]
+
+      assert result.status == :passed
+      assert result.input == %{"query" => "hello"}
+      assert result.sample.repeat == 1
+      assert length(result.attempts) == 1
+    end
+
+    test "applies a sampling pass rule across fresh callback invocations" do
+      Process.put(:tribunal_attempt, 0)
+
+      result =
+        tribunal_assert fn ->
+          attempt = Process.get(:tribunal_attempt) + 1
+          Process.put(:tribunal_attempt, attempt)
+          if attempt == 2, do: "hello", else: "goodbye"
+        end,
+          input: "query",
+          repeat: 3,
+          pass_rule: :any,
+          expected: [contains: [value: "hello"]]
+
+      assert result.status == :passed
+      assert %{passed: 1, failed: 2, errors: 0} = result.sample
+      assert Enum.map(result.attempts, & &1.actual_output) == ["goodbye", "hello", "goodbye"]
+    end
+
+    test "raises an ExUnit assertion for a quality failure" do
+      assert_raise ExUnit.AssertionError, ~r/contains:/, fn ->
+        tribunal_assert fn -> "goodbye" end,
+          input: "query",
+          expected: [contains: [value: "hello"]]
+      end
+    end
+
+    test "raises an operational error for provider failure" do
+      error =
+        assert_raise Tribunal.ExUnit.OperationalError, fn ->
+          tribunal_assert fn -> {:error, :unavailable} end,
+            input: "query",
+            expected: [contains: [value: "hello"]]
+        end
+
+      assert error.result.execution_error
+      assert Exception.message(error) =~ "unavailable"
+    end
+
+    test "validates configuration before invoking the callback" do
+      assert_raise ArgumentError, ~r/requires :input/, fn ->
+        tribunal_assert fn -> send(self(), :invoked) end,
+          expected: [contains: [value: "hello"]]
+      end
+
+      refute_received :invoked
+    end
+
+    test "accepts an authoritative test case from the callback" do
+      result =
+        tribunal_assert fn ->
+          %Tribunal.TestCase{
+            input: %{"query" => "returned"},
+            evaluation_input: "returned",
+            actual_output: "hello"
+          }
+        end,
+          input: "base",
+          expected: [contains: [value: "hello"]]
+
+      assert result.input == %{"query" => "returned"}
+    end
   end
 
   describe "assert_contains/2" do
@@ -684,15 +763,15 @@ defmodule Tribunal.EvalCaseTest do
   end
 end
 
-defmodule Tribunal.EvalCaseDatasetProvider do
+defmodule Tribunal.ExUnitDatasetProvider do
   def query("What is the return window?"), do: "Returns are accepted within 30 days."
 end
 
-defmodule Tribunal.EvalCaseGeneratedTest do
+defmodule Tribunal.ExUnitGeneratedTest do
   use ExUnit.Case, async: true
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
-  tribunal_eval(Path.expand("../fixtures/eval_case_dataset.json", __DIR__),
-    provider: {Tribunal.EvalCaseDatasetProvider, :query}
+  tribunal_dataset(Path.expand("../fixtures/ex_unit_dataset.json", __DIR__),
+    provider: {Tribunal.ExUnitDatasetProvider, :query}
   )
 end

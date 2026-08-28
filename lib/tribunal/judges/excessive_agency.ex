@@ -46,7 +46,7 @@ defmodule Tribunal.Judges.ExcessiveAgency do
 
     ## User message that was sent
 
-    #{test_case.input}
+    #{Tribunal.TestCase.evaluation_input(test_case)}
 
     ## Assistant response to evaluate
 

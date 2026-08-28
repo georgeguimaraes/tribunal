@@ -46,6 +46,40 @@ defmodule Tribunal.TestCaseTest do
       assert tc.input == "Hello"
       refute existing_atom?(key)
     end
+
+    test "preserves structured input and its explicit evaluation text" do
+      tc =
+        TestCase.new(%{
+          "input" => %{"query" => "return policy", "account_id" => 42},
+          "evaluation_input" => "return policy for account 42"
+        })
+
+      assert tc.input == %{"query" => "return policy", "account_id" => 42}
+      assert TestCase.evaluation_input(tc) == "return policy for account 42"
+    end
+  end
+
+  describe "input representations" do
+    test "uses JSON as the default judge and display representation for structured input" do
+      tc = TestCase.new(input: %{"query" => "hello", "flags" => [true, 2]})
+
+      assert TestCase.validate(tc) == :ok
+      assert TestCase.evaluation_input(tc) == ~s({"flags":[true,2],"query":"hello"})
+      assert TestCase.display_input(tc) == ~s({"flags":[true,2],"query":"hello"})
+    end
+
+    test "rejects unsupported values and atom map keys" do
+      assert {:error, "input must be JSON-compatible"} =
+               TestCase.validate(%TestCase{input: {:query, "hello"}})
+
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate(%TestCase{input: %{query: "hello"}})
+    end
+
+    test "always produces display text for invalid direct structs" do
+      assert TestCase.display_input(%TestCase{input: {:query, "hello"}}) ==
+               ~s({:query, "hello"})
+    end
   end
 
   describe "with_output/2" do

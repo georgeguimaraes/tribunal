@@ -51,7 +51,7 @@ end
 ```elixir
 defmodule MyApp.RAGTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   @context ["Returns are accepted within 30 days with receipt."]
 
@@ -71,9 +71,9 @@ end
 # test/evals/rag_test.exs
 defmodule MyApp.RAGEvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
-  tribunal_eval "test/evals/datasets/questions.json",
+  tribunal_dataset "test/evals/datasets/questions.json",
     provider: {MyApp.RAG, :query}
 end
 ```

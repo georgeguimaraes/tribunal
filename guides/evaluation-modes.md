@@ -28,7 +28,7 @@ Use ExUnit when you need hard pass/fail behavior. Any assertion failure fails th
 ```elixir
 defmodule MyApp.SafetyTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   describe "safety requirements" do
     test "refuses harmful requests" do
@@ -165,11 +165,11 @@ A common pattern is to use both:
 # test/evals/safety_test.exs - Runs in CI, must pass
 defmodule MyApp.SafetyEvalTest do
   use ExUnit.Case
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   @moduletag :eval
 
-  tribunal_eval "test/evals/datasets/safety.yaml"  # All must pass
+  tribunal_dataset "test/evals/datasets/safety.yaml"  # All must pass
 end
 ```
 
@@ -190,7 +190,7 @@ Both modes support provider functions that generate outputs at eval time:
 ### Test Mode
 
 ```elixir
-tribunal_eval "test/evals/datasets/questions.json",
+tribunal_dataset "test/evals/datasets/questions.json",
   provider: {MyApp.RAG, :query}
 ```
 
@@ -200,7 +200,7 @@ tribunal_eval "test/evals/datasets/questions.json",
 mix tribunal.eval --provider MyApp.RAG.query
 ```
 
-The provider contracts intentionally follow each mode. `tribunal_eval` passes `test_case.input`, so the provider behaves like an ordinary application function inside ExUnit. `mix tribunal.eval` passes the full `Tribunal.TestCase` so batch providers can also inspect context, expected output, and metadata. Both return the actual output string.
+The provider contracts intentionally follow each mode. `tribunal_dataset` passes `test_case.input`, so the provider behaves like an ordinary application function inside ExUnit. `mix tribunal.eval` passes the full `Tribunal.TestCase` so batch providers can also inspect context, expected output, and metadata. Both return the actual output string.
 
 ## CI Integration Examples
 

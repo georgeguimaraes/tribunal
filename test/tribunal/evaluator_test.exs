@@ -29,6 +29,20 @@ defmodule Tribunal.EvaluatorTest do
     assert result.execution_error
   end
 
+  test "rejects unsupported structured input before assertions run" do
+    test_case = %TestCase{input: %{query: "hello"}, actual_output: "hello world"}
+
+    result = Evaluator.evaluate(test_case, [{:contains, [value: "hello"]}])
+
+    assert result.status == :failed
+
+    assert result.failures == [
+             {:input, "input maps must use string keys and JSON-compatible values"}
+           ]
+
+    assert result.execution_error
+  end
+
   test "fails when no assertions are configured" do
     test_case = %TestCase{input: "hello", actual_output: "hello world"}
 

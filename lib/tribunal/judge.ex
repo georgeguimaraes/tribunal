@@ -25,7 +25,7 @@ defmodule Tribunal.Judge do
           Response to evaluate:
           \#{test_case.actual_output}
 
-          Query: \#{test_case.input}
+          Query: \#{Tribunal.TestCase.evaluation_input(test_case)}
           \"""
         end
       end
