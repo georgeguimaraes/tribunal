@@ -39,7 +39,11 @@ defmodule Tribunal.Evaluator do
         evaluate_valid(test_case, assertions, opts, started_at)
 
       {:error, reason} ->
-        error(test_case, reason, Keyword.merge(opts, started_at: started_at, kind: :input))
+        error(
+          test_case,
+          reason,
+          Keyword.merge(opts, started_at: started_at, kind: :input, assertions: assertions)
+        )
     end
   end
 

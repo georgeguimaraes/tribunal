@@ -76,6 +76,37 @@ defmodule Tribunal.TestCaseTest do
                TestCase.validate(%TestCase{input: %{query: "hello"}})
     end
 
+    test "accepts valid UTF-8 strings in nested values and map keys" do
+      input = %{"pergunta" => ["olá", %{"resposta" => "amanhã"}]}
+
+      assert TestCase.validate_input(input) == :ok
+    end
+
+    test "rejects invalid UTF-8 string values at any depth" do
+      invalid_utf8 = <<255>>
+
+      assert {:error, "input must be JSON-compatible"} =
+               TestCase.validate_input(invalid_utf8)
+
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate_input(%{"nested" => ["valid", invalid_utf8]})
+    end
+
+    test "rejects invalid UTF-8 map keys" do
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate_input(%{<<255>> => "value"})
+    end
+
+    test "rejects improper lists without raising" do
+      improper = ["first" | "invalid tail"]
+
+      assert {:error, "input must be JSON-compatible"} =
+               TestCase.validate_input(improper)
+
+      assert {:error, "input maps must use string keys and JSON-compatible values"} =
+               TestCase.validate_input(%{"nested" => improper})
+    end
+
     test "always produces display text for invalid direct structs" do
       assert TestCase.display_input(%TestCase{input: {:query, "hello"}}) ==
                ~s({:query, "hello"})

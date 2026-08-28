@@ -6,6 +6,14 @@ Tribunal works as an ordinary ExUnit suite for hard requirements and as a gated 
 
 Generated `tribunal_dataset` tests and user-owned `tribunal_assert` tests run through `mix test`:
 
+Tag user-owned suites so the filtered command includes them:
+
+```elixir
+use Tribunal.ExUnit
+
+@moduletag :eval
+```
+
 ```yaml
 name: LLM safety
 
@@ -87,7 +95,7 @@ Policy values override defaults. Dataset paths are resolved from the repository 
 
 ## Exit behavior
 
-Without `--threshold`, `--strict`, or a policy group gate, ordinary quality failures are report-only. The command exits zero with `gate_status: not_configured`.
+Without an overall or group quality gate, configured through CLI flags or policy, ordinary quality failures are report-only. The command exits zero with `gate_status: not_configured`.
 
 These conditions always exit nonzero:
 
@@ -134,6 +142,7 @@ JUnit distinguishes assertion failures from operational errors:
 
 ```yaml
 - name: Produce JUnit report
+  id: tribunal_junit
   continue-on-error: true
   run: mix tribunal.eval --config config/evaluation_policy.yaml --format junit --output junit.xml
 
@@ -142,6 +151,10 @@ JUnit distinguishes assertion failures from operational errors:
   uses: mikepenz/action-junit-report@v4
   with:
     report_paths: junit.xml
+
+- name: Enforce evaluation result
+  if: steps.tribunal_junit.outcome == 'failure'
+  run: exit 1
 ```
 
 ## Scheduled baselines

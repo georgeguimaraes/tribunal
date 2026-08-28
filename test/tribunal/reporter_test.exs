@@ -213,6 +213,8 @@ defmodule Tribunal.ReporterTest do
     test "renders structured sampled operational failures" do
       output = Console.format(@sampled_results)
 
+      assert output =~ "Failed:    1"
+      assert output =~ "Errors:    1"
       assert output =~ ~s("question":"timeout)
       assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
       assert output =~ "provider: timeout"
@@ -256,6 +258,8 @@ defmodule Tribunal.ReporterTest do
     test "renders structured sampled operational failures" do
       output = Text.format(@sampled_results)
 
+      assert output =~ "Failed:    1"
+      assert output =~ "Errors:    1"
       assert output =~ ~s("question":"timeout)
       assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
       assert output =~ "provider: timeout"
@@ -277,6 +281,12 @@ defmodule Tribunal.ReporterTest do
 
     test "escapes structured sampled operational failures" do
       output = HTML.format(@sampled_results)
+
+      assert output =~
+               ~r/<div class="stat-value">1<\/div>\s+<div class="stat-label">Failed<\/div>/
+
+      assert output =~
+               ~r/<div class="stat-value">1<\/div>\s+<div class="stat-label">Errors<\/div>/
 
       assert output =~ ~s(&quot;question&quot;)
       assert output =~ "quality &lt;case&gt;"

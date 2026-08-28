@@ -34,9 +34,7 @@ defmodule Tribunal.Judges.Faithful do
     ## Context
     #{context}
 
-    ## Question
-    #{Tribunal.TestCase.evaluation_input(test_case)}
-
+    #{question_section(test_case)}
     ## Output to Evaluate
     #{test_case.actual_output}
 
@@ -71,4 +69,10 @@ defmodule Tribunal.Judges.Faithful do
   end
 
   defp format_context(context) when is_binary(context), do: context
+
+  defp question_section(%{input: nil, evaluation_input: nil}), do: ""
+
+  defp question_section(test_case) do
+    "## Question\n#{Tribunal.TestCase.evaluation_input(test_case)}\n"
+  end
 end

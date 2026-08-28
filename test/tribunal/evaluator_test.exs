@@ -32,12 +32,23 @@ defmodule Tribunal.EvaluatorTest do
   test "rejects unsupported structured input before assertions run" do
     test_case = %TestCase{input: %{query: "hello"}, actual_output: "hello world"}
 
-    result = Evaluator.evaluate(test_case, [{:contains, [value: "hello"]}])
+    result =
+      Evaluator.evaluate(test_case, [
+        {:contains, [value: "hello"]},
+        {:contains, [value: "world"]},
+        {:relevant, []}
+      ])
 
     assert result.status == :failed
 
     assert result.failures == [
              {:input, "input maps must use string keys and JSON-compatible values"}
+           ]
+
+    assert result.evaluations == [
+             {:contains, {:error, "input maps must use string keys and JSON-compatible values"}},
+             {:contains, {:error, "input maps must use string keys and JSON-compatible values"}},
+             {:relevant, {:error, "input maps must use string keys and JSON-compatible values"}}
            ]
 
     assert result.execution_error

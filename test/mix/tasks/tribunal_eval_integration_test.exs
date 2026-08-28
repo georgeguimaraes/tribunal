@@ -25,7 +25,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
         end
       end)
 
-    assert output =~ "Failed:    1"
+    assert output =~ "Failed:    0"
+    assert output =~ "Errors:    1"
     assert output =~ "contains"
     assert output =~ "evaluation: Missing actual output"
     assert output =~ "FAILED"
@@ -55,7 +56,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
         end
       end)
 
-    assert output =~ "Failed:    1"
+    assert output =~ "Failed:    0"
+    assert output =~ "Errors:    1"
     assert output =~ "provider: provider exploded"
   end
 
@@ -360,7 +362,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     output = run_eval(path, "killing_provider")
 
     assert output =~ "Passed:    1"
-    assert output =~ "Failed:    1"
+    assert output =~ "Failed:    0"
+    assert output =~ "Errors:    1"
     assert output =~ "Evaluation task failed"
   end
 
@@ -391,7 +394,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
         end
       end)
 
-    assert output =~ "Failed:    1"
+    assert output =~ "Failed:    0"
+    assert output =~ "Errors:    1"
     assert output =~ "Evaluation task failed"
   end
 
@@ -421,7 +425,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     output = run_eval(path, "slow_provider")
 
     assert output =~ "Passed:    1"
-    assert output =~ "Failed:    1"
+    assert output =~ "Failed:    0"
+    assert output =~ "Errors:    1"
     assert output =~ "Evaluation task failed: :timeout"
   end
 

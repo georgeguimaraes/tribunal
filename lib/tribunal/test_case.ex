@@ -111,30 +111,17 @@ defmodule Tribunal.TestCase do
   Validates that an input can be represented in JSON without changing its shape.
   """
   @spec validate_input(term()) :: :ok | {:error, String.t()}
-  def validate_input(value)
-      when is_nil(value) or is_binary(value) or is_integer(value) or is_boolean(value),
-      do: :ok
-
-  def validate_input(value) when is_float(value) do
-    case encode_json(value) do
-      {:ok, _encoded} -> :ok
-      {:error, _reason} -> {:error, "input must be JSON-compatible"}
-    end
-  end
-
-  def validate_input(values) when is_list(values) do
-    if Enum.all?(values, &(validate_input(&1) == :ok)),
-      do: :ok,
-      else: {:error, "input must be JSON-compatible"}
-  end
-
   def validate_input(value) when is_map(value) do
-    if Enum.all?(value, fn {key, item} -> is_binary(key) and validate_input(item) == :ok end),
+    if json_value?(value),
       do: :ok,
       else: {:error, "input maps must use string keys and JSON-compatible values"}
   end
 
-  def validate_input(_value), do: {:error, "input must be JSON-compatible"}
+  def validate_input(value) do
+    if json_value?(value),
+      do: :ok,
+      else: {:error, "input must be JSON-compatible"}
+  end
 
   @doc """
   Returns the text judges should evaluate for a test case.
@@ -200,6 +187,28 @@ defmodule Tribunal.TestCase do
   defp validate_evaluation_input(nil), do: :ok
   defp validate_evaluation_input(value) when is_binary(value), do: :ok
   defp validate_evaluation_input(_value), do: {:error, "evaluation_input must be a string"}
+
+  defp json_value?(value) when is_nil(value) or is_integer(value) or is_boolean(value), do: true
+  defp json_value?(value) when is_binary(value), do: String.valid?(value)
+
+  defp json_value?(value) when is_float(value) do
+    match?({:ok, _encoded}, encode_json(value))
+  end
+
+  defp json_value?([]), do: true
+  defp json_value?([_head | _tail] = values), do: json_list?(values)
+
+  defp json_value?(value) when is_map(value) do
+    Enum.all?(value, fn {key, item} ->
+      is_binary(key) and String.valid?(key) and json_value?(item)
+    end)
+  end
+
+  defp json_value?(_value), do: false
+
+  defp json_list?([]), do: true
+  defp json_list?([head | tail]), do: json_value?(head) and json_list?(tail)
+  defp json_list?(_improper_tail), do: false
 
   defp encode_json(value) do
     {:ok, JSON.encode!(value)}

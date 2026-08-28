@@ -516,6 +516,31 @@ defmodule Tribunal.Assertions.JudgeTest do
       assert prompt =~ "30 day return policy"
     end
 
+    test "faithful module omits the question when no input is available" do
+      test_case = %TestCase{
+        actual_output: "Returns within 30 days.",
+        context: ["30 day return policy with receipt."]
+      }
+
+      prompt = Tribunal.Judges.Faithful.prompt(test_case, [])
+
+      refute prompt =~ "## Question"
+      refute prompt =~ "null"
+      assert prompt =~ "## Output to Evaluate\nReturns within 30 days."
+    end
+
+    test "faithful module uses explicit evaluation input when input is absent" do
+      test_case = %TestCase{
+        evaluation_input: "Return policy for account 42",
+        actual_output: "Returns within 30 days.",
+        context: ["30 day return policy with receipt."]
+      }
+
+      prompt = Tribunal.Judges.Faithful.prompt(test_case, [])
+
+      assert prompt =~ "## Question\nReturn policy for account 42"
+    end
+
     test "relevant module builds prompt" do
       test_case = %TestCase{
         input: "What are the hours?",

@@ -51,6 +51,11 @@ defmodule Tribunal.Reporter.Format do
     end
   end
 
+  def outcome_counts(summary) do
+    errors = Map.get(summary, :errors, 0)
+    %{failures: max(summary.failed - errors, 0), errors: errors}
+  end
+
   def gates(%{overall: overall, groups: groups}) do
     [overall_gate(overall), group_gates(groups)]
     |> Enum.reject(&is_nil/1)
@@ -114,12 +119,15 @@ defmodule Tribunal.Reporter.Console do
   end
 
   defp summary_section(summary) do
+    %{failures: failures, errors: errors} = Format.outcome_counts(summary)
+
     """
     Summary
     ───────────────────────────────────────────────────────────────
       Total:     #{summary.total} test cases
       Passed:    #{summary.passed} (#{round(summary.pass_rate * 100)}%)
-      Failed:    #{summary.failed}
+      Failed:    #{failures}
+      Errors:    #{errors}
       Duration:  #{format_duration(summary.duration_ms)}
     """
   end
@@ -271,12 +279,15 @@ defmodule Tribunal.Reporter.Text do
   end
 
   defp summary_section(summary) do
+    %{failures: failures, errors: errors} = Format.outcome_counts(summary)
+
     """
     Summary
     -------------------------------------------------------------------
       Total:     #{summary.total} test cases
       Passed:    #{summary.passed} (#{round(summary.pass_rate * 100)}%)
-      Failed:    #{summary.failed}
+      Failed:    #{failures}
+      Errors:    #{errors}
       Duration:  #{format_duration(summary.duration_ms)}
     """
   end
@@ -642,6 +653,8 @@ defmodule Tribunal.Reporter.HTML do
   end
 
   defp summary_section(summary) do
+    %{failures: failures, errors: errors} = Format.outcome_counts(summary)
+
     {status_class, status_text} =
       case Map.get(summary, :gate_status) do
         status when status in [:error, :failed] -> {"failed", "FAILED"}
@@ -669,8 +682,12 @@ defmodule Tribunal.Reporter.HTML do
           <div class="stat-label">Passed</div>
         </div>
         <div class="stat">
-          <div class="stat-value">#{summary.failed}</div>
+          <div class="stat-value">#{failures}</div>
           <div class="stat-label">Failed</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">#{errors}</div>
+          <div class="stat-label">Errors</div>
         </div>
         <div class="stat">
           <div class="stat-value">#{round(summary.pass_rate * 100)}%</div>
