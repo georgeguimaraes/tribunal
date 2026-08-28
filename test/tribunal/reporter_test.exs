@@ -218,6 +218,7 @@ defmodule Tribunal.ReporterTest do
       assert output =~ ~s("question":"timeout)
       assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
       assert output =~ "provider: timeout"
+      assert output =~ ~r/Failed Cases.*quality <case>.*Errors.*timeout/s
     end
   end
 
@@ -263,6 +264,7 @@ defmodule Tribunal.ReporterTest do
       assert output =~ ~s("question":"timeout)
       assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
       assert output =~ "provider: timeout"
+      assert output =~ ~r/Failed Cases.*quality <case>.*Errors.*timeout/s
     end
   end
 
@@ -291,6 +293,7 @@ defmodule Tribunal.ReporterTest do
       assert output =~ ~s(&quot;question&quot;)
       assert output =~ "quality &lt;case&gt;"
       assert output =~ "samples: 2/3 passed, 1 failed, 1 error, rule: any"
+      assert output =~ ~r/<h2>Failed Cases<\/h2>.*quality.*<h2>Errors<\/h2>.*timeout/s
     end
   end
 

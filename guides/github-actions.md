@@ -9,6 +9,7 @@ Generated `tribunal_dataset` tests and user-owned `tribunal_assert` tests run th
 Tag user-owned suites so the filtered command includes them:
 
 ```elixir
+use ExUnit.Case
 use Tribunal.ExUnit
 
 @moduletag :eval

@@ -7,7 +7,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
   @moduletag :tmp_dir
 
-  test "reports a missing output as a failed case", %{tmp_dir: tmp_dir} do
+  test "reports a missing output as an error", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "missing_output.json")
 
     File.write!(
@@ -32,7 +32,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     assert output =~ "FAILED"
   end
 
-  test "reports a provider exception as a failed case", %{tmp_dir: tmp_dir} do
+  test "reports a provider exception as an error", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "provider_error.json")
 
     File.write!(
