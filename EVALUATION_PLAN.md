@@ -87,6 +87,33 @@ Each assertion owns its threshold and verdict semantics. Similarity uses a minim
 
 Dataset YAML does not contain a suite-wide gate. The same cases can be required to pass individually in ExUnit and evaluated statistically through the Mix task.
 
+### Inline ExUnit: one output
+
+A normal ExUnit test calls the application once and puts metric thresholds directly on the relevant assertions:
+
+```elixir
+defmodule MyApp.SupportTest do
+  use ExUnit.Case, async: false
+  use Tribunal.EvalCase
+
+  @context ["Opened laptops can be returned within 14 days with a receipt."]
+
+  @tag timeout: 120_000
+  test "answers the opened-laptop return question" do
+    query = "Can I return an opened laptop?"
+    response = MyApp.SupportAgent.run(query)
+
+    assert_contains response, "14 days"
+    assert_faithful response, context: @context, threshold: 0.85
+    assert_relevant response, query: query, threshold: 0.80
+  end
+end
+```
+
+ExUnit itself is the gate here. The test fails when any assertion fails and reports an operational exception as an error. There is no pass-rate gate because this test produces one output once.
+
+Repeated sampling needs a callable provider rather than an already-computed `response`. Use `tribunal_eval` for that in the initial roadmap. A future `assert_consistently` helper may provide generator-style sampling for hand-written tests, but it is deliberately deferred until the shared sampling model is proven.
+
 ### ExUnit: one test per case
 
 ExUnit reads metric thresholds from the dataset. The macro configures repeated sampling for each generated test:
