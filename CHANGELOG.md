@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v2.0.0) (2026-08-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* Add evaluation v2 ([#54](https://github.com/georgeguimaraes/tribunal/issues/54))
+
+### Features
+
+* Add evaluation v2 ([#54](https://github.com/georgeguimaraes/tribunal/issues/54)) ([b2513a8](https://github.com/georgeguimaraes/tribunal/commit/b2513a8541aaf3f10429266640e87882a47c59fd))
+
+
+### Miscellaneous
+
+* **deps:** bump actions/cache from 5 to 6 ([#47](https://github.com/georgeguimaraes/tribunal/issues/47)) ([10029e0](https://github.com/georgeguimaraes/tribunal/commit/10029e09518ba39f9b638e661c5dfa207719668c))
+* **deps:** bump actions/checkout from 6 to 7 ([#46](https://github.com/georgeguimaraes/tribunal/issues/46)) ([5002038](https://github.com/georgeguimaraes/tribunal/commit/50020381d1de11f14881bac144a2c0018323afb2))
+* Refresh optional dependencies ([#53](https://github.com/georgeguimaraes/tribunal/issues/53)) ([4600194](https://github.com/georgeguimaraes/tribunal/commit/46001942ae9653db0f3aa564dba76e8f371c096a))
+
+
+### Documentation
+
+* Add Why Tribunal section and repeated-sampling plan ([54521af](https://github.com/georgeguimaraes/tribunal/commit/54521af914a4c506fbe6587c7fb6f0a620149b3b))
+
+
+### Code Refactoring
+
+* Share evaluation semantics across runners ([#52](https://github.com/georgeguimaraes/tribunal/issues/52)) ([7202f35](https://github.com/georgeguimaraes/tribunal/commit/7202f356aba8340692b46313d638a257d005f960))
+
 ## [1.4.0](https://github.com/georgeguimaraes/tribunal/compare/v1.3.6...v1.4.0) (2026-07-23)
 
 
