@@ -4,7 +4,7 @@
 
 Build one trustworthy evaluation model that works through both Tribunal interfaces without making either interface imitate the other.
 
-`tribunal_eval` should continue to feel like ExUnit. `mix tribunal.eval` should continue to feel like a batch evaluation tool. They should agree on assertion results, repeated sampling, and case status because those are shared evaluation semantics.
+Tribunal's assertions and dataset integration should continue to feel like ExUnit. `mix tribunal.eval` should continue to feel like a batch evaluation tool. They should agree on assertion results, repeated sampling, and case status because those are shared evaluation semantics.
 
 The host application owns the definitive quality requirements. Tribunal provides measurements, reduction rules, execution controls, evidence, and reporting. Report-only evaluation remains the Mix task default.
 
@@ -21,14 +21,14 @@ populated Tribunal.TestCase
         v
 Tribunal.Evaluator
         |
-        +--> tribunal_eval turns the result into an ExUnit failure
+        +--> Tribunal's ExUnit adapter turns the result into a failure or error
         |
         +--> mix tribunal.eval aggregates results and applies batch gates
 ```
 
 `Tribunal.Evaluator` owns one populated output and its assertions. It does not call the application provider, schedule work, aggregate a dataset, format reports, or interact with ExUnit.
 
-`tribunal_eval` creates one ExUnit test per dataset row. ExUnit owns scheduling, filtering, tags, timeouts, and failure presentation. Its provider receives `test_case.input`.
+Today, `tribunal_eval` creates one ExUnit test per dataset row. The target API renames it to `tribunal_dataset` and adds `tribunal_assert` for repeated evaluation inside a user-owned test. ExUnit owns scheduling, filtering, tags, timeouts, and failure presentation.
 
 `mix tribunal.eval` owns dataset execution, bounded concurrency, aggregation, reports, quality gates, and exit codes. Its provider receives the full `Tribunal.TestCase`.
 
@@ -87,32 +87,64 @@ Each assertion owns its threshold and verdict semantics. Similarity uses a minim
 
 Dataset YAML does not contain a suite-wide gate. The same cases can be required to pass individually in ExUnit and evaluated statistically through the Mix task.
 
-### Inline ExUnit: one output
+### Inline ExUnit: user-owned test with `tribunal_assert`
 
-A normal ExUnit test calls the application once and puts metric thresholds directly on the relevant assertions:
+The user owns the ExUnit test, setup, fixtures, tags, timeout, and surrounding assertions. `tribunal_assert` owns only repeated target invocation, evaluation, reduction, and the final ExUnit outcome:
 
 ```elixir
 defmodule MyApp.SupportTest do
   use ExUnit.Case, async: false
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   @context ["Opened laptops can be returned within 14 days with a receipt."]
 
-  @tag timeout: 120_000
-  test "answers the opened-laptop return question" do
+  @tag timeout: 300_000
+  test "answers the opened-laptop return question", %{account: account} do
     query = "Can I return an opened laptop?"
-    response = MyApp.SupportAgent.run(query)
 
-    assert_contains response, "14 days"
-    assert_faithful response, context: @context, threshold: 0.85
-    assert_relevant response, query: query, threshold: 0.80
+    tribunal_assert fn ->
+      MyApp.SupportAgent.run(query, account: account)
+    end,
+      input: query,
+      context: @context,
+      repeat: 5,
+      pass_rule: {:rate, 0.80},
+      expected: [
+        contains: [value: "14 days"],
+        faithful: [threshold: 0.85],
+        relevant: [threshold: 0.80]
+      ]
   end
 end
 ```
 
-ExUnit itself is the gate here. The test fails when any assertion fails and reports an operational exception as an error. There is no pass-rate gate because this test produces one output once.
+The zero-arity callback can close over setup data, authentication, mocks, configuration, and any other application state. Tribunal invokes it once per attempt. Setup outside the callback runs once per ExUnit test. Work placed inside the callback is fresh for every attempt.
 
-Repeated sampling needs a callable provider rather than an already-computed `response`. Use `tribunal_eval` for that in the initial roadmap. A future `assert_consistently` helper may provide generator-style sampling for hand-written tests, but it is deliberately deferred until the shared sampling model is proven.
+The callback accepts this result contract:
+
+```elixir
+output
+{:ok, output}
+{:error, reason}
+%Tribunal.TestCase{}
+{:ok, %Tribunal.TestCase{}}
+```
+
+A plain output populates a base `TestCase` from the assertion options. A returned `TestCase` is authoritative for that attempt and supports dynamic retrieval context, metadata, and other evaluation fields. `{:error, reason}`, exceptions, and exits become operational attempt errors. Tribunal keeps the callback zero-arity initially. Attempt indexes or execution contexts can be added later only if controlled seeds or per-attempt configuration become real requirements.
+
+The test passes when at least four attempts pass and none ends in an operational error. A reduced quality failure becomes an ExUnit assertion failure. A reduced operational error is raised as an error.
+
+Existing assertion macros remain useful when the user already has one output and does not need application-level sampling:
+
+```elixir
+response = MyApp.SupportAgent.run(query)
+
+assert_contains response, "14 days"
+assert_faithful response, context: @context, threshold: 0.85
+assert_relevant response, query: query, threshold: 0.80
+```
+
+Repeating these individual assertions would repeatedly judge the same output. `tribunal_assert` repeats the application callback and therefore measures application nondeterminism.
 
 ### ExUnit: one test per case
 
@@ -121,11 +153,11 @@ ExUnit reads metric thresholds from the dataset. The macro configures repeated s
 ```elixir
 defmodule MyApp.SupportEvalTest do
   use ExUnit.Case, async: false
-  use Tribunal.EvalCase
+  use Tribunal.ExUnit
 
   @moduletag :eval
 
-  tribunal_eval "test/evals/support.yaml",
+  tribunal_dataset "test/evals/support.yaml",
     provider: {MyApp.SupportEvalProvider, :run},
     repeat: 5,
     pass_rule: {:rate, 0.80},
@@ -191,7 +223,7 @@ mix tribunal.eval test/evals/support.yaml \
 
 Explicit CLI options override policy-file values. Policy-file values override Tribunal defaults. Assertion options on an individual dataset case override assertion defaults, but they do not override sampling or batch gates.
 
-The Mix policy file is not loaded by `tribunal_eval`. ExUnit intentionally uses its macro options and native test semantics instead of applying suite-wide gates.
+The Mix policy file is not loaded by `tribunal_dataset` or `tribunal_assert`. ExUnit intentionally uses assertion or macro options and native test semantics instead of applying suite-wide gates.
 
 ## Design rules
 
