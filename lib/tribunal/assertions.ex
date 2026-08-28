@@ -239,7 +239,7 @@ defmodule Tribunal.Assertions do
       LLM-as-judge assertions require ReqLLM.
 
       Add to mix.exs:
-        {:req_llm, "~> 1.2"}
+        {:req_llm, ">= 1.2.0 and < 2.0.0"}
       """
     end
 
@@ -252,7 +252,7 @@ defmodule Tribunal.Assertions do
       Embedding similarity requires Alike.
 
       Add to mix.exs:
-        {:alike, "~> 0.4"}
+        {:alike, ">= 0.4.0 and < 0.5.0"}
       """
     end
 

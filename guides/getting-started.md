@@ -28,13 +28,13 @@ end
 For LLM-as-judge evaluations (faithfulness, relevancy, hallucination detection):
 
 ```elixir
-{:req_llm, "~> 0.2"}
+{:req_llm, ">= 1.2.0 and < 2.0.0"}
 ```
 
 For embedding-based semantic similarity:
 
 ```elixir
-{:alike, "~> 0.1"}
+{:alike, ">= 0.4.0 and < 0.5.0"}
 ```
 
 Then run:

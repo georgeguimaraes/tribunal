@@ -82,10 +82,10 @@ defmodule Tribunal do
           {:tribunal, "~> 1.3"},
 
           # Optional: LLM-as-judge metrics
-          {:req_llm, "~> 1.2"},
+          {:req_llm, ">= 1.2.0 and < 2.0.0"},
 
           # Optional: embedding similarity
-          {:alike, "~> 0.1"}
+          {:alike, ">= 0.4.0 and < 0.5.0"}
         ]
       end
   """

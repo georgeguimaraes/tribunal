@@ -29,13 +29,13 @@ defmodule Tribunal.MixProject do
   defp deps do
     [
       # Required: YAML parsing for configs/datasets
-      {:yaml_elixir, "~> 2.11"},
+      {:yaml_elixir, ">= 2.11.0 and < 3.0.0"},
 
       # Optional: LLM-as-judge metrics
-      {:req_llm, "~> 1.2", optional: true},
+      {:req_llm, ">= 1.2.0 and < 2.0.0", optional: true},
 
       # Optional: embedding similarity
-      {:alike, "~> 0.1", optional: true},
+      {:alike, ">= 0.4.0 and < 0.5.0", optional: true},
 
       # Dev
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},

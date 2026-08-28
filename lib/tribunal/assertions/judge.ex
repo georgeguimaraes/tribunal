@@ -115,7 +115,8 @@ defmodule Tribunal.Assertions.Judge do
           {:error, inspect(error)}
       end
     else
-      {:error, "req_llm is not available. Add {:req_llm, \"~> 1.2\"} to your dependencies."}
+      {:error,
+       "req_llm is not available. Add {:req_llm, \">= 1.2.0 and < 2.0.0\"} to your dependencies."}
     end
   end
 

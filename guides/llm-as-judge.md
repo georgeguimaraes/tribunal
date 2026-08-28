@@ -7,7 +7,7 @@ LLM-as-judge is a pattern where an LLM evaluates another LLM's output. Tribunal 
 Add `req_llm` to your dependencies:
 
 ```elixir
-{:req_llm, "~> 0.2"}
+{:req_llm, ">= 1.2.0 and < 2.0.0"}
 ```
 
 Configure your LLM provider credentials as environment variables or in your application config.
