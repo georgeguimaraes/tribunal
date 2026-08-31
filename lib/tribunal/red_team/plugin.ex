@@ -84,9 +84,18 @@ defmodule Tribunal.RedTeam.Plugin do
   `{:error, _}` the caller can handle, rather than a raw `KeyError`.
   """
   def fetch_required(opts, keys) do
-    case Enum.reject(keys, &Keyword.has_key?(opts, &1)) do
+    case Enum.reject(keys, &valid_required_option?(opts, &1)) do
       [] -> {:ok, Enum.map(keys, &Keyword.fetch!(opts, &1))}
       missing -> {:error, {:missing_options, missing}}
+    end
+  end
+
+  defp valid_required_option?(opts, key) do
+    case Keyword.fetch(opts, key) do
+      {:ok, nil} -> false
+      {:ok, value} when is_binary(value) -> String.trim(value) != ""
+      {:ok, _value} -> true
+      :error -> false
     end
   end
 
@@ -94,30 +103,71 @@ defmodule Tribunal.RedTeam.Plugin do
   Extracts and validates the attacker's `attacks` list.
 
   Accepts the attacker response with an `attacks` list keyed by either string
-  or atom. Every attack must carry a non-empty `prompt`; otherwise the whole
-  batch is rejected with `{:error, {:invalid_attack, attack}}` rather than
-  emitting a case with `input: nil`. An unrecognised shape returns
+  or atom. Every attack must carry a non-empty `prompt` and `goal`. When an
+  expected count is supplied, the batch must contain exactly that many unique
+  prompts. An unrecognised shape returns
   `{:error, {:unexpected_attacker_response, other}}`.
   """
-  def extract_attacks(%{"attacks" => attacks}) when is_list(attacks),
-    do: validate_attacks(attacks)
+  def extract_attacks(response, expected_count \\ nil)
 
-  def extract_attacks(%{attacks: attacks}) when is_list(attacks), do: validate_attacks(attacks)
-  def extract_attacks(other), do: {:error, {:unexpected_attacker_response, other}}
+  def extract_attacks(%{"attacks" => attacks}, expected_count) when is_list(attacks),
+    do: validate_attacks(attacks, expected_count)
 
-  defp validate_attacks(attacks) do
-    case Enum.find(attacks, fn attack -> is_nil(attack_prompt(attack)) end) do
-      nil -> {:ok, attacks}
+  def extract_attacks(%{attacks: attacks}, expected_count) when is_list(attacks),
+    do: validate_attacks(attacks, expected_count)
+
+  def extract_attacks(other, _expected_count),
+    do: {:error, {:unexpected_attacker_response, other}}
+
+  defp validate_attacks(attacks, expected_count) do
+    with :ok <- validate_attack_fields(attacks),
+         :ok <- validate_attack_count(attacks, expected_count),
+         :ok <- validate_unique_prompts(attacks) do
+      {:ok, attacks}
+    end
+  end
+
+  defp validate_attack_fields(attacks) do
+    case Enum.find(attacks, fn attack ->
+           is_nil(attack_field(attack, "prompt")) or is_nil(attack_field(attack, "goal"))
+         end) do
+      nil -> :ok
       bad -> {:error, {:invalid_attack, bad}}
     end
   end
 
-  defp attack_prompt(attack) when is_map(attack) do
-    case attack["prompt"] || attack[:prompt] do
-      value when is_binary(value) -> if String.trim(value) == "", do: nil, else: value
-      _ -> nil
+  defp validate_attack_count(_attacks, nil), do: :ok
+
+  defp validate_attack_count(attacks, expected_count) do
+    actual_count = length(attacks)
+
+    if actual_count == expected_count,
+      do: :ok,
+      else: {:error, {:unexpected_attack_count, expected_count, actual_count}}
+  end
+
+  defp validate_unique_prompts(attacks) do
+    prompts = Enum.map(attacks, &attack_field(&1, "prompt"))
+    frequencies = Enum.frequencies(prompts)
+
+    case Enum.find(prompts, &(Map.fetch!(frequencies, &1) > 1)) do
+      nil -> :ok
+      duplicate -> {:error, {:duplicate_prompt, duplicate}}
     end
   end
 
-  defp attack_prompt(_), do: nil
+  defp attack_field(attack, key) when is_map(attack) do
+    case attack[key] || attack[String.to_existing_atom(key)] do
+      value when is_binary(value) ->
+        case String.trim(value) do
+          "" -> nil
+          trimmed -> trimmed
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  defp attack_field(_attack, _key), do: nil
 end

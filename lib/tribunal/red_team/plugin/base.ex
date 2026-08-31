@@ -67,8 +67,10 @@ defmodule Tribunal.RedTeam.Plugin.Base do
 
       @impl Tribunal.RedTeam.Plugin
       def generate(opts) do
-        with {:ok, _values} <- Plugin.fetch_required(opts, unquote(required)) do
-          count = Keyword.get(opts, :count, unquote(default_count))
+        count = Keyword.get(opts, :count, unquote(default_count))
+
+        with :ok <- Base.validate_count(count),
+             {:ok, _values} <- Plugin.fetch_required(opts, unquote(required)) do
           opts = Keyword.put(opts, :count, count)
           attacker = Keyword.get(opts, :attacker, Attacker.default())
 
@@ -88,10 +90,10 @@ defmodule Tribunal.RedTeam.Plugin.Base do
   @doc false
   def run(module, attacker, opts) do
     with {:ok, raw} <- call_attacker(module, attacker, opts),
-         {:ok, attacks} <- Plugin.extract_attacks(raw) do
+         {:ok, attacks} <- Plugin.extract_attacks(raw, opts[:count]) do
       expected = module.expected(opts)
       purpose = Keyword.get(opts, :purpose)
-      cases = Enum.map(attacks, &to_case(module, &1, purpose, expected))
+      cases = Enum.map(attacks, &to_case(module, attacker, &1, purpose, expected, opts))
       Enum.each(cases, &emit_case_event/1)
       {:ok, cases}
     end
@@ -100,6 +102,10 @@ defmodule Tribunal.RedTeam.Plugin.Base do
   @doc false
   def result_count({:ok, cases}), do: length(cases)
   def result_count(_), do: 0
+
+  @doc false
+  def validate_count(count) when is_integer(count) and count > 0, do: :ok
+  def validate_count(count), do: {:error, {:invalid_count, count}}
 
   defp call_attacker(module, attacker, opts) do
     prompt = module.meta_prompt(opts)
@@ -112,21 +118,42 @@ defmodule Tribunal.RedTeam.Plugin.Base do
     )
   end
 
-  defp to_case(module, attack, purpose, expected) do
+  defp to_case(module, attacker, attack, purpose, expected, opts) do
+    prompt = attack_field(attack, "prompt")
+
     %{
-      input: attack_field(attack, "prompt"),
+      input: prompt,
       metadata: %{
+        attack_id: attack_id(module.id(), prompt),
         plugin: module.id(),
+        strategy: :basic,
         severity: module.severity(),
         goal: attack_field(attack, "goal"),
-        purpose: purpose
+        purpose: purpose,
+        generation: generation_metadata(attacker, opts)
       },
       expected: expected
     }
   end
 
   defp attack_field(attack, key) when is_map(attack) do
-    attack[key] || attack[String.to_atom(key)]
+    attack[key] || attack[String.to_existing_atom(key)]
+  end
+
+  defp attack_id(plugin, prompt) do
+    :crypto.hash(:sha256, Atom.to_string(plugin) <> "\0" <> prompt)
+    |> Base.encode16(case: :lower)
+  end
+
+  defp generation_metadata(attacker, opts) do
+    %{
+      attacker: inspect(attacker),
+      requested_model: opts[:model],
+      temperature: opts[:temperature],
+      max_tokens: opts[:max_tokens]
+    }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
   end
 
   defp emit_case_event(case_) do

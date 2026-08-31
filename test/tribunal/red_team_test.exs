@@ -1,7 +1,20 @@
 defmodule Tribunal.RedTeamTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Tribunal.RedTeam
+
+  defmodule InvalidCasePlugin do
+    @behaviour Tribunal.RedTeam.Plugin
+
+    @impl true
+    def id, do: :invalid_case
+
+    @impl true
+    def severity, do: :medium
+
+    @impl true
+    def generate(_opts), do: {:ok, [%{input: 42, metadata: %{}, expected: %{}}]}
+  end
 
   describe "generate_attacks/2" do
     test "generates all attack categories by default" do
@@ -261,8 +274,29 @@ defmodule Tribunal.RedTeamTest do
       assert {:error, {:unknown_plugin, :nope}} = RedTeam.generate(plugins: [:nope])
     end
 
-    test "raises if :plugins is missing" do
-      assert_raise KeyError, fn -> RedTeam.generate([]) end
+    test "returns errors for missing, empty, or duplicate plugins" do
+      assert {:error, {:missing_options, [:plugins]}} = RedTeam.generate([])
+      assert {:error, {:invalid_plugins, :empty}} = RedTeam.generate(plugins: [])
+
+      assert {:error, {:duplicate_plugins, [:policy]}} =
+               RedTeam.generate(plugins: [:policy, :policy])
+    end
+
+    test "rejects malformed cases returned by a custom plugin" do
+      previous_plugins = Application.fetch_env(:tribunal, :red_team_plugins)
+      Application.put_env(:tribunal, :red_team_plugins, [InvalidCasePlugin])
+
+      on_exit(fn ->
+        case previous_plugins do
+          {:ok, plugins} -> Application.put_env(:tribunal, :red_team_plugins, plugins)
+          :error -> Application.delete_env(:tribunal, :red_team_plugins)
+        end
+      end)
+
+      invalid_cases = [%{input: 42, metadata: %{}, expected: %{}}]
+
+      assert {:error, {:invalid_case, {:invalid_plugin_result, ^invalid_cases}}} =
+               RedTeam.generate(plugins: [:invalid_case])
     end
 
     test "emits a generate span" do

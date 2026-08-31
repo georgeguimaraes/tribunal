@@ -256,7 +256,7 @@ mix tribunal.redteam.generate \
   --purpose "Shopping assistant for a cosmetics retailer." \
   --policy-file priv/policy.txt \
   --count 5 \
-  --output test/evals/datasets/redteam.yaml
+  --output tmp/redteam-candidates.yaml
 ```
 
 Built-in plugins: `policy`, `excessive_agency`, `prompt_extraction`,
@@ -265,6 +265,8 @@ Built-in plugins: `policy`, `excessive_agency`, `prompt_extraction`,
 response. The attacker LLM defaults to `req_llm` with sonnet; custom attackers
 and plugins plug in via config. See the
 [red team guide](guides/red-team-testing.md).
+
+Run candidate datasets with `mix tribunal.eval`, inspect the evidence, then copy confirmed cases into a committed regression dataset. Use `tribunal_dataset` to enforce those selected cases as native ExUnit tests.
 
 ## Guides
 

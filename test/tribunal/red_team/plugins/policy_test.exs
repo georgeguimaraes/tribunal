@@ -57,6 +57,9 @@ defmodule Tribunal.RedTeam.Plugins.PolicyTest do
       assert case_.metadata.severity == :high
       assert case_.metadata.goal == "g"
       assert case_.metadata.purpose == "Shopping assistant"
+      assert case_.metadata.strategy == :basic
+      assert byte_size(case_.metadata.attack_id) == 64
+      assert case_.metadata.generation.attacker == "Tribunal.RedTeam.Attacker.Stub"
     end
 
     test "expected.policy_violation carries the policy text" do
@@ -96,6 +99,43 @@ defmodule Tribunal.RedTeam.Plugins.PolicyTest do
     test "missing :policy returns a missing-options error" do
       assert {:error, {:missing_options, [:policy]}} =
                Policy.generate(purpose: "x", attacker: Stub)
+    end
+
+    test "rejects blank required text before calling the attacker" do
+      assert {:error, {:missing_options, [:purpose, :policy]}} =
+               Policy.generate(purpose: " ", policy: "\n", attacker: Stub)
+    end
+
+    test "rejects a non-positive count before calling the attacker" do
+      assert {:error, {:invalid_count, 0}} =
+               Policy.generate(purpose: "x", policy: "y", count: 0, attacker: Stub)
+    end
+
+    test "rejects a short or duplicate attacker batch" do
+      Stub.set_response(%{attacks: [%{prompt: "only", goal: "one"}]})
+
+      assert {:error, {:unexpected_attack_count, 2, 1}} =
+               Policy.generate(
+                 purpose: "x",
+                 policy: "y",
+                 count: 2,
+                 attacker: Stub
+               )
+
+      Stub.set_response(%{
+        attacks: [
+          %{prompt: "same", goal: "one"},
+          %{prompt: " same ", goal: "two"}
+        ]
+      })
+
+      assert {:error, {:duplicate_prompt, "same"}} =
+               Policy.generate(
+                 purpose: "x",
+                 policy: "y",
+                 count: 2,
+                 attacker: Stub
+               )
     end
 
     test "propagates attacker errors" do
