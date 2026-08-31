@@ -54,7 +54,7 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
                "Never give financial advice.\nStay on topic."
     end
 
-    test "multi-line input round-trips (block scalar indented past sibling keys)" do
+    test "multi-line input round-trips exactly" do
       cases = [
         %{
           input: "Line one of the attack.\nLine two piggybacks the violation.",
@@ -71,7 +71,7 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
       assert item["metadata"]["plugin"] == "policy"
     end
 
-    test "preserves a trailing newline in a block scalar" do
+    test "preserves a trailing newline when round-tripping" do
       cases = [
         %{
           input: "Line one.\nLine two.\n",
@@ -86,7 +86,7 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
       assert [%{"input" => "Line one.\nLine two.\n"}] = parsed
     end
 
-    test "preserves multiple trailing newlines in a block scalar" do
+    test "preserves multiple trailing newlines when round-tripping" do
       cases = [
         %{
           input: "Line one.\nLine two.\n\n",

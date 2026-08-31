@@ -126,10 +126,26 @@ defmodule Tribunal.RedTeam do
   end
 
   defp wrap_plugin_error(id, {:ok, []}), do: {:error, {id, :no_attacks_generated}}
-  defp wrap_plugin_error(_id, {:ok, cases}) when is_list(cases), do: {:ok, cases}
+
+  defp wrap_plugin_error(id, {:ok, cases}) when is_list(cases) do
+    if Enum.all?(cases, &valid_case?/1),
+      do: {:ok, cases},
+      else: {:error, {id, {:invalid_plugin_result, cases}}}
+  end
+
   defp wrap_plugin_error(id, {:ok, other}), do: {:error, {id, {:invalid_plugin_result, other}}}
   defp wrap_plugin_error(id, {:error, reason}), do: {:error, {id, reason}}
   defp wrap_plugin_error(id, other), do: {:error, {id, {:invalid_plugin_result, other}}}
+
+  defp valid_case?(%{input: input, metadata: metadata, expected: expected})
+       when is_binary(input) and is_map(metadata) and is_map(expected),
+       do: true
+
+  defp valid_case?(%{input: input, metadata: metadata, expected: expected})
+       when is_binary(input) and is_map(metadata) and is_list(expected),
+       do: Keyword.keyword?(expected)
+
+  defp valid_case?(_case), do: false
 
   defp count_cases({:ok, cases}), do: length(cases)
   defp count_cases(_), do: 0

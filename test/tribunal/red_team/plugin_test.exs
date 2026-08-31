@@ -83,13 +83,15 @@ defmodule Tribunal.RedTeam.PluginTest do
     test "rejects duplicate prompts after trimming" do
       response = %{
         attacks: [
-          %{prompt: "same prompt", goal: "g1"},
-          %{prompt: " same prompt ", goal: "g2"}
+          %{prompt: " earliest duplicate ", goal: "g1"},
+          %{prompt: "later duplicate", goal: "g2"},
+          %{prompt: "later duplicate", goal: "g3"},
+          %{prompt: "earliest duplicate", goal: "g4"}
         ]
       }
 
-      assert {:error, {:duplicate_prompt, "same prompt"}} =
-               Plugin.extract_attacks(response, 2)
+      assert {:error, {:duplicate_prompt, "earliest duplicate"}} =
+               Plugin.extract_attacks(response, 4)
     end
 
     test "rejects an unrecognised attacker response shape" do

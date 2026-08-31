@@ -148,8 +148,9 @@ defmodule Tribunal.RedTeam.Plugin do
 
   defp validate_unique_prompts(attacks) do
     prompts = Enum.map(attacks, &attack_field(&1, "prompt"))
+    frequencies = Enum.frequencies(prompts)
 
-    case Enum.find(prompts, fn prompt -> Enum.count(prompts, &(&1 == prompt)) > 1 end) do
+    case Enum.find(prompts, &(Map.fetch!(frequencies, &1) > 1)) do
       nil -> :ok
       duplicate -> {:error, {:duplicate_prompt, duplicate}}
     end
