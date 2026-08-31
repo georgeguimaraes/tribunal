@@ -47,7 +47,7 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
 
   @impl Mix.Task
   def run(args) do
-    {opts, _, _} =
+    {opts, positional, invalid} =
       OptionParser.parse(args,
         strict: [
           plugins: :string,
@@ -62,7 +62,8 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
         ]
       )
 
-    Mix.Task.run("app.start")
+    validate_args!(positional, invalid)
+    validate_count!(opts[:count])
 
     plugins = parse_plugins(opts)
     purpose = read_text(opts, :purpose, :purpose_file, "purpose", required?: true)
@@ -73,12 +74,28 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
       |> maybe_put(:policy, policy)
       |> maybe_put(:model, opts[:model])
 
+    Mix.Task.run("app.start")
+
     case RedTeam.generate(generate_opts) do
       {:ok, cases} -> write_output(cases, opts)
       {:error, {plugin, {:missing_options, missing}}} -> missing_options_error(plugin, missing)
       {:error, reason} -> Mix.raise("Generation failed: #{inspect(reason)}")
     end
   end
+
+  defp validate_args!([], []), do: :ok
+
+  defp validate_args!(_positional, [{option, value} | _rest]) do
+    suffix = if is_nil(value), do: "", else: " #{value}"
+    Mix.raise("Unknown or malformed option: #{option}#{suffix}")
+  end
+
+  defp validate_args!([arg | _rest], _invalid),
+    do: Mix.raise("Unexpected argument: #{arg}")
+
+  defp validate_count!(nil), do: :ok
+  defp validate_count!(count) when is_integer(count) and count > 0, do: :ok
+  defp validate_count!(count), do: Mix.raise("--count must be a positive integer, got: #{count}")
 
   defp missing_options_error(plugin, missing) do
     flags = Enum.map_join(missing, ", ", &"--#{&1}")
@@ -91,9 +108,16 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
         Mix.raise("--plugins is required (e.g. --plugins policy)")
 
       raw ->
-        raw
-        |> String.split(",", trim: true)
-        |> Enum.map(&resolve_plugin!/1)
+        plugins =
+          raw
+          |> String.split(",", trim: true)
+          |> Enum.map(&resolve_plugin!/1)
+
+        cond do
+          plugins == [] -> Mix.raise("--plugins must contain at least one plugin id")
+          Enum.uniq(plugins) != plugins -> Mix.raise("--plugins contains duplicate plugin ids")
+          true -> plugins
+        end
     end
   end
 
@@ -122,7 +146,7 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 
   defp write_output([], _opts) do
-    Mix.shell().error("No attacks were generated; nothing written.")
+    Mix.raise("No attacks were generated; nothing written")
   end
 
   defp write_output(cases, opts) do
@@ -130,8 +154,12 @@ defmodule Mix.Tasks.Tribunal.Redteam.Generate do
     body = encode(cases, format)
 
     case opts[:output] do
-      nil -> Mix.shell().info(body)
-      path -> File.write!(path, body)
+      nil ->
+        Mix.shell().info(body)
+
+      path ->
+        path |> Path.dirname() |> File.mkdir_p!()
+        File.write!(path, body)
     end
   end
 

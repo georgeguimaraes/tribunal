@@ -261,8 +261,12 @@ defmodule Tribunal.RedTeamTest do
       assert {:error, {:unknown_plugin, :nope}} = RedTeam.generate(plugins: [:nope])
     end
 
-    test "raises if :plugins is missing" do
-      assert_raise KeyError, fn -> RedTeam.generate([]) end
+    test "returns errors for missing, empty, or duplicate plugins" do
+      assert {:error, {:missing_options, [:plugins]}} = RedTeam.generate([])
+      assert {:error, {:invalid_plugins, :empty}} = RedTeam.generate(plugins: [])
+
+      assert {:error, {:duplicate_plugins, [:policy]}} =
+               RedTeam.generate(plugins: [:policy, :policy])
     end
 
     test "emits a generate span" do

@@ -31,23 +31,65 @@ defmodule Tribunal.RedTeam.PluginTest do
       assert {:error, {:missing_options, [:purpose, :policy]}} =
                Plugin.fetch_required([count: 3], [:purpose, :policy])
     end
+
+    test "treats blank required text as missing" do
+      assert {:error, {:missing_options, [:purpose, :policy]}} =
+               Plugin.fetch_required([purpose: "  ", policy: "\n"], [:purpose, :policy])
+    end
+
+    test "treats nil as missing without rejecting structured custom options" do
+      assert {:error, {:missing_options, [:purpose]}} =
+               Plugin.fetch_required([purpose: nil, categories: [:safety]], [
+                 :purpose,
+                 :categories
+               ])
+
+      assert {:ok, [[:safety]]} =
+               Plugin.fetch_required([categories: [:safety]], [:categories])
+    end
   end
 
   describe "extract_attacks/1" do
     test "accepts string- or atom-keyed attacks lists" do
-      assert {:ok, [%{"prompt" => "a"}]} =
-               Plugin.extract_attacks(%{"attacks" => [%{"prompt" => "a"}]})
+      assert {:ok, [%{"prompt" => "a", "goal" => "ga"}]} =
+               Plugin.extract_attacks(%{"attacks" => [%{"prompt" => "a", "goal" => "ga"}]})
 
-      assert {:ok, [%{prompt: "b"}]} =
-               Plugin.extract_attacks(%{attacks: [%{prompt: "b"}]})
+      assert {:ok, [%{prompt: "b", goal: "gb"}]} =
+               Plugin.extract_attacks(%{attacks: [%{prompt: "b", goal: "gb"}]})
     end
 
-    test "rejects an attack with a missing or blank prompt" do
+    test "rejects an attack with a missing or blank prompt or goal" do
       assert {:error, {:invalid_attack, %{"goal" => "g"}}} =
                Plugin.extract_attacks(%{"attacks" => [%{"goal" => "g"}]})
 
       assert {:error, {:invalid_attack, _}} =
-               Plugin.extract_attacks(%{"attacks" => [%{"prompt" => "   "}]})
+               Plugin.extract_attacks(%{
+                 "attacks" => [%{"prompt" => "   ", "goal" => "g"}]
+               })
+
+      assert {:error, {:invalid_attack, _}} =
+               Plugin.extract_attacks(%{
+                 "attacks" => [%{"prompt" => "p", "goal" => "\n"}]
+               })
+    end
+
+    test "rejects a batch whose size differs from the requested count" do
+      response = %{"attacks" => [%{"prompt" => "a", "goal" => "g"}]}
+
+      assert {:error, {:unexpected_attack_count, 2, 1}} =
+               Plugin.extract_attacks(response, 2)
+    end
+
+    test "rejects duplicate prompts after trimming" do
+      response = %{
+        attacks: [
+          %{prompt: "same prompt", goal: "g1"},
+          %{prompt: " same prompt ", goal: "g2"}
+        ]
+      }
+
+      assert {:error, {:duplicate_prompt, "same prompt"}} =
+               Plugin.extract_attacks(response, 2)
     end
 
     test "rejects an unrecognised attacker response shape" do

@@ -38,17 +38,29 @@ mix tribunal.eval test/evals/redteam.yaml \
   --group-threshold 0.8
 ```
 
+Mix is the discovery and batch-gating interface. ExUnit enforces reviewed cases promoted into committed regression datasets.
+
+## Red-team implementation plan
+
+### Current milestone
+
+- [x] reject invalid generation inputs and incomplete or duplicate attacker output
+- [x] preserve generated prompts and policies exactly through YAML
+- [x] include stable attack ids, strategy, and basic attacker provenance in generated rows
+- [x] document candidate generation, Mix exploration, and manual ExUnit promotion
+- [x] verify the complete generate, serialize, and reload path
+
 ## Next red-team work
 
 ### Static and hybrid corpora
 
-Public safety corpora could add broader harmful-content and PII coverage. Before embedding one, verify its license and define whether Tribunal ships static cases, optional LLM retargeting, or both.
+Start with small ordinary YAML corpora. Preserve source and license metadata when importing third-party cases. Add no importer until a real corpus requires one. Optional LLM retargeting should still produce concrete reviewable dataset rows.
 
 ### Multi-turn strategies
 
 Crescendo and iterative jailbreaks need a target response feedback loop. The current callback contract represents one invocation, so a multi-turn design must define conversation state, attacker visibility, target invocation, attempt evidence, and timeout behavior before implementation.
 
-This work should reuse `Tribunal.TestCase`, `Tribunal.Execution`, `Tribunal.Evaluator`, sampling, and schema v3 reporting once a transcript becomes the evaluated output. It should not overload the current single-turn provider contract.
+Prototype one strategy in tribunal-juror with plain functions, an explicit transcript, a turn limit, and a timeout. Extract a Tribunal API only after that host implementation proves a reusable contract. One complete conversation is one sampling attempt.
 
 ### Host application integration
 

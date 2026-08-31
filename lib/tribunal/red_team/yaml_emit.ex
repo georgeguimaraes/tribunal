@@ -40,18 +40,20 @@ defmodule Tribunal.RedTeam.YamlEmit do
   end
 
   defp encode_kv(key, value, prefix, level) when is_binary(value) do
-    if String.contains?(value, "\n") do
+    if String.contains?(value, "\n") and not String.contains?(value, "\r") do
       pad = pad(level + 1)
+      indicator = block_indicator(value)
 
       lines =
         value
+        |> block_content()
         |> String.split("\n")
         |> Enum.map_join("\n", fn
           "" -> ""
           line -> pad <> line
         end)
 
-      prefix <> "#{key}: |\n" <> lines
+      prefix <> "#{key}: #{indicator}\n" <> lines
     else
       prefix <> "#{key}: " <> scalar(value)
     end
@@ -97,6 +99,22 @@ defmodule Tribunal.RedTeam.YamlEmit do
     end
   end
 
+  defp block_indicator(value) do
+    cond do
+      String.ends_with?(value, "\n\n") -> "|+"
+      String.ends_with?(value, "\n") -> "|"
+      true -> "|-"
+    end
+  end
+
+  defp block_content(value) do
+    if String.ends_with?(value, "\n") do
+      binary_part(value, 0, byte_size(value) - 1)
+    else
+      value
+    end
+  end
+
   defp ordered_pairs(map) do
     map
     |> Enum.to_list()
@@ -105,38 +123,12 @@ defmodule Tribunal.RedTeam.YamlEmit do
 
   defp pad(level), do: String.duplicate("  ", level)
 
-  defp scalar(""), do: "''"
-
-  defp scalar(value) when is_binary(value) do
-    if needs_quoting?(value), do: double_quote(value), else: value
+  defp scalar("") do
+    JSON.encode!("")
   end
+
+  defp scalar(value) when is_binary(value), do: JSON.encode!(value)
 
   defp scalar(value) when is_atom(value), do: Atom.to_string(value)
   defp scalar(value), do: to_string(value)
-
-  defp needs_quoting?(string) do
-    String.match?(string, ~r/^[\s\-?:,\[\]\{\}#&*!|>'"%@`]/) or
-      String.contains?(string, ": ") or
-      String.contains?(string, " #") or
-      String.ends_with?(string, ":") or
-      numeric_looking?(string) or
-      string in ["true", "false", "null", "yes", "no", "on", "off", "~"]
-  end
-
-  # Quote strings that YAML would otherwise parse as a number, so they
-  # round-trip back as strings rather than integers/floats.
-  defp numeric_looking?(string) do
-    String.match?(string, ~r/^[-+]?\d[\d_]*(\.\d+)?([eE][-+]?\d+)?$/)
-  end
-
-  defp double_quote(string) do
-    escaped =
-      string
-      |> String.replace("\\", "\\\\")
-      |> String.replace("\"", "\\\"")
-      |> String.replace("\t", "\\t")
-      |> String.replace("\n", "\\n")
-
-    "\"" <> escaped <> "\""
-  end
 end

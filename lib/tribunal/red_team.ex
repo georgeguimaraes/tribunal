@@ -60,11 +60,13 @@ defmodule Tribunal.RedTeam do
 
   Each returned case is a regular Tribunal dataset entry with `:input`,
   `:metadata`, and `:expected` and round-trips cleanly through
-  `Tribunal.Dataset`.
+  `Tribunal.Dataset`. Generated metadata includes a stable attack id, the
+  plugin, the basic single-turn strategy, severity, and attacker provenance.
 
   ## Options
 
-    * `:plugins` — required. List of plugin ids (atoms), e.g. `[:policy]`.
+    * `:plugins` — required. Non-empty list of unique plugin ids (atoms), e.g. `[:policy]`.
+    * `:count` — positive number of attacks each LLM-backed plugin must return.
     * Plugin-specific options pass through. For example, `Plugins.Policy`
       requires `:purpose` and `:policy`.
 
@@ -77,17 +79,35 @@ defmodule Tribunal.RedTeam do
       )
   """
   def generate(opts) do
-    plugins = Keyword.fetch!(opts, :plugins)
-
-    :telemetry.span(
-      [:tribunal, :red_team, :generate],
-      %{plugins: plugins},
-      fn ->
-        result = run_plugins(plugins, opts)
-        {result, %{count: count_cases(result)}}
-      end
-    )
+    with {:ok, plugins} <- validate_plugins(Keyword.get(opts, :plugins)) do
+      :telemetry.span(
+        [:tribunal, :red_team, :generate],
+        %{plugins: plugins},
+        fn ->
+          result = run_plugins(plugins, opts)
+          {result, %{count: count_cases(result)}}
+        end
+      )
+    end
   end
+
+  defp validate_plugins(nil), do: {:error, {:missing_options, [:plugins]}}
+  defp validate_plugins([]), do: {:error, {:invalid_plugins, :empty}}
+
+  defp validate_plugins(plugins) when is_list(plugins) do
+    cond do
+      not Enum.all?(plugins, &is_atom/1) ->
+        {:error, {:invalid_plugins, plugins}}
+
+      Enum.uniq(plugins) != plugins ->
+        {:error, {:duplicate_plugins, plugins -- Enum.uniq(plugins)}}
+
+      true ->
+        {:ok, plugins}
+    end
+  end
+
+  defp validate_plugins(plugins), do: {:error, {:invalid_plugins, plugins}}
 
   defp run_plugins(plugins, opts) do
     Enum.reduce_while(plugins, {:ok, []}, fn id, {:ok, acc} ->
@@ -105,8 +125,11 @@ defmodule Tribunal.RedTeam do
     end
   end
 
-  defp wrap_plugin_error(_id, {:ok, cases}), do: {:ok, cases}
+  defp wrap_plugin_error(id, {:ok, []}), do: {:error, {id, :no_attacks_generated}}
+  defp wrap_plugin_error(_id, {:ok, cases}) when is_list(cases), do: {:ok, cases}
+  defp wrap_plugin_error(id, {:ok, other}), do: {:error, {id, {:invalid_plugin_result, other}}}
   defp wrap_plugin_error(id, {:error, reason}), do: {:error, {id, reason}}
+  defp wrap_plugin_error(id, other), do: {:error, {id, {:invalid_plugin_result, other}}}
 
   defp count_cases({:ok, cases}), do: length(cases)
   defp count_cases(_), do: 0
