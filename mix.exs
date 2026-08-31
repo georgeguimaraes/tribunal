@@ -28,8 +28,9 @@ defmodule Tribunal.MixProject do
 
   defp deps do
     [
-      # Required: YAML parsing for configs/datasets
+      # Required: YAML parsing and encoding for configs/datasets
       {:yaml_elixir, ">= 2.11.0 and < 3.0.0"},
+      {:ymlr, ">= 5.1.6 and < 6.0.0"},
 
       # Optional: LLM-as-judge metrics
       {:req_llm, ">= 1.2.0 and < 2.0.0", optional: true},

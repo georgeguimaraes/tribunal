@@ -47,8 +47,6 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
 
     test "multi-line strings without a trailing newline round-trip exactly" do
       yaml = YamlEmit.encode([@case_with_multiline])
-
-      assert yaml =~ "policy: |-"
       parsed = YamlElixir.read_from_string!(yaml)
       [item] = parsed
 
@@ -85,7 +83,6 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
       yaml = YamlEmit.encode(cases)
       parsed = YamlElixir.read_from_string!(yaml)
 
-      assert yaml =~ "input: |\n"
       assert [%{"input" => "Line one.\nLine two.\n"}] = parsed
     end
 
@@ -101,8 +98,28 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
       yaml = YamlEmit.encode(cases)
       parsed = YamlElixir.read_from_string!(yaml)
 
-      assert yaml =~ "input: |+\n"
       assert [%{"input" => "Line one.\nLine two.\n\n"}] = parsed
+    end
+
+    test "preserves multiline strings with significant whitespace" do
+      values = ["\n", " \n", "\n \n", " a\na", "Line one. \nLine two."]
+
+      cases =
+        Enum.map(values, fn value ->
+          %{
+            input: value,
+            metadata: %{goal: value},
+            expected: %{policy_violation: %{policy: value}}
+          }
+        end)
+
+      parsed = cases |> YamlEmit.encode() |> YamlElixir.read_from_string!()
+
+      assert Enum.map(parsed, & &1["input"]) == values
+      assert Enum.map(parsed, & &1["metadata"]["goal"]) == values
+
+      assert Enum.map(parsed, &get_in(&1, ["expected", "policy_violation", "policy"])) ==
+               values
     end
 
     test "numeric-looking strings round-trip as strings, not numbers" do
@@ -196,9 +213,13 @@ defmodule Tribunal.RedTeam.YamlEmitTest do
         "FALSE",
         "Null",
         ".nan",
+        ".NaN",
         ".Inf",
         "0x10",
         "0o10",
+        ":[",
+        ":]Z",
+        "\uFEFFa",
         "line\rreturn",
         "line\r\nreturn"
       ]
