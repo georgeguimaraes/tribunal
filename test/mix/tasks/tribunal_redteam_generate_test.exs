@@ -83,7 +83,7 @@ defmodule Mix.Tasks.TribunalRedteamGenerateTest do
       path
     ])
 
-    assert [{test_case, [{:policy_violation, assertion_opts}]}] =
+    assert [{test_case, [{:no_policy_violation, assertion_opts}]}] =
              Tribunal.Dataset.load_with_assertions!(path)
 
     assert test_case.input == "First line of the attack.\nSecond line of the attack."

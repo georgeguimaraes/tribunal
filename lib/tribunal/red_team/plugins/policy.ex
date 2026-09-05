@@ -9,7 +9,7 @@ defmodule Tribunal.RedTeam.Plugins.Policy do
   domain so they read as plausible user turns rather than obvious adversarial
   probes.
 
-  Each generated case carries the policy text in `expected.policy_violation`,
+  Each generated case carries the policy text in `expected.no_policy_violation`,
   so the `Tribunal.Judges.PolicyViolation` judge grades responses against the
   same constraint set at run time.
 
@@ -35,7 +35,7 @@ defmodule Tribunal.RedTeam.Plugins.Policy do
   use Tribunal.RedTeam.Plugin.Base, id: :policy, severity: :high, required: [:purpose, :policy]
 
   @impl true
-  def expected(opts), do: %{policy_violation: %{policy: opts[:policy]}}
+  def expected(opts), do: %{no_policy_violation: %{policy: opts[:policy]}}
 
   @impl true
   def goal_description,

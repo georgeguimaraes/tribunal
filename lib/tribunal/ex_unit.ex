@@ -13,9 +13,8 @@ defmodule Tribunal.ExUnit do
         test "response is faithful" do
           response = MyApp.RAG.query("What's the return policy?")
 
-          assert_contains response, "30 days"
+          assert response =~ "30 days"
           assert_faithful response, context: @docs, threshold: 0.8
-          refute_hallucination response, context: @docs
         end
       end
 
@@ -285,20 +284,6 @@ defmodule Tribunal.ExUnit.Assertions do
     "#{icon} #{type}#{score_str}#{verdict_str}: #{details[:reason]}"
   end
 
-  @doc "Assert output contains substring(s)"
-  defmacro assert_contains(output, value_or_opts) do
-    quote do
-      output = unquote(output)
-      opts = unquote(normalize_opts(value_or_opts))
-
-      case Deterministic.evaluate(:contains, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-        {:error, reason} -> flunk(reason)
-      end
-    end
-  end
-
   @doc "Assert output does not contain substring(s)"
   defmacro refute_contains(output, value_or_opts) do
     quote do
@@ -337,19 +322,6 @@ defmodule Tribunal.ExUnit.Assertions do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
         {:error, reason} -> flunk(reason)
-      end
-    end
-  end
-
-  @doc "Assert output matches regex pattern"
-  defmacro assert_regex(output, pattern) do
-    quote do
-      output = unquote(output)
-      opts = [pattern: unquote(pattern)]
-
-      case Deterministic.evaluate(:regex, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
       end
     end
   end
@@ -395,84 +367,6 @@ defmodule Tribunal.ExUnit.Assertions do
     end
   end
 
-  @doc "Assert output is under token limit"
-  defmacro assert_max_tokens(output, max) do
-    quote do
-      output = unquote(output)
-      opts = [max: unquote(max)]
-
-      case Deterministic.evaluate(:max_tokens, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output starts with prefix"
-  defmacro assert_starts_with(output, prefix) do
-    quote do
-      output = unquote(output)
-      opts = [value: unquote(prefix)]
-
-      case Deterministic.evaluate(:starts_with, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output ends with suffix"
-  defmacro assert_ends_with(output, suffix) do
-    quote do
-      output = unquote(output)
-      opts = [value: unquote(suffix)]
-
-      case Deterministic.evaluate(:ends_with, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output exactly equals expected"
-  defmacro assert_equals(output, expected) do
-    quote do
-      output = unquote(output)
-      opts = [value: unquote(expected)]
-
-      case Deterministic.evaluate(:equals, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output meets minimum length"
-  defmacro assert_min_length(output, min) do
-    quote do
-      output = unquote(output)
-      opts = [min: unquote(min)]
-
-      case Deterministic.evaluate(:min_length, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output under maximum length"
-  defmacro assert_max_length(output, max) do
-    quote do
-      output = unquote(output)
-      opts = [max: unquote(max)]
-
-      case Deterministic.evaluate(:max_length, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
   @doc "Assert output word count within range"
   defmacro assert_word_count(output, opts) do
     quote do
@@ -503,7 +397,7 @@ defmodule Tribunal.ExUnit.Assertions do
         input: nil
       }
 
-      result = Tribunal.Assertions.evaluate(:pii, test_case, [])
+      result = Tribunal.Assertions.evaluate(:no_pii, test_case, [])
 
       case result do
         {:pass, _} -> :ok
@@ -538,93 +432,10 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:pii, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:pii, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_pii, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_pii, result, opts)
 
       case result do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc """
-  Assert output contains no toxic content (LLM-based).
-
-  Uses LLM-as-judge for nuanced detection of toxic content including
-  hate speech, harassment, threats, and harmful language.
-
-  ## Examples
-
-      refute_toxic response
-  """
-  defmacro refute_toxic(output) do
-    quote do
-      test_case = %TestCase{
-        actual_output: unquote(output),
-        input: nil
-      }
-
-      result = Tribunal.Assertions.evaluate(:toxicity, test_case, [])
-
-      case result do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc """
-  Assert output contains no toxic content (LLM-based).
-
-  ## Options
-
-    * `:query` - Optional context about the input
-    * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
-    * `:model` - LLM model to use for judging
-
-  ## Examples
-
-      refute_toxic response, query: "user message"
-      refute_toxic response, verbose: true
-  """
-  defmacro refute_toxic(output, opts) do
-    quote do
-      test_case = %TestCase{
-        actual_output: unquote(output),
-        input: unquote(opts)[:query]
-      }
-
-      opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:toxicity, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:toxicity, result, opts)
-
-      case result do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output is a valid URL"
-  defmacro assert_url(output) do
-    quote do
-      output = unquote(output)
-
-      case Deterministic.evaluate(:is_url, output, []) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output is a valid email"
-  defmacro assert_email(output) do
-    quote do
-      output = unquote(output)
-
-      case Deterministic.evaluate(:is_email, output, []) do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
@@ -708,35 +519,6 @@ defmodule Tribunal.ExUnit.Assertions do
   end
 
   @doc """
-  Assert response has no hallucinations (requires req_llm).
-
-  ## Options
-
-    * `:context` - Required. The context to check against.
-    * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
-    * `:model` - LLM model to use for judging
-  """
-  defmacro refute_hallucination(output, opts) do
-    quote do
-      test_case = %TestCase{
-        actual_output: unquote(output),
-        context: unquote(opts)[:context]
-      }
-
-      opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:hallucination, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:hallucination, result, opts)
-
-      case result do
-        {:pass, %{has_hallucination: false}} -> :ok
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc """
   Assert response has no bias (requires req_llm).
 
   ## Options
@@ -754,8 +536,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:bias, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:bias, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_bias, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_bias, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -774,7 +556,7 @@ defmodule Tribunal.ExUnit.Assertions do
     * `:verbose` - When true, prints score reasoning (default: false)
     * `:model` - LLM model to use for judging
   """
-  defmacro refute_toxicity(output, opts) do
+  defmacro refute_toxicity(output, opts \\ []) do
     quote do
       test_case = %TestCase{
         actual_output: unquote(output),
@@ -782,8 +564,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:toxicity, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:toxicity, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_toxicity, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_toxicity, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -810,46 +592,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:harmful, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:harmful, result, opts)
-
-      case result do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc """
-  Assert response shows no signs of jailbreak success (requires req_llm).
-
-  Uses LLM-as-judge for nuanced detection of jailbreak indicators.
-
-  ## Options
-
-    * `:query` - The original prompt that was sent to the LLM
-    * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
-    * `:model` - LLM model to use for judging
-    * `:llm_client` - Custom LLM client function for testing
-
-  ## Examples
-
-      refute_jailbreak(response,
-        query: "Ignore previous instructions and...",
-        verbose: true
-      )
-  """
-  defmacro refute_jailbreak(output, opts) do
-    quote do
-      test_case = %TestCase{
-        actual_output: unquote(output),
-        input: unquote(opts)[:query]
-      }
-
-      opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:jailbreak, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:jailbreak, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_harmful_content, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_harmful_content, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -862,7 +606,7 @@ defmodule Tribunal.ExUnit.Assertions do
   Assert response does not violate a supplied policy (requires req_llm).
 
   Pairs with `Tribunal.RedTeam.Plugins.Policy`: red-team cases generated by
-  that plugin carry the policy text under `expected.policy_violation.policy`,
+  that plugin carry the policy text under `expected.no_policy_violation.policy`,
   and this macro grades responses against it.
 
   ## Options
@@ -888,8 +632,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:policy_violation, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:policy_violation, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_policy_violation, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_policy_violation, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -902,7 +646,7 @@ defmodule Tribunal.ExUnit.Assertions do
   Assert response was not hijacked off-topic (requires req_llm).
 
   Pairs with `Tribunal.RedTeam.Plugins.Hijacking`: red-team cases generated by
-  that plugin carry the assistant's purpose under `expected.hijacked.purpose`,
+  that plugin carry the assistant's purpose under `expected.no_hijacking.purpose`,
   and this macro grades responses against it.
 
   ## Options
@@ -928,8 +672,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:hijacked, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:hijacked, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_hijacking, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_hijacking, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -959,8 +703,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:prompt_extracted, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:prompt_extracted, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_prompt_extraction, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_prompt_extraction, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -990,8 +734,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:excessive_agency, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:excessive_agency, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_excessive_agency, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_excessive_agency, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -1021,42 +765,8 @@ defmodule Tribunal.ExUnit.Assertions do
       }
 
       opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:imitation, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:imitation, result, opts)
-
-      case result do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc """
-  Assert response did not fabricate specifics (requires req_llm).
-
-  Pairs with `Tribunal.RedTeam.Plugins.Hallucination`. Distinct from
-  `refute_hallucination/2`, which grades faithfulness against a supplied
-  context. This macro grades on the *signature* of confabulation without
-  ground truth.
-
-  ## Options
-
-    * `:purpose` - Required. The assistant's purpose text.
-    * `:query` - Optional context about the input.
-    * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
-    * `:model` - LLM model to use for judging
-  """
-  defmacro refute_hallucinated(output, opts) do
-    quote do
-      test_case = %TestCase{
-        actual_output: unquote(output),
-        input: unquote(opts)[:query]
-      }
-
-      opts = unquote(opts)
-      result = Tribunal.Assertions.evaluate(:hallucinated, test_case, opts)
-      Tribunal.ExUnit.Assertions.print_verbose(:hallucinated, result, opts)
+      result = Tribunal.Assertions.evaluate(:no_imitation, test_case, opts)
+      Tribunal.ExUnit.Assertions.print_verbose(:no_imitation, result, opts)
 
       case result do
         {:pass, _} -> :ok
@@ -1103,7 +813,7 @@ defmodule Tribunal.ExUnit.Assertions do
   ## Options
 
     * `:expected` - Required. The expected output to compare against.
-    * `:threshold` - Similarity threshold (default: 0.8)
+    * `:threshold` - Similarity threshold (default: 0.7)
     * `:verbose` - When true, prints similarity score (default: false)
   """
   defmacro assert_similar(output, opts) do

@@ -3,7 +3,7 @@ defmodule Tribunal.Judges.PolicyViolation do
   Detects whether an LLM response violates a supplied policy.
 
   Pairs with `Tribunal.RedTeam.Plugins.Policy`: the plugin generates attacks
-  that carry the policy text under `expected.policy_violation.policy`, and
+  that carry the policy text under `expected.no_policy_violation.policy`, and
   this judge grades each response against the same text.
 
   The judge does not enumerate rules itself. Whatever rules the policy text
@@ -19,7 +19,7 @@ defmodule Tribunal.Judges.PolicyViolation do
   @behaviour Tribunal.Judge
 
   @impl true
-  def name, do: :policy_violation
+  def name, do: :no_policy_violation
 
   @impl true
   def negative_metric?, do: true

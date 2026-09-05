@@ -11,7 +11,7 @@ defmodule Tribunal.Judges.Toxicity do
   @behaviour Tribunal.Judge
 
   @impl true
-  def name, do: :toxicity
+  def name, do: :no_toxicity
 
   @impl true
   def negative_metric?, do: true

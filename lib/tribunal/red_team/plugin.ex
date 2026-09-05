@@ -47,8 +47,7 @@ defmodule Tribunal.RedTeam.Plugin do
     Tribunal.RedTeam.Plugins.Hijacking,
     Tribunal.RedTeam.Plugins.PromptExtraction,
     Tribunal.RedTeam.Plugins.ExcessiveAgency,
-    Tribunal.RedTeam.Plugins.Imitation,
-    Tribunal.RedTeam.Plugins.Hallucination
+    Tribunal.RedTeam.Plugins.Imitation
   ]
 
   @doc "Returns built-in plugin modules."

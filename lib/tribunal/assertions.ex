@@ -18,7 +18,6 @@ defmodule Tribunal.Assertions do
     :contains_all,
     :regex,
     :is_json,
-    :max_tokens,
     :latency_ms,
     :starts_with,
     :ends_with,
@@ -26,8 +25,6 @@ defmodule Tribunal.Assertions do
     :min_length,
     :max_length,
     :word_count,
-    :is_url,
-    :is_email,
     :levenshtein
   ]
 
@@ -36,13 +33,12 @@ defmodule Tribunal.Assertions do
   @embedding_assertions [:similar]
 
   @deterministic_options %{
-    contains: [:value, :values],
+    contains: [:value],
     not_contains: [:value, :values],
     contains_any: [:value, :values],
     contains_all: [:value, :values],
     regex: [:value, :pattern],
     is_json: [],
-    max_tokens: [:value, :max],
     latency_ms: [:value, :max, :actual, :latency],
     starts_with: [:value],
     ends_with: [:value],
@@ -50,8 +46,6 @@ defmodule Tribunal.Assertions do
     min_length: [:value, :min],
     max_length: [:value, :max],
     word_count: [:min, :max],
-    is_url: [],
-    is_email: [],
     levenshtein: [:value, :max_distance]
   }
 

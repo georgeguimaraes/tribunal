@@ -10,19 +10,18 @@ defmodule Tribunal.Assertions.Deterministic do
 
   ## Assertion Types
 
-  - `:contains` - Output contains substring(s)
+  - `:contains` - Output contains a single substring
   - `:not_contains` - Output does not contain substring(s)
   - `:contains_any` - Output contains at least one of the substrings
   - `:contains_all` - Output contains all substrings
   - `:regex` - Output matches regex pattern
   - `:is_json` - Output is valid JSON
-  - `:max_tokens` - Output is under token limit (approximated by words)
   - `:latency_ms` - Response was within time limit
 
   ## Examples
 
       evaluate(:contains, "Hello world", value: "world")
-      #=> {:pass, %{matched: "world"}}
+      #=> {:pass, %{matched: ["world"]}}
 
       evaluate(:regex, "Price: $29.99", value: ~r/\\$\\d+\\.\\d{2}/)
       #=> {:pass, %{matched: "$29.99"}}
@@ -33,12 +32,11 @@ defmodule Tribunal.Assertions.Deterministic do
   def evaluate(type, output, opts \\ [])
 
   def evaluate(:contains, output, opts) do
-    values = List.wrap(opts[:value] || opts[:values])
-
-    if values == [] do
-      {:error, "contains requires :value or :values"}
+    if is_binary(opts[:value]) and not Keyword.has_key?(opts, :values) do
+      evaluate_contains(output, [opts[:value]])
     else
-      evaluate_contains(output, values)
+      {:error,
+       "contains requires a single string :value; use contains_all or contains_any for lists"}
     end
   end
 
@@ -74,7 +72,7 @@ defmodule Tribunal.Assertions.Deterministic do
     if values == [] do
       {:error, "contains_all requires :value or :values"}
     else
-      evaluate_contains_all(output, values)
+      evaluate_contains(output, values)
     end
   end
 
@@ -97,26 +95,6 @@ defmodule Tribunal.Assertions.Deterministic do
     case JSON.decode(output) do
       {:ok, parsed} -> {:pass, %{parsed: parsed}}
       {:error, _} -> {:fail, %{reason: "Invalid JSON"}}
-    end
-  end
-
-  def evaluate(:max_tokens, output, opts) do
-    max = opts[:value] || opts[:max] || 500
-
-    # Approximate: 1 token ~= 0.75 words ~= 4 chars
-    # Using word count as a reasonable approximation
-    word_count = output |> String.split(~r/\s+/) |> length()
-    approx_tokens = ceil(word_count / 0.75)
-
-    if approx_tokens <= max do
-      {:pass, %{approx_tokens: approx_tokens, max: max}}
-    else
-      {:fail,
-       %{
-         approx_tokens: approx_tokens,
-         max: max,
-         reason: "Output ~#{approx_tokens} tokens exceeds max #{max}"
-       }}
     end
   end
 
@@ -211,26 +189,6 @@ defmodule Tribunal.Assertions.Deterministic do
     end
   end
 
-  def evaluate(:is_url, output, _opts) do
-    url = String.trim(output)
-
-    if Regex.match?(~r/^https?:\/\/[^\s]+$/, url) do
-      {:pass, %{url: url}}
-    else
-      {:fail, %{reason: "Output is not a valid URL"}}
-    end
-  end
-
-  def evaluate(:is_email, output, _opts) do
-    email = String.trim(output)
-
-    if Regex.match?(~r/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, email) do
-      {:pass, %{email: email}}
-    else
-      {:fail, %{reason: "Output is not a valid email"}}
-    end
-  end
-
   def evaluate(:levenshtein, output, opts) do
     target = opts[:value]
     max_distance = opts[:max_distance] || 3
@@ -269,8 +227,6 @@ defmodule Tribunal.Assertions.Deterministic do
       {:fail, %{found: found, reason: "Output contains forbidden: #{inspect(found)}"}}
     end
   end
-
-  defp evaluate_contains_all(output, values), do: evaluate_contains(output, values)
 
   # Levenshtein distance algorithm
   defp levenshtein_distance(s1, s2) do

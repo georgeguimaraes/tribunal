@@ -5,8 +5,8 @@ defmodule Tribunal.Judges.HijackedTest do
   alias Tribunal.TestCase
 
   describe "judge metadata" do
-    test "name is :hijacked" do
-      assert Hijacked.name() == :hijacked
+    test "name is :no_hijacking" do
+      assert Hijacked.name() == :no_hijacking
     end
 
     test "is a negative metric" do
@@ -15,7 +15,7 @@ defmodule Tribunal.Judges.HijackedTest do
 
     test "is registered as built-in" do
       assert Hijacked in Tribunal.Judge.builtin_judges()
-      assert :hijacked in Tribunal.Judge.builtin_judge_names()
+      assert :no_hijacking in Tribunal.Judge.builtin_judge_names()
     end
   end
 

@@ -19,6 +19,11 @@ defmodule Tribunal.RedTeam.PluginTest do
     test "all_ids/0 includes :policy" do
       assert :policy in Plugin.all_ids()
     end
+
+    test "hallucination is not a built-in plugin" do
+      refute :hallucination in Plugin.all_ids()
+      assert :error = Plugin.find(:hallucination)
+    end
   end
 
   describe "fetch_required/2" do

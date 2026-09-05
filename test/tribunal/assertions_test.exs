@@ -33,9 +33,28 @@ defmodule Tribunal.AssertionsTest do
       test_case = %TestCase{input: "test", actual_output: "short"}
 
       assert {:error, reason} =
-               Assertions.evaluate(:max_tokens, test_case, actual_output: 1)
+               Assertions.evaluate(:contains, test_case, actual_output: 1)
 
-      assert reason =~ "Unknown options for max_tokens"
+      assert reason =~ "Unknown options for contains"
+    end
+
+    test "contains rejects the plural values option even with a scalar value" do
+      test_case = %TestCase{actual_output: "hello world"}
+
+      assert {:error, reason} =
+               Assertions.evaluate(:contains, test_case, value: "hello", values: ["world"])
+
+      assert reason =~ "Unknown options for contains"
+      assert reason =~ "values"
+    end
+
+    test "removed URL, email, and jailbreak checks fail as unknown assertions" do
+      test_case = %TestCase{actual_output: "https://example.com"}
+
+      for type <- [:is_url, :is_email, :no_jailbreak] do
+        assert {:error, reason} = Assertions.evaluate(type, test_case)
+        assert reason =~ "Unknown assertion"
+      end
     end
 
     test "accepts documented judge context options" do
@@ -201,7 +220,7 @@ defmodule Tribunal.AssertionsTest do
       assert :not_contains in available
       assert :regex in available
       assert :is_json in available
-      assert :max_tokens in available
+      refute :max_tokens in available
       assert :latency_ms in available
       # New assertions
       assert :starts_with in available
@@ -210,22 +229,48 @@ defmodule Tribunal.AssertionsTest do
       assert :min_length in available
       assert :max_length in available
       assert :word_count in available
-      assert :is_url in available
-      assert :is_email in available
+      refute :is_url in available
+      refute :is_email in available
       assert :levenshtein in available
     end
 
     test "includes judge assertions when req_llm loaded" do
       available = Assertions.available()
 
+      passing_safety_assertions = [
+        :no_bias,
+        :no_toxicity,
+        :no_harmful_content,
+        :no_pii,
+        :no_policy_violation,
+        :no_hijacking,
+        :no_prompt_extraction,
+        :no_excessive_agency,
+        :no_imitation
+      ]
+
+      retired_negative_names = [
+        :bias,
+        :toxicity,
+        :harmful,
+        :jailbreak,
+        :no_jailbreak,
+        :pii,
+        :policy_violation,
+        :hijacked,
+        :prompt_extracted,
+        :excessive_agency,
+        :imitation
+      ]
+
       # req_llm is in deps
       assert :faithful in available
       assert :relevant in available
-      assert :hallucination in available
       assert :correctness in available
-      assert :bias in available
-      assert :toxicity in available
-      assert :harmful in available
+      assert Enum.all?(passing_safety_assertions, &(&1 in available))
+      refute Enum.any?(retired_negative_names, &(&1 in available))
+      refute :hallucination in available
+      refute :hallucinated in available
     end
 
     test "includes embedding assertions when alike loaded" do

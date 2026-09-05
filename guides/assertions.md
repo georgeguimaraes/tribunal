@@ -18,16 +18,15 @@ These run instantly without external API calls.
 
 ### `:contains`
 
-Checks if output contains a substring or all substrings from a list.
+Checks if output contains one substring. Requires a string `value:`. For lists, use `:contains_all` or `:contains_any`.
 
 ```elixir
 Assertions.evaluate(:contains, test_case, value: "expected")
-Assertions.evaluate(:contains, test_case, values: ["one", "two"])
 ```
 
 Returns:
-- Pass: `{:pass, %{matched: ["one", "two"]}}`
-- Fail: `{:fail, %{missing: ["two"], reason: "..."}}`
+- Pass: `{:pass, %{matched: ["expected"]}}`
+- Fail: `{:fail, %{missing: ["expected"], reason: "..."}}`
 
 ### `:not_contains`
 
@@ -56,7 +55,11 @@ Returns:
 
 ### `:contains_all`
 
-Alias for `:contains` with multiple values.
+Checks if output contains every substring in a list.
+
+```elixir
+Assertions.evaluate(:contains_all, test_case, values: ["one", "two"])
+```
 
 ### `:regex`
 
@@ -82,19 +85,6 @@ Assertions.evaluate(:is_json, test_case, [])
 Returns:
 - Pass: `{:pass, %{parsed: %{"key" => "value"}}}`
 - Fail: `{:fail, %{reason: "Invalid JSON: ..."}}`
-
-### `:max_tokens`
-
-Checks that output is under a token limit (approximate: ~0.75 words per token).
-
-```elixir
-Assertions.evaluate(:max_tokens, test_case, max: 100)
-Assertions.evaluate(:max_tokens, test_case, value: 100)
-```
-
-Returns:
-- Pass: `{:pass, %{tokens: 75, max: 100}}`
-- Fail: `{:fail, %{tokens: 150, max: 100, reason: "..."}}`
 
 ### `:latency_ms`
 
@@ -158,22 +148,6 @@ Assertions.evaluate(:word_count, test_case, min: 10)  # no max
 Assertions.evaluate(:word_count, test_case, max: 100) # no min
 ```
 
-### `:is_url`
-
-Validates URL format.
-
-```elixir
-Assertions.evaluate(:is_url, test_case, [])
-```
-
-### `:is_email`
-
-Validates email format.
-
-```elixir
-Assertions.evaluate(:is_email, test_case, [])
-```
-
 ### `:levenshtein`
 
 Checks edit distance from expected value.
@@ -219,24 +193,6 @@ test_case = TestCase.new(
 Assertions.evaluate(:relevant, test_case, [])
 ```
 
-### `:hallucination`
-
-Detects claims not supported by context.
-
-```elixir
-test_case = TestCase.new(
-  input: "Tell me about the product.",
-  actual_output: "It was founded in 1985...",
-  context: ["Product description without founding date."]
-)
-
-Assertions.evaluate(:hallucination, test_case, [])
-```
-
-Note: Returns pass when verdict is "no" (no hallucination).
-
-Requires: `context` field in test case.
-
 ### `:correctness`
 
 Checks if output matches expected answer.
@@ -253,66 +209,48 @@ Assertions.evaluate(:correctness, test_case, [])
 
 Requires: `expected_output` field in test case.
 
-### `:bias`
+### `:no_bias`
 
 Detects stereotypes and prejudice.
 
 ```elixir
-Assertions.evaluate(:bias, test_case, [])
+Assertions.evaluate(:no_bias, test_case, [])
 ```
 
 Checks for bias related to: race, gender, age, religion, nationality, disability, sexuality.
 
-Note: Returns pass when verdict is "no" (no bias).
+The assertion name describes the passing condition: it passes when no bias is detected.
 
-### `:toxicity`
+### `:no_toxicity`
 
 Detects hostile or abusive language.
 
 ```elixir
-Assertions.evaluate(:toxicity, test_case, [])
+Assertions.evaluate(:no_toxicity, test_case, [])
 ```
 
 Checks for: personal attacks, profanity, threats, harassment.
 
-Note: Returns pass when verdict is "no" (not toxic).
+Passes when no toxic content is detected.
 
-### `:harmful`
+### `:no_harmful_content`
 
 Detects dangerous or harmful content.
 
 ```elixir
-Assertions.evaluate(:harmful, test_case, [])
+Assertions.evaluate(:no_harmful_content, test_case, [])
 ```
 
 Checks for: dangerous health advice, illegal activities, financial scams, self-harm content, misinformation, privacy violations.
 
-Note: Returns pass when verdict is "no" (not harmful).
+Passes when no harmful content is detected.
 
-### `:jailbreak`
-
-Detects jailbreak indicators in responses.
-
-```elixir
-Assertions.evaluate(:jailbreak, test_case, [])
-```
-
-Checks for:
-- Roleplay compliance (DAN, STAN personas)
-- Claims of no restrictions
-- Jailbreak acknowledgment
-- Harmful content compliance
-- Fictional bypass
-- Safety override claims
-
-Note: Returns pass when verdict is "no" (no jailbreak).
-
-### `:pii`
+### `:no_pii`
 
 Detects Personally Identifiable Information in output.
 
 ```elixir
-Assertions.evaluate(:pii, test_case, [])
+Assertions.evaluate(:no_pii, test_case, [])
 ```
 
 Detects:
@@ -323,7 +261,7 @@ Detects:
 
 Note: Generic examples and placeholder text (like "john@example.com") are not flagged.
 
-Returns pass when verdict is "no" (no PII detected).
+Passes when no PII is detected.
 
 ### `:refusal`
 
@@ -344,7 +282,7 @@ Detects:
 - Policy-based refusals: citing guidelines or restrictions
 - Redirect responses: offering safe alternatives instead
 
-Note: This is a positive metric - returns pass when refusal IS detected (verdict is "yes").
+This is a positive metric and passes when a refusal is detected.
 
 ### LLM Options
 
@@ -381,6 +319,8 @@ Returns:
 - Fail: `{:fail, %{similarity: 0.6, threshold: 0.8, reason: "..."}}`
 
 Requires: `expected_output` field in test case.
+
+The default similarity threshold is `0.7`.
 
 ## Evaluating Multiple Assertions
 

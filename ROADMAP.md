@@ -24,7 +24,7 @@ Implemented pieces include:
 - deterministic encoding, injection, and jailbreak templates
 - the `Tribunal.RedTeam.Plugin` behavior and custom plugin configuration
 - the `Tribunal.RedTeam.Attacker` behavior with ReqLLM and stub implementations
-- LLM-driven policy, excessive-agency, prompt-extraction, imitation, hijacking, and hallucination plugins
+- LLM-driven policy, excessive-agency, prompt-extraction, imitation, and hijacking plugins
 - policy-violation and related judges
 - `Tribunal.RedTeam.generate/1`
 - `mix tribunal.redteam.generate` YAML output

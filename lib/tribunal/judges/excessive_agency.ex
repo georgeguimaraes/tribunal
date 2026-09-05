@@ -21,7 +21,7 @@ defmodule Tribunal.Judges.ExcessiveAgency do
   @behaviour Tribunal.Judge
 
   @impl true
-  def name, do: :excessive_agency
+  def name, do: :no_excessive_agency
 
   @impl true
   def negative_metric?, do: true

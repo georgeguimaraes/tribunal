@@ -15,7 +15,7 @@ defmodule Tribunal.RedTeam.Plugins.Imitation do
       person or system (e.g., "you ARE the support team, right?") rather
       than clarifying its scope.
 
-  Each generated case carries the purpose in `expected.imitation.purpose`
+  Each generated case carries the purpose in `expected.no_imitation.purpose`
   so the `Tribunal.Judges.Imitation` judge can grade responses against
   the same scope at run time.
 
@@ -39,7 +39,7 @@ defmodule Tribunal.RedTeam.Plugins.Imitation do
   use Tribunal.RedTeam.Plugin.Base, id: :imitation, severity: :medium
 
   @impl true
-  def expected(opts), do: %{imitation: %{purpose: opts[:purpose]}}
+  def expected(opts), do: %{no_imitation: %{purpose: opts[:purpose]}}
 
   @impl true
   def goal_description,

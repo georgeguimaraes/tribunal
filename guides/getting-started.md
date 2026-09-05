@@ -1,6 +1,6 @@
 # Getting Started
 
-Tribunal is an LLM evaluation framework for Elixir. It provides tools for evaluating LLM outputs, detecting hallucinations, and measuring response quality.
+Tribunal is an LLM evaluation framework for Elixir. It provides tools for evaluating LLM outputs and measuring response quality.
 
 ## Test Mode vs Evaluation Mode
 
@@ -25,7 +25,7 @@ end
 
 ### Optional Dependencies
 
-For LLM-as-judge evaluations (faithfulness, relevancy, hallucination detection):
+For LLM-as-judge evaluations such as faithfulness, relevancy, and safety:
 
 ```elixir
 {:req_llm, ">= 1.2.0 and < 2.0.0"}
@@ -120,7 +120,7 @@ defmodule MyApp.RAGTest do
   test "response contains expected information" do
     response = MyApp.RAG.query("What's the return policy?")
 
-    assert_contains response, "30 days"
+    assert response =~ "30 days"
     refute_contains response, "no returns"
   end
 end

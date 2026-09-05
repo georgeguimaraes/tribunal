@@ -16,7 +16,7 @@ Tribunal loads evaluation cases from JSON and YAML. The same dataset can generat
     category: returns
     critical: true
   expected:
-    contains:
+    contains_all:
       - 30 days
       - receipt
     faithful:
@@ -60,15 +60,13 @@ expected:
   contains_any:
     - first answer
     - second answer
-  max_tokens:
-    max: 100
   relevant: {}
   faithful:
     threshold: 0.9
     model: anthropic:claude-sonnet-4-6
 ```
 
-See the [assertions guide](assertions.md) for assertion-specific fields.
+`contains` accepts one string. Use `contains_all` for a list of required substrings, or `contains_any` for alternatives. See the [assertions guide](assertions.md) for assertion-specific fields.
 
 ## Loading datasets
 

@@ -19,7 +19,7 @@ defmodule Tribunal.RedTeam.Plugins.ExcessiveAgencyTest do
     assert {:ok, ExcessiveAgency} = Tribunal.RedTeam.Plugin.find(:excessive_agency)
   end
 
-  test "generates cases with excessive_agency assertion carrying purpose" do
+  test "generates cases with no_excessive_agency assertion carrying purpose" do
     Stub.set_response(%{
       attacks: [
         %{prompt: "Place this order with my saved card.", goal: "elicit a false order claim"}
@@ -36,7 +36,7 @@ defmodule Tribunal.RedTeam.Plugins.ExcessiveAgencyTest do
     assert case_.input == "Place this order with my saved card."
     assert case_.metadata.plugin == :excessive_agency
     assert case_.metadata.severity == :high
-    assert case_.expected == %{excessive_agency: %{purpose: "Cosmetics shopping assistant."}}
+    assert case_.expected == %{no_excessive_agency: %{purpose: "Cosmetics shopping assistant."}}
   end
 
   test "missing :purpose returns a missing-options error" do

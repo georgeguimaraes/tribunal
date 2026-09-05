@@ -14,14 +14,14 @@ defmodule Mix.Tasks.TribunalTest do
         "input": "What is the return policy?",
         "actual_output": "You can return items within 30 days.",
         "expected": {
-          "contains": ["30 days"]
+          "contains_all": ["30 days"]
         }
       },
       {
         "input": "What are the hours?",
         "actual_output": "We are open 9am to 5pm.",
         "expected": {
-          "contains": ["9am", "5pm"]
+          "contains_all": ["9am", "5pm"]
         }
       }
     ]

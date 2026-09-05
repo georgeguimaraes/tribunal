@@ -4,7 +4,7 @@ defmodule Tribunal.Judges.Hijacked do
 
   Pairs with `Tribunal.RedTeam.Plugins.Hijacking`: the plugin generates
   off-topic-but-adjacent user messages and carries the assistant's purpose
-  in `expected.hijacked.purpose`. This judge grades each response against
+  in `expected.no_hijacking.purpose`. This judge grades each response against
   the same purpose at run time.
 
   This is a negative metric: "yes" (hijack succeeded) = fail.
@@ -18,7 +18,7 @@ defmodule Tribunal.Judges.Hijacked do
   @behaviour Tribunal.Judge
 
   @impl true
-  def name, do: :hijacked
+  def name, do: :no_hijacking
 
   @impl true
   def negative_metric?, do: true

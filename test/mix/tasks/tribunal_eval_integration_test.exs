@@ -12,7 +12,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     File.write!(
       path,
-      ~s([{"input":"hello","expected":{"contains":["hello"]}}])
+      ~s([{"input":"hello","expected":{"contains_all":["hello"]}}])
     )
 
     Mix.Task.reenable("tribunal.eval")
@@ -27,7 +27,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     assert output =~ "Failed:    0"
     assert output =~ "Errors:    1"
-    assert output =~ "contains"
+    assert output =~ "contains_all"
     assert output =~ "evaluation: Missing actual output"
     assert output =~ "FAILED"
   end
@@ -37,7 +37,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     File.write!(
       path,
-      ~s([{"input":"hello","expected":{"contains":["hello"]}}])
+      ~s([{"input":"hello","expected":{"contains_all":["hello"]}}])
     )
 
     Mix.Task.reenable("tribunal.eval")
@@ -65,7 +65,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     path = Path.join(tmp_dir, "missing_output.json")
     report_path = Path.join(tmp_dir, "report.json")
 
-    File.write!(path, ~s([{"input":"hello","expected":{"contains":["hello"]}}]))
+    File.write!(path, ~s([{"input":"hello","expected":{"contains_all":["hello"]}}]))
 
     Mix.Task.reenable("tribunal.eval")
     Mix.Task.reenable("app.start")
@@ -87,7 +87,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     File.write!(
       path,
-      ~s([{"input":"hello","expected":{"contains":["hello"]}}])
+      ~s([{"input":"hello","expected":{"contains_all":["hello"]}}])
     )
 
     Mix.Task.reenable("tribunal.eval")
@@ -113,7 +113,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
   } do
     path = Path.join(tmp_dir, "sampled.json")
     report_path = Path.join(tmp_dir, "sampled_report.json")
-    File.write!(path, ~s([{"input":"hello","expected":{"contains":["hello"]}}]))
+    File.write!(path, ~s([{"input":"hello","expected":{"contains_all":["hello"]}}]))
     counter = start_supervised!({Agent, fn -> 0 end})
     Process.register(counter, Tribunal.SampledProviderCounter)
 
@@ -154,7 +154,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
         %{
           "input" => %{"query" => "hello", "account_id" => 42},
           "evaluation_input" => "hello",
-          "expected" => %{"contains" => ["hello"]}
+          "expected" => %{"contains_all" => ["hello"]}
         }
       ])
     )
@@ -188,7 +188,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
           "input" => "hello",
           "actual_output" => "hello",
           "metadata" => %{"kind" => "core"},
-          "expected" => %{"contains" => ["hello"]}
+          "expected" => %{"contains_all" => ["hello"]}
         }
       ])
     )
@@ -226,7 +226,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     File.write!(
       dataset,
-      ~s([{"input":"hello","actual_output":"hello","expected":{"contains":["hello"]}}])
+      ~s([{"input":"hello","actual_output":"hello","expected":{"contains_all":["hello"]}}])
     )
 
     File.write!(policy, "version: 1\ndatasets: [missing.json]\n")
@@ -241,7 +241,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
   test "rejects invalid group metadata before provider invocation", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "missing_group.json")
-    File.write!(path, ~s([{"input":"hello","expected":{"contains":["hello"]}}]))
+    File.write!(path, ~s([{"input":"hello","expected":{"contains_all":["hello"]}}]))
     counter = start_supervised!({Agent, fn -> 0 end})
     Process.register(counter, Tribunal.GroupProviderCounter)
 
@@ -271,7 +271,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     File.write!(
       path,
-      ~s([{"input":"hello","metadata":{"kind":"core"},"expected":{"contains":["hello"]}}])
+      ~s([{"input":"hello","metadata":{"kind":"core"},"expected":{"contains_all":["hello"]}}])
     )
 
     Mix.Task.reenable("tribunal.eval")
@@ -330,7 +330,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     File.write!(
       path,
-      ~s([{"input":"hello","actual_output":"hello","expected":{"contains":["hello"]}}])
+      ~s([{"input":"hello","actual_output":"hello","expected":{"contains_all":["hello"]}}])
     )
 
     Mix.Task.reenable("tribunal.eval")
@@ -354,8 +354,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     File.write!(
       path,
       JSON.encode!([
-        %{"input" => "kill", "expected" => %{"contains" => ["ok"]}},
-        %{"input" => "pass", "expected" => %{"contains" => ["ok"]}}
+        %{"input" => "kill", "expected" => %{"contains_all" => ["ok"]}},
+        %{"input" => "pass", "expected" => %{"contains_all" => ["ok"]}}
       ])
     )
 
@@ -374,7 +374,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     File.write!(
       path,
       JSON.encode!([
-        %{"input" => "kill", "expected" => %{"contains" => ["ok"]}}
+        %{"input" => "kill", "expected" => %{"contains_all" => ["ok"]}}
       ])
     )
 
@@ -406,8 +406,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     File.write!(
       path,
       JSON.encode!([
-        %{"input" => "slow", "expected" => %{"contains" => ["ok"]}},
-        %{"input" => "pass", "expected" => %{"contains" => ["ok"]}}
+        %{"input" => "slow", "expected" => %{"contains_all" => ["ok"]}},
+        %{"input" => "pass", "expected" => %{"contains_all" => ["ok"]}}
       ])
     )
 

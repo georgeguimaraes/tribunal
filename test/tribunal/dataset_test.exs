@@ -15,7 +15,7 @@ defmodule Tribunal.DatasetTest do
         "input": "What is the return policy?",
         "context": "Returns within 30 days.",
         "expected": {
-          "contains": ["30 days"]
+          "contains_all": ["30 days"]
         }
       },
       {
@@ -33,7 +33,7 @@ defmodule Tribunal.DatasetTest do
     - input: What is the return policy?
       context: Returns within 30 days.
       expected:
-        contains:
+        contains_all:
           - 30 days
 
     - input: Do you ship internationally?
@@ -145,6 +145,41 @@ defmodule Tribunal.DatasetTest do
   end
 
   describe "load_with_assertions/1" do
+    test "list contains fails evaluation while contains_all evaluates every substring", %{
+      fixtures_path: fixtures_path
+    } do
+      for extension <- ["json", "yaml"] do
+        path = Path.join(fixtures_path, "contains_contract.#{extension}")
+
+        content =
+          if extension == "json" do
+            ~s([{"input":"hello","expected":{"contains":["hello","world"],"contains_all":["hello","world"]}}])
+          else
+            """
+            - input: hello
+              expected:
+                contains: [hello, world]
+                contains_all: [hello, world]
+            """
+          end
+
+        File.write!(path, content)
+        assert {:ok, [{test_case, assertions}]} = Dataset.load_with_assertions(path)
+
+        results =
+          Tribunal.Assertions.evaluate_all(assertions, %{test_case | actual_output: "hello world"})
+
+        assert {:error, reason} = results[:contains]
+        assert reason =~ "single string"
+        assert {:pass, _} = results[:contains_all]
+
+        missing =
+          Tribunal.Assertions.evaluate_all(assertions, %{test_case | actual_output: "hello"})
+
+        assert {:fail, %{missing: ["world"]}} = missing[:contains_all]
+      end
+    end
+
     test "loads structured input and judge-facing evaluation text", %{
       fixtures_path: fixtures_path
     } do
@@ -175,7 +210,7 @@ defmodule Tribunal.DatasetTest do
 
       {tc1, assertions1} = hd(cases)
       assert tc1.input == "What is the return policy?"
-      assert {:contains, [value: ["30 days"]]} in assertions1
+      assert {:contains_all, [value: ["30 days"]]} in assertions1
     end
 
     test "extracts multiple assertions", %{fixtures_path: fixtures_path} do

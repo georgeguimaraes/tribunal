@@ -39,9 +39,10 @@ defmodule Tribunal.Judge do
         MyApp.Judges.Compliance
       ]
 
-  Then use them like built-in assertions:
-
-      assert_judge :brand_voice, response, query: input
+  The value returned by `name/0` becomes an assertion type for datasets and
+  `Tribunal.Assertions.evaluate/3`. Name the condition that makes the assertion
+  pass. For example, a detector for policy violations should expose
+  `:no_policy_violation` because a compliant response passes.
   """
 
   alias Tribunal.TestCase
@@ -49,9 +50,8 @@ defmodule Tribunal.Judge do
   @doc """
   Returns the atom name for this judge.
 
-  This name is used to invoke the judge in assertions:
-
-      assert_judge :my_judge_name, response, opts
+  This name is used as the assertion type in datasets and
+  `Tribunal.Assertions.evaluate/3`. It should describe the passing condition.
   """
   @callback name() :: atom()
 
@@ -101,20 +101,17 @@ defmodule Tribunal.Judge do
   @builtin_judges [
     Tribunal.Judges.Faithful,
     Tribunal.Judges.Relevant,
-    Tribunal.Judges.Hallucination,
     Tribunal.Judges.Correctness,
     Tribunal.Judges.Bias,
     Tribunal.Judges.Toxicity,
     Tribunal.Judges.Harmful,
-    Tribunal.Judges.Jailbreak,
     Tribunal.Judges.PII,
     Tribunal.Judges.Refusal,
     Tribunal.Judges.PolicyViolation,
     Tribunal.Judges.Hijacked,
     Tribunal.Judges.PromptExtracted,
     Tribunal.Judges.ExcessiveAgency,
-    Tribunal.Judges.Imitation,
-    Tribunal.Judges.Hallucinated
+    Tribunal.Judges.Imitation
   ]
 
   @doc """

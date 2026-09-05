@@ -5,10 +5,10 @@ defmodule Tribunal.Judges.ExcessiveAgencyTest do
   alias Tribunal.TestCase
 
   test "name and registration" do
-    assert ExcessiveAgency.name() == :excessive_agency
+    assert ExcessiveAgency.name() == :no_excessive_agency
     assert ExcessiveAgency.negative_metric?()
     assert ExcessiveAgency in Tribunal.Judge.builtin_judges()
-    assert :excessive_agency in Tribunal.Judge.builtin_judge_names()
+    assert :no_excessive_agency in Tribunal.Judge.builtin_judge_names()
   end
 
   test "prompt embeds purpose, input, and response" do
