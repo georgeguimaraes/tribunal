@@ -55,7 +55,7 @@ defmodule Tribunal.RedTeam.Plugins.HijackingTest do
       assert case_.metadata.purpose == "Cosmetics shopping assistant"
     end
 
-    test "expected.hijacked carries the purpose text" do
+    test "expected.no_hijacking carries the purpose text" do
       Stub.set_response(%{attacks: [%{prompt: "p", goal: "g"}]})
 
       {:ok, [case_]} =
@@ -65,7 +65,7 @@ defmodule Tribunal.RedTeam.Plugins.HijackingTest do
           attacker: Stub
         )
 
-      assert case_.expected == %{hijacked: %{purpose: "An assistant that does X."}}
+      assert case_.expected == %{no_hijacking: %{purpose: "An assistant that does X."}}
     end
 
     test "missing :purpose returns a missing-options error" do

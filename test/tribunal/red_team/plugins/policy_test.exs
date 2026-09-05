@@ -62,7 +62,7 @@ defmodule Tribunal.RedTeam.Plugins.PolicyTest do
       assert case_.metadata.generation.attacker == "Tribunal.RedTeam.Attacker.Stub"
     end
 
-    test "expected.policy_violation carries the policy text" do
+    test "expected.no_policy_violation carries the policy text" do
       Stub.set_response(%{attacks: [%{prompt: "p", goal: "g"}]})
 
       {:ok, [case_]} =
@@ -73,7 +73,7 @@ defmodule Tribunal.RedTeam.Plugins.PolicyTest do
           attacker: Stub
         )
 
-      assert case_.expected == %{policy_violation: %{policy: "Hard rule: do nothing."}}
+      assert case_.expected == %{no_policy_violation: %{policy: "Hard rule: do nothing."}}
     end
 
     test "accepts string-keyed attacker responses too" do

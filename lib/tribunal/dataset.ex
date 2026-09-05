@@ -18,7 +18,7 @@ defmodule Tribunal.Dataset do
           "input": "What's the return policy?",
           "context": "Returns accepted within 30 days.",
           "expected": {
-            "contains": ["30 days"],
+            "contains": "30 days",
             "faithful": {"threshold": 0.8}
           }
         }
@@ -29,8 +29,7 @@ defmodule Tribunal.Dataset do
       - input: What's the return policy?
         context: Returns accepted within 30 days.
         expected:
-          contains:
-            - 30 days
+          contains: 30 days
           faithful:
             threshold: 0.8
   """

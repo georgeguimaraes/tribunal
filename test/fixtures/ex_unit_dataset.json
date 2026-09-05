@@ -2,7 +2,7 @@
   {
     "input": "What is the return window?",
     "expected": {
-      "contains": ["30 days"]
+      "contains_all": ["30 days"]
     }
   }
 ]

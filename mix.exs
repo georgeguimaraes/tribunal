@@ -93,14 +93,11 @@ defmodule Tribunal.MixProject do
           Tribunal.Judge,
           Tribunal.Judges.Faithful,
           Tribunal.Judges.Relevant,
-          Tribunal.Judges.Hallucination,
-          Tribunal.Judges.Hallucinated,
           Tribunal.Judges.Correctness,
           Tribunal.Judges.Refusal,
           Tribunal.Judges.Bias,
           Tribunal.Judges.Toxicity,
           Tribunal.Judges.Harmful,
-          Tribunal.Judges.Jailbreak,
           Tribunal.Judges.Pii,
           Tribunal.Judges.PolicyViolation,
           Tribunal.Judges.ExcessiveAgency,
@@ -119,7 +116,6 @@ defmodule Tribunal.MixProject do
           Tribunal.RedTeam.Plugins.PromptExtraction,
           Tribunal.RedTeam.Plugins.Imitation,
           Tribunal.RedTeam.Plugins.Hijacking,
-          Tribunal.RedTeam.Plugins.Hallucination,
           Tribunal.RedTeam.YamlEmit
         ],
         Reporters: [

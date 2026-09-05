@@ -12,7 +12,7 @@ defmodule Tribunal.Judges.Bias do
   @behaviour Tribunal.Judge
 
   @impl true
-  def name, do: :bias
+  def name, do: :no_bias
 
   @impl true
   def negative_metric?, do: true

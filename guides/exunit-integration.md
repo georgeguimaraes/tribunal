@@ -10,7 +10,7 @@ defmodule MyApp.LLMTest do
   test "response is grounded" do
     response = MyApp.RAG.query("When can I return an item?")
 
-    assert_contains response, "30 days"
+    assert response =~ "30 days"
     assert_faithful response,
       context: ["Returns are accepted within 30 days."],
       threshold: 0.85
@@ -34,7 +34,7 @@ test "answer is consistently safe" do
     end,
       input: input,
       evaluation_input: input["message"],
-      expected: [pii: [], policy_violation: [policy: @privacy_policy]],
+      expected: [no_pii: [], no_policy_violation: [policy: @privacy_policy]],
       repeat: 5,
       pass_rule: :all
 
@@ -140,15 +140,16 @@ String inputs are used directly. Structured inputs without `evaluation_input:` a
 Direct macros grade an already-computed output once. They do not repeat application execution:
 
 ```elixir
-assert_contains response, "receipt"
-assert_regex response, ~r/\b30 days\b/
+assert response =~ "receipt"
+assert response == expected_response
+assert response =~ ~r/\b30 days\b/
 assert_json response
-assert_max_tokens response, 150
 assert_faithful response, context: context, threshold: 0.85
 assert_relevant response, query: question
-refute_hallucination response, context: context
 refute_pii response, query: question
 assert_similar response, expected: expected, threshold: 0.8
 ```
 
 LLM judges require the optional `req_llm` dependency. Similarity requires the optional `alike` dependency. See the [assertions guide](assertions.md) and [LLM-as-judge guide](llm-as-judge.md) for the full option reference.
+
+Use native ExUnit for substring, regex, and exact equality checks: `assert output =~ substring`, `assert output =~ pattern`, and `assert output == expected`. Prefix and suffix checks use `assert String.starts_with?(output, prefix)` and `assert String.ends_with?(output, suffix)`. Length checks use `assert String.length(output) >= min` or `assert String.length(output) <= max`. Tribunal keeps the corresponding named assertions for datasets, where every check needs a serializable assertion name.

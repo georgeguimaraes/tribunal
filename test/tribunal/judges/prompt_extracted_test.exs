@@ -5,10 +5,10 @@ defmodule Tribunal.Judges.PromptExtractedTest do
   alias Tribunal.TestCase
 
   test "name and registration" do
-    assert PromptExtracted.name() == :prompt_extracted
+    assert PromptExtracted.name() == :no_prompt_extraction
     assert PromptExtracted.negative_metric?()
     assert PromptExtracted in Tribunal.Judge.builtin_judges()
-    assert :prompt_extracted in Tribunal.Judge.builtin_judge_names()
+    assert :no_prompt_extraction in Tribunal.Judge.builtin_judge_names()
   end
 
   test "prompt embeds purpose, input, and response" do

@@ -9,9 +9,12 @@ defmodule Tribunal.Assertions.DeterministicTest do
                Deterministic.evaluate(:contains, "Hello world", value: "world")
     end
 
-    test "passes with multiple values" do
-      assert {:pass, _} =
-               Deterministic.evaluate(:contains, "Hello world", values: ["Hello", "world"])
+    test "rejects list values and the plural values option" do
+      for opts <- [[value: ["Hello", "world"]], [values: ["Hello", "world"]]] do
+        assert {:error, reason} = Deterministic.evaluate(:contains, "Hello world", opts)
+        assert reason =~ "single string"
+        assert reason =~ "contains_all"
+      end
     end
 
     test "fails when substring missing" do
@@ -105,20 +108,6 @@ defmodule Tribunal.Assertions.DeterministicTest do
     test "fails with invalid JSON" do
       assert {:fail, %{reason: "Invalid JSON"}} =
                Deterministic.evaluate(:is_json, "not json", [])
-    end
-  end
-
-  describe "max_tokens" do
-    test "passes under limit" do
-      assert {:pass, _} =
-               Deterministic.evaluate(:max_tokens, "Short response", max: 100)
-    end
-
-    test "fails over limit" do
-      long_text = String.duplicate("word ", 200)
-
-      assert {:fail, details} = Deterministic.evaluate(:max_tokens, long_text, max: 50)
-      assert details.reason =~ "exceeds"
     end
   end
 
@@ -216,31 +205,6 @@ defmodule Tribunal.Assertions.DeterministicTest do
     test "fails when word count exceeds maximum" do
       assert {:fail, %{word_count: 5, max: 2}} =
                Deterministic.evaluate(:word_count, "one two three four five", max: 2)
-    end
-  end
-
-  describe "is_url" do
-    test "passes with valid URL" do
-      assert {:pass, %{url: "https://example.com"}} =
-               Deterministic.evaluate(:is_url, "https://example.com", [])
-    end
-
-    test "fails with invalid URL" do
-      assert {:fail, %{reason: reason}} =
-               Deterministic.evaluate(:is_url, "not a url at all", [])
-
-      assert reason =~ "not a valid URL"
-    end
-  end
-
-  describe "is_email" do
-    test "passes with valid email" do
-      assert {:pass, %{email: "test@example.com"}} =
-               Deterministic.evaluate(:is_email, "test@example.com", [])
-    end
-
-    test "fails with invalid email" do
-      assert {:fail, %{}} = Deterministic.evaluate(:is_email, "not-an-email", [])
     end
   end
 

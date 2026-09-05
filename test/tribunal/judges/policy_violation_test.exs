@@ -5,8 +5,8 @@ defmodule Tribunal.Judges.PolicyViolationTest do
   alias Tribunal.TestCase
 
   describe "judge metadata" do
-    test "name is :policy_violation" do
-      assert PolicyViolation.name() == :policy_violation
+    test "name is :no_policy_violation" do
+      assert PolicyViolation.name() == :no_policy_violation
     end
 
     test "is a negative metric" do
@@ -15,7 +15,7 @@ defmodule Tribunal.Judges.PolicyViolationTest do
 
     test "is registered as built-in" do
       assert PolicyViolation in Tribunal.Judge.builtin_judges()
-      assert :policy_violation in Tribunal.Judge.builtin_judge_names()
+      assert :no_policy_violation in Tribunal.Judge.builtin_judge_names()
     end
   end
 

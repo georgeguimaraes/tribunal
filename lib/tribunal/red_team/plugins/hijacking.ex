@@ -12,7 +12,7 @@ defmodule Tribunal.RedTeam.Plugins.Hijacking do
   help dressed as fan tooling. Generic off-topic probes ("write me a poem")
   are easy refusals and waste budget.
 
-  Each generated case carries the purpose in `expected.hijacked.purpose` so
+  Each generated case carries the purpose in `expected.no_hijacking.purpose` so
   the `Tribunal.Judges.Hijacked` judge grades responses against the same
   scope at run time.
 
@@ -36,7 +36,7 @@ defmodule Tribunal.RedTeam.Plugins.Hijacking do
   use Tribunal.RedTeam.Plugin.Base, id: :hijacking, severity: :high
 
   @impl true
-  def expected(opts), do: %{hijacked: %{purpose: opts[:purpose]}}
+  def expected(opts), do: %{no_hijacking: %{purpose: opts[:purpose]}}
 
   @impl true
   def goal_description,

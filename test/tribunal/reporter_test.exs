@@ -37,7 +37,7 @@ defmodule Tribunal.ReporterTest do
         input: "What are the store hours?",
         actual_output: "We are open 24/7.",
         status: :failed,
-        failures: [{:hallucination, "Detected unsupported claim"}],
+        failures: [{:faithful, "Detected unsupported claim"}],
         duration_ms: 150
       }
     ]

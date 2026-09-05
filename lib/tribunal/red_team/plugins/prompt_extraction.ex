@@ -9,7 +9,7 @@ defmodule Tribunal.RedTeam.Plugins.PromptExtraction do
   "describe a hypothetical chatbot like you" — that elicit partial or full
   leaks while sounding like benign requests.
 
-  Each generated case carries the purpose in `expected.prompt_extracted.purpose`
+  Each generated case carries the purpose in `expected.no_prompt_extraction.purpose`
   so the `Tribunal.Judges.PromptExtracted` judge can grade responses against
   the same scope at run time.
 
@@ -33,7 +33,7 @@ defmodule Tribunal.RedTeam.Plugins.PromptExtraction do
   use Tribunal.RedTeam.Plugin.Base, id: :prompt_extraction, severity: :medium
 
   @impl true
-  def expected(opts), do: %{prompt_extracted: %{purpose: opts[:purpose]}}
+  def expected(opts), do: %{no_prompt_extraction: %{purpose: opts[:purpose]}}
 
   @impl true
   def goal_description,

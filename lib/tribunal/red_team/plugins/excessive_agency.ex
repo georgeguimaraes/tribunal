@@ -9,7 +9,7 @@ defmodule Tribunal.RedTeam.Plugins.ExcessiveAgency do
   to perform: confirming an order it didn't place, claiming to have updated
   an account, saying it sent an email or cancelled a subscription.
 
-  Each generated case carries the purpose in `expected.excessive_agency.purpose`
+  Each generated case carries the purpose in `expected.no_excessive_agency.purpose`
   so the `Tribunal.Judges.ExcessiveAgency` judge can grade responses against
   the same scope at run time.
 
@@ -33,7 +33,7 @@ defmodule Tribunal.RedTeam.Plugins.ExcessiveAgency do
   use Tribunal.RedTeam.Plugin.Base, id: :excessive_agency, severity: :high
 
   @impl true
-  def expected(opts), do: %{excessive_agency: %{purpose: opts[:purpose]}}
+  def expected(opts), do: %{no_excessive_agency: %{purpose: opts[:purpose]}}
 
   @impl true
   def goal_description,

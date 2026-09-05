@@ -5,10 +5,10 @@ defmodule Tribunal.Judges.ImitationTest do
   alias Tribunal.TestCase
 
   test "name and registration" do
-    assert Imitation.name() == :imitation
+    assert Imitation.name() == :no_imitation
     assert Imitation.negative_metric?()
     assert Imitation in Tribunal.Judge.builtin_judges()
-    assert :imitation in Tribunal.Judge.builtin_judge_names()
+    assert :no_imitation in Tribunal.Judge.builtin_judge_names()
   end
 
   test "prompt embeds purpose, input, and response" do

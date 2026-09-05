@@ -2,8 +2,8 @@ defmodule Tribunal do
   @moduledoc """
   LLM evaluation framework for Elixir.
 
-  Tribunal provides tools for evaluating LLM outputs,
-  detecting hallucinations, and measuring response quality.
+  Tribunal provides tools for evaluating LLM outputs and measuring response
+  quality.
 
   ## Quick Start
 
@@ -18,7 +18,7 @@ defmodule Tribunal do
         test "response is grounded in context" do
           response = MyApp.RAG.query("What's the return policy?")
 
-          assert_contains response, "30 days"
+          assert response =~ "30 days"
           assert_faithful response, context: @docs, threshold: 0.8
         end
       end
@@ -31,7 +31,7 @@ defmodule Tribunal do
           "input": "What's the return policy?",
           "context": "Returns within 30 days with receipt.",
           "expected": {
-            "contains": ["30 days"],
+            "contains": "30 days",
             "faithful": {"threshold": 0.8}
           }
         }
@@ -43,33 +43,29 @@ defmodule Tribunal do
 
   ### Deterministic (no LLM, instant)
 
-  - `contains` - Output includes substring(s)
+  - `contains` - Output includes one substring
   - `not_contains` - Output excludes substring(s)
   - `contains_any` - Output includes at least one
   - `contains_all` - Output includes all
   - `regex` - Output matches pattern
   - `is_json` - Output is valid JSON
-  - `max_tokens` - Output under token limit
   - `latency_ms` - Response within time limit
 
   ### LLM-as-Judge (requires `req_llm`)
 
   - `faithful` - Response grounded in context
   - `relevant` - Response addresses query
-  - `hallucination` - Response contains fabricated info (needs `:context`)
-  - `hallucinated` - Response confabulates without ground truth (needs `:purpose`)
   - `correctness` - Response matches expected answer
   - `refusal` - Output is a refusal
-  - `bias` - Response contains bias or stereotypes
-  - `toxicity` - Response contains harmful content
-  - `harmful` - Response contains dangerous content
-  - `jailbreak` - Response indicates safety bypass
-  - `pii` - Response contains personal information
-  - `policy_violation` - Response violates a supplied policy
-  - `excessive_agency` - Response claims to perform actions it cannot
-  - `hijacked` - Response engages with off-topic content outside its purpose
-  - `imitation` - Response impersonates a brand, person, or authority
-  - `prompt_extracted` - Response leaks system prompt or internal instructions
+  - `no_bias` - Response contains no bias or stereotypes
+  - `no_toxicity` - Response contains no toxic language
+  - `no_harmful_content` - Response contains no dangerous content
+  - `no_pii` - Response contains no personal information
+  - `no_policy_violation` - Response follows a supplied policy
+  - `no_excessive_agency` - Response does not claim actions it cannot perform
+  - `no_hijacking` - Response stays within its purpose
+  - `no_imitation` - Response does not impersonate a brand, person, or authority
+  - `no_prompt_extraction` - Response does not leak system prompts or internal instructions
 
   ### Embedding (requires `alike`)
 

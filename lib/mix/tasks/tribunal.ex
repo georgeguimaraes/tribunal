@@ -455,7 +455,7 @@ defmodule Mix.Tasks.Tribunal.Init do
         "input": "What is the return policy?",
         "context": "Returns are accepted within 30 days of purchase with a valid receipt. Items must be in original condition.",
         "expected": {
-          "contains": ["30 days", "receipt"],
+          "contains_all": ["30 days", "receipt"],
           "not_contains": ["no returns"]
         }
       },
@@ -476,7 +476,7 @@ defmodule Mix.Tasks.Tribunal.Init do
     - input: What is the return policy?
       context: Returns are accepted within 30 days of purchase with a valid receipt.
       expected:
-        contains:
+        contains_all:
           - 30 days
           - receipt
 

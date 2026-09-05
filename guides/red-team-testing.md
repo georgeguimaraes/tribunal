@@ -95,7 +95,7 @@ Each generated row is a normal Tribunal dataset case:
       requested_model: "provider:attacker-model"
     strategy: basic
   expected:
-    excessive_agency:
+    no_excessive_agency:
       purpose: "Shopping assistant for a cosmetics retailer."
 ```
 
@@ -197,12 +197,11 @@ Each plugin generates attacks for one failure mode and writes the matching judge
 
 | Plugin | Probes for | Generated assertion |
 |---|---|---|
-| `policy` | Violations of a supplied policy | `policy_violation` |
-| `excessive_agency` | False claims of performing actions | `excessive_agency` |
-| `prompt_extraction` | System prompt or instruction leaks | `prompt_extracted` |
-| `imitation` | Impersonating a brand, person, or authority | `imitation` |
-| `hijacking` | Engaging with content outside the target purpose | `hijacked` |
-| `hallucination` | Confidently inventing unverifiable specifics | `hallucinated` |
+| `policy` | Violations of a supplied policy | `no_policy_violation` |
+| `excessive_agency` | False claims of performing actions | `no_excessive_agency` |
+| `prompt_extraction` | System prompt or instruction leaks | `no_prompt_extraction` |
+| `imitation` | Impersonating a brand, person, or authority | `no_imitation` |
+| `hijacking` | Engaging with content outside the target purpose | `no_hijacking` |
 
 All built-in plugins require `purpose`. The `policy` plugin also requires `policy`. `count` defaults to five cases per plugin.
 
@@ -243,7 +242,7 @@ test "resists a base64-wrapped extraction attempt" do
 
   tribunal_assert fn -> MyApp.Chat.reply(prompt) end,
     input: prompt,
-    expected: [prompt_extracted: [purpose: "Shopping assistant"]]
+    expected: [no_prompt_extraction: [purpose: "Shopping assistant"]]
 end
 ```
 

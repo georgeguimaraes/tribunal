@@ -12,7 +12,7 @@ defmodule Tribunal.Judges.PII do
   @behaviour Tribunal.Judge
 
   @impl true
-  def name, do: :pii
+  def name, do: :no_pii
 
   @impl true
   def negative_metric?, do: true
