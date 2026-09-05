@@ -1,5 +1,136 @@
 # Changelog
 
+## [3.0.0](https://github.com/georgeguimaraes/tribunal/compare/v2.0.0...v3.0.0) (2026-09-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* Simplify assertion contracts and ExUnit macros ([#57](https://github.com/georgeguimaraes/tribunal/issues/57))
+* Add evaluation v2 ([#54](https://github.com/georgeguimaraes/tribunal/issues/54))
+
+### Features
+
+* add --concurrency flag for parallel test case execution ([87b6e16](https://github.com/georgeguimaraes/tribunal/commit/87b6e164c1195fa9439327e7c643b4611eb5a23d))
+* add --limit and --offset options to mix tribunal.eval ([5f392fa](https://github.com/georgeguimaraes/tribunal/commit/5f392fa164faa7fd24a6b66b52b0ba9dedc1069e))
+* add --threshold and --strict flags to mix tribunal.eval ([ff4f8b2](https://github.com/georgeguimaraes/tribunal/commit/ff4f8b2938d6e58d0088904822cba8f6073a0c3c))
+* Add evaluation v2 ([#54](https://github.com/georgeguimaraes/tribunal/issues/54)) ([b2513a8](https://github.com/georgeguimaraes/tribunal/commit/b2513a8541aaf3f10429266640e87882a47c59fd))
+* Add Hallucination red-team plugin ([743b347](https://github.com/georgeguimaraes/tribunal/commit/743b34751dfde4e4e0bf22eb5f95bda7ec09d46b))
+* add LLM-based PII detection alongside regex ([0be8e9e](https://github.com/georgeguimaraes/tribunal/commit/0be8e9e44d9cfcb5e8f5fd0946312154478aa5bc))
+* add LLM-based safety metrics ([c5b2591](https://github.com/georgeguimaraes/tribunal/commit/c5b25917af9a07a504b14e9b43a1cd046791728c))
+* Add LLM-driven red-team plugin system ([c93fcd4](https://github.com/georgeguimaraes/tribunal/commit/c93fcd403a42945cd05c59c335a6a5352b9e74c1))
+* add safety and utility assertions ([a5946f6](https://github.com/georgeguimaraes/tribunal/commit/a5946f66476f6db6c519acb353ba730b771fdc70))
+* add text and html reporters ([36a4459](https://github.com/georgeguimaraes/tribunal/commit/36a4459dbcf74b2112403a52acd420d39607e85e))
+* add verbose mode for score reasoning output ([768de5b](https://github.com/georgeguimaraes/tribunal/commit/768de5b7077332389830969fc2bc0be26cd81a7a))
+* expand LLM PII detection with comprehensive categories ([59f7e58](https://github.com/georgeguimaraes/tribunal/commit/59f7e58cda06fbbf35ec4aced6ceef78cb76ae72))
+* extract built-in judges to modules with Judge behaviour ([42de6bd](https://github.com/georgeguimaraes/tribunal/commit/42de6bde43313738b8752b11ed04c97a839c8286))
+* Harden red-team test generation ([#56](https://github.com/georgeguimaraes/tribunal/issues/56)) ([704031c](https://github.com/georgeguimaraes/tribunal/commit/704031c46f5226c8fdba5631dae3fbe2913b7eff))
+* implement Tier 1 and Tier 2 LLM evaluation framework ([bfb458d](https://github.com/georgeguimaraes/tribunal/commit/bfb458db79dae9aa914163ca558eca2a9a42d969))
+* improve judge prompts with research-backed evaluation criteria ([20b724a](https://github.com/georgeguimaraes/tribunal/commit/20b724a31062d1fb3e432566612e54830df31172))
+* improve toxicity detection prompt with research-backed categories ([ed3ec38](https://github.com/georgeguimaraes/tribunal/commit/ed3ec3870cbc31182ff9dc1cef442b347baed186))
+* include actual_output in eval results and all reporters ([559bdc7](https://github.com/georgeguimaraes/tribunal/commit/559bdc7f07bccbcf0246be5ed9786414ef93c0f7))
+* migrate refusal from deterministic to LLM-based judge ([e7738a4](https://github.com/georgeguimaraes/tribunal/commit/e7738a45d7da378122b56f370308e7d5d4c7f47a))
+* move PII and toxicity detection to LLM-based evaluation ([3c1e37a](https://github.com/georgeguimaraes/tribunal/commit/3c1e37a8e2fe49e2832faac4a830d25fca67d470))
+* pass full TestCase to provider function ([18acf9a](https://github.com/georgeguimaraes/tribunal/commit/18acf9a43b249a87ad82630392488a52d1077701))
+* rename Judicium to Tribunal with documentation ([9cead1d](https://github.com/georgeguimaraes/tribunal/commit/9cead1d86767625fe4a8337000acf531c881a46c))
+* show threshold status in console reporter output ([f6835d2](https://github.com/georgeguimaraes/tribunal/commit/f6835d2057b6a78202edc825024cbd89e58c0de7))
+
+
+### Bug Fixes
+
+* align metric bar rows in CLI output ([43db3aa](https://github.com/georgeguimaraes/tribunal/commit/43db3aa28ac5a043873dd67883e89447bb2255ef))
+* align release workflows with arcana patterns ([2cfdfa3](https://github.com/georgeguimaraes/tribunal/commit/2cfdfa3e3ac0954f6bc59c004131038934734e52))
+* CI cache key and test parallelism issues ([11f12be](https://github.com/georgeguimaraes/tribunal/commit/11f12becb82909351c2e281d957baa71ac472d5c))
+* **ci:** chain hex-publish in release-please workflow ([e8c8c59](https://github.com/georgeguimaraes/tribunal/commit/e8c8c59246dc109f21ab95aea379803002461924))
+* default to exit 0, require explicit --threshold or --strict to fail ([8c50bb9](https://github.com/georgeguimaraes/tribunal/commit/8c50bb993a862f311c718e711d4778fd33641c3e))
+* Harden red-team YAML emit and plugin option handling ([c3c9381](https://github.com/georgeguimaraes/tribunal/commit/c3c938159ec6e30eb6619c096c425d2902c081f2))
+* improve CI cache key to prevent stale build artifacts ([90894a4](https://github.com/georgeguimaraes/tribunal/commit/90894a489f5cc64978ed0a0938aacf97ce7fb6fa))
+* mark release PR as tagged after publishing ([e26a1fa](https://github.com/georgeguimaraes/tribunal/commit/e26a1fa631be7a20a515dd721f9252bbc273a1bb))
+* remove _build cache to prevent stale artifacts ([8b81113](https://github.com/georgeguimaraes/tribunal/commit/8b81113a486955d5bb28bafe7cf455b718651f68))
+* silence compile warnings for optional dependencies ([8515874](https://github.com/georgeguimaraes/tribunal/commit/85158747902d9517db36efec5ae8a052ac741602))
+* use String.to_atom for YAML assertion parsing ([5e8e55e](https://github.com/georgeguimaraes/tribunal/commit/5e8e55ede2c77c8b3fdafef7810215d33c5aa43e))
+
+
+### Miscellaneous
+
+* add maintainers to package config ([431574a](https://github.com/georgeguimaraes/tribunal/commit/431574a05dfb2a29dd86919b8ff203681730e506))
+* Add MIT license ([adcce07](https://github.com/georgeguimaraes/tribunal/commit/adcce07427208bd5cb79e4a80e05d12397d0f86d))
+* **deps-dev:** bump credo from 1.7.15 to 1.7.16 ([#10](https://github.com/georgeguimaraes/tribunal/issues/10)) ([0ea9825](https://github.com/georgeguimaraes/tribunal/commit/0ea98259c1030add19561186e01c8d62a3f60bc5))
+* **deps-dev:** bump credo from 1.7.16 to 1.7.17 ([#22](https://github.com/georgeguimaraes/tribunal/issues/22)) ([73d0c5a](https://github.com/georgeguimaraes/tribunal/commit/73d0c5ae0c373660cfde2255a6776f2e61ebb211))
+* **deps-dev:** bump credo from 1.7.17 to 1.7.18 ([#29](https://github.com/georgeguimaraes/tribunal/issues/29)) ([a5e0fb8](https://github.com/georgeguimaraes/tribunal/commit/a5e0fb84e9fc5299803476e9a1599f1933f6750d))
+* **deps-dev:** bump ex_doc from 0.39.3 to 0.40.0 ([#7](https://github.com/georgeguimaraes/tribunal/issues/7)) ([e32af86](https://github.com/georgeguimaraes/tribunal/commit/e32af86c620da726dd137b70e4afc1b64ee2a223))
+* **deps-dev:** bump ex_doc from 0.40.0 to 0.40.1 ([#11](https://github.com/georgeguimaraes/tribunal/issues/11)) ([18f6fcd](https://github.com/georgeguimaraes/tribunal/commit/18f6fcd8b6f0b98e189483213174508bf0f0159c))
+* **deps:** bump actions/cache from 3 to 5 ([#5](https://github.com/georgeguimaraes/tribunal/issues/5)) ([bb8612d](https://github.com/georgeguimaraes/tribunal/commit/bb8612df06d7ab8fe680fff53166c656dde66990))
+* **deps:** bump actions/cache from 5 to 6 ([#47](https://github.com/georgeguimaraes/tribunal/issues/47)) ([10029e0](https://github.com/georgeguimaraes/tribunal/commit/10029e09518ba39f9b638e661c5dfa207719668c))
+* **deps:** bump actions/checkout from 4 to 6 ([#6](https://github.com/georgeguimaraes/tribunal/issues/6)) ([488c229](https://github.com/georgeguimaraes/tribunal/commit/488c2292c0a9a18a8c31b7669d79e6b9e5da85b9))
+* **deps:** bump actions/checkout from 6 to 7 ([#46](https://github.com/georgeguimaraes/tribunal/issues/46)) ([5002038](https://github.com/georgeguimaraes/tribunal/commit/50020381d1de11f14881bac144a2c0018323afb2))
+* **deps:** bump alike from 0.4.0 to 0.4.2 ([#17](https://github.com/georgeguimaraes/tribunal/issues/17)) ([4d038bb](https://github.com/georgeguimaraes/tribunal/commit/4d038bbbf9ac2296b73f800bb10fdb120337b8b5))
+* **deps:** bump alike from 0.4.2 to 0.4.3 ([#28](https://github.com/georgeguimaraes/tribunal/issues/28)) ([ac308cf](https://github.com/georgeguimaraes/tribunal/commit/ac308cfde071f094b297ffc81a363b244b262b5a))
+* **deps:** bump amannn/action-semantic-pull-request from 5 to 6 ([#4](https://github.com/georgeguimaraes/tribunal/issues/4)) ([f153bc5](https://github.com/georgeguimaraes/tribunal/commit/f153bc55b85f7eaca3d832f5df1584d637b03f15))
+* **deps:** bump googleapis/release-please-action from 4 to 5 ([#31](https://github.com/georgeguimaraes/tribunal/issues/31)) ([ff05425](https://github.com/georgeguimaraes/tribunal/commit/ff054259bb333b03e6dd1b76ae5995be8c2e2488))
+* **deps:** bump req_llm from 1.2.0 to 1.3.0 ([#8](https://github.com/georgeguimaraes/tribunal/issues/8)) ([1d13a54](https://github.com/georgeguimaraes/tribunal/commit/1d13a54cfe2419bf9f9cb08114a9338b0cfcab3a))
+* **deps:** bump req_llm from 1.3.0 to 1.5.1 ([#13](https://github.com/georgeguimaraes/tribunal/issues/13)) ([7995052](https://github.com/georgeguimaraes/tribunal/commit/7995052900d23aba5c29574cf170b2ed4f7f05ba))
+* **deps:** bump req_llm from 1.5.1 to 1.6.0 ([#20](https://github.com/georgeguimaraes/tribunal/issues/20)) ([51bff91](https://github.com/georgeguimaraes/tribunal/commit/51bff91cc43c83fb7a86f83f1c57b18c8222def8))
+* **deps:** bump req_llm from 1.6.0 to 1.8.0 ([#25](https://github.com/georgeguimaraes/tribunal/issues/25)) ([f3f5d49](https://github.com/georgeguimaraes/tribunal/commit/f3f5d49b01a899bd251343731b6f083bb35d7e47))
+* **deps:** bump req_llm from 1.8.0 to 1.10.0 ([#30](https://github.com/georgeguimaraes/tribunal/issues/30)) ([b6ea776](https://github.com/georgeguimaraes/tribunal/commit/b6ea77600175ed41ff55695ce106468c5a458411))
+* **deps:** Bump req_llm to 1.11.0 ([b39ab10](https://github.com/georgeguimaraes/tribunal/commit/b39ab106e127b360e7382cef6d7ca66ecc6791c7))
+* **deps:** bump yaml_elixir from 2.12.0 to 2.12.1 ([#18](https://github.com/georgeguimaraes/tribunal/issues/18)) ([1e1e9ec](https://github.com/georgeguimaraes/tribunal/commit/1e1e9ec6f81413ec32c5a03e81dab35983772031))
+* **deps:** Update dependencies ([d4f8f63](https://github.com/georgeguimaraes/tribunal/commit/d4f8f635afbe535aaa8caf7a33542207adc22abc))
+* **main:** release 1.0.0 ([#1](https://github.com/georgeguimaraes/tribunal/issues/1)) ([1d8311c](https://github.com/georgeguimaraes/tribunal/commit/1d8311c273f9e7cc3150cddf6c675f1f88041169))
+* **main:** release 1.1.1 ([#3](https://github.com/georgeguimaraes/tribunal/issues/3)) ([f3d2a12](https://github.com/georgeguimaraes/tribunal/commit/f3d2a12970e16ab95c953934c5da04f1e2cb351b))
+* **main:** release 1.2.0 ([#9](https://github.com/georgeguimaraes/tribunal/issues/9)) ([b662d9f](https://github.com/georgeguimaraes/tribunal/commit/b662d9f7ae6f853ff031e7b49aac45d80deb5890))
+* **main:** release 1.3.0 ([#14](https://github.com/georgeguimaraes/tribunal/issues/14)) ([7a3ac65](https://github.com/georgeguimaraes/tribunal/commit/7a3ac651f8d6007c6742444c451b106e1f1b9001))
+* **main:** release 1.3.1 ([#15](https://github.com/georgeguimaraes/tribunal/issues/15)) ([6996267](https://github.com/georgeguimaraes/tribunal/commit/6996267d1d9c83754dae04abee699ae9bab47fe9))
+* **main:** release 1.3.2 ([#16](https://github.com/georgeguimaraes/tribunal/issues/16)) ([1c9bafc](https://github.com/georgeguimaraes/tribunal/commit/1c9bafc4be91456d55fa1b4010d27ce4c8906b2c))
+* **main:** release 1.3.3 ([#19](https://github.com/georgeguimaraes/tribunal/issues/19)) ([1a12294](https://github.com/georgeguimaraes/tribunal/commit/1a12294b6b135aad40c8b94eb8ca55fccd20a998))
+* **main:** release 1.3.4 ([#21](https://github.com/georgeguimaraes/tribunal/issues/21)) ([7514a70](https://github.com/georgeguimaraes/tribunal/commit/7514a70d680ed4ef334c113d59e56df35ce10d7e))
+* **main:** release 1.3.5 ([#23](https://github.com/georgeguimaraes/tribunal/issues/23)) ([2e88033](https://github.com/georgeguimaraes/tribunal/commit/2e880336ded19fc3cac1e4843c12c0b2ad0b950b))
+* **main:** release 1.3.6 ([#26](https://github.com/georgeguimaraes/tribunal/issues/26)) ([7275823](https://github.com/georgeguimaraes/tribunal/commit/72758238e36eca3269b7be9f276cb202284b54be))
+* **main:** release 1.4.0 ([#34](https://github.com/georgeguimaraes/tribunal/issues/34)) ([8fe3a29](https://github.com/georgeguimaraes/tribunal/commit/8fe3a2981feed4c259326c6c1f7a1a29e7149b4f))
+* **main:** release 2.0.0 ([#51](https://github.com/georgeguimaraes/tribunal/issues/51)) ([cef2096](https://github.com/georgeguimaraes/tribunal/commit/cef2096ed15d058c6a9ab386e0c8eedb983300c3))
+* Refresh optional dependencies ([#53](https://github.com/georgeguimaraes/tribunal/issues/53)) ([4600194](https://github.com/georgeguimaraes/tribunal/commit/46001942ae9653db0f3aa564dba76e8f371c096a))
+* release 1.1.0 ([#2](https://github.com/georgeguimaraes/tribunal/issues/2)) ([60e67e2](https://github.com/georgeguimaraes/tribunal/commit/60e67e2e1aecc532ac7c93ba0d96bf089d5d56e9))
+* remove unused on-release workflow ([6a15c78](https://github.com/georgeguimaraes/tribunal/commit/6a15c78d5860baf3b048589f13073ea84dbebd26))
+* sync release-please config with arcana ([3b6c6a6](https://github.com/georgeguimaraes/tribunal/commit/3b6c6a6618df9d0b4b6616e229e1300cd17af5fa))
+
+
+### Documentation
+
+* add application config section to llm-as-judge guide ([126b550](https://github.com/georgeguimaraes/tribunal/commit/126b5502a142f063d8fe01d4b8ec281017cc8510))
+* add CLI report example to README ([b89dd89](https://github.com/georgeguimaraes/tribunal/commit/b89dd8923472b597d0239c9174d8d30daa98e31d))
+* add GitHub Actions integration guide ([7ba92cf](https://github.com/georgeguimaraes/tribunal/commit/7ba92cf72930ae22d35615003aca7779597c3ea9))
+* Add link to tribunal-juror showcase app ([23b79db](https://github.com/georgeguimaraes/tribunal/commit/23b79db86acaa5bf270439a8f382d6dd4cdf593b))
+* add scales emoji to README title ([18e956f](https://github.com/georgeguimaraes/tribunal/commit/18e956fbf20cce1e0a8ca39892bc6bcbf544256f))
+* Add Why Tribunal section and repeated-sampling plan ([54521af](https://github.com/georgeguimaraes/tribunal/commit/54521af914a4c506fbe6587c7fb6f0a620149b3b))
+* document ExUnit vs Mix Task evaluation modes ([b7b987d](https://github.com/georgeguimaraes/tribunal/commit/b7b987d63a55eaa49d3238bad85ca8f416684da9))
+* Document red-team plugin system and fix stale references ([d54c9cd](https://github.com/georgeguimaraes/tribunal/commit/d54c9cd1bd9b4b3f804ab586f3815dd350ec4d90))
+* rename Assertion Mode to Test Mode ([24bcb25](https://github.com/georgeguimaraes/tribunal/commit/24bcb25b82c1124bb45aba848c313f2498a5fba1))
+* restore README intro with evaluating and testing ([c5e7989](https://github.com/georgeguimaraes/tribunal/commit/c5e7989144ee7c811db1f6ccae44b2d0bae1ed2e))
+* update README intro ([88aa47f](https://github.com/georgeguimaraes/tribunal/commit/88aa47f6713193309741acacc373102cca1ee371))
+
+
+### Code Refactoring
+
+* **ci:** use release-please for GitHub releases ([7e6dd6e](https://github.com/georgeguimaraes/tribunal/commit/7e6dd6e535f1cd79aa691197cc9ccda7d277a8d2))
+* **ci:** use shared workflows from georgeguimaraes/workflows ([b7fe021](https://github.com/georgeguimaraes/tribunal/commit/b7fe0212dc24b4b5d2cad36644c65f4f3ebec2d0))
+* Collapse red-team plugins onto shared Plugin.Base ([deea8af](https://github.com/georgeguimaraes/tribunal/commit/deea8af927e8fc1bf5a26f1a5f01897493c4b999))
+* fix credo strict warnings ([1fb32f6](https://github.com/georgeguimaraes/tribunal/commit/1fb32f63fc53800a4d7573976559b89a9ae31f78))
+* fix credo warnings and add credo dependency ([10f9201](https://github.com/georgeguimaraes/tribunal/commit/10f9201f4690ba7078fceb334a45b646b8845704))
+* rename llm_client to llm, judge_model to llm config key ([9c24c8c](https://github.com/georgeguimaraes/tribunal/commit/9c24c8c05dde249ee161f2e9d831b715e327a190))
+* Share evaluation semantics across runners ([#52](https://github.com/georgeguimaraes/tribunal/issues/52)) ([7202f35](https://github.com/georgeguimaraes/tribunal/commit/7202f356aba8340692b46313d638a257d005f960))
+* Simplify assertion contracts and ExUnit macros ([#57](https://github.com/georgeguimaraes/tribunal/issues/57)) ([1226e34](https://github.com/georgeguimaraes/tribunal/commit/1226e34feac47713c2c787c9ba2599a16950e4f2))
+* use dot notation for --provider option ([5a9dfdb](https://github.com/georgeguimaraes/tribunal/commit/5a9dfdbafade22ee0c5b518893032ceead0a2776))
+* use Logger instead of IO.puts for verbose output ([6dfd0d6](https://github.com/georgeguimaraes/tribunal/commit/6dfd0d629f4983df67345e42f8d4428a10df3dba))
+
+
+### Tests
+
+* add LLM integration tests for all judge assertions ([dfe9ca2](https://github.com/georgeguimaraes/tribunal/commit/dfe9ca2d7d98538081bef79cb97495c9568db092))
+
+
+### Continuous Integration
+
+* add dependabot for mix and github-actions ([adbd1fb](https://github.com/georgeguimaraes/tribunal/commit/adbd1fbede74ba16cf7e8076795388542a1f0d05))
+
 ## [2.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v2.0.0) (2026-08-28)
 
 Tribunal 2.0 gives ExUnit and `mix tribunal.eval` one shared evaluation model while keeping each workflow native. ExUnit owns focused tests and hard requirements. The Mix task owns batch execution, aggregate gates, and reports.
