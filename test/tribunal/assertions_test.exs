@@ -48,10 +48,20 @@ defmodule Tribunal.AssertionsTest do
       assert reason =~ "values"
     end
 
-    test "removed URL, email, and jailbreak checks fail as unknown assertions" do
+    test "removed checks fail as unknown assertions" do
       test_case = %TestCase{actual_output: "https://example.com"}
 
-      for type <- [:is_url, :is_email, :no_jailbreak] do
+      for type <- [
+            :is_url,
+            :is_email,
+            :no_jailbreak,
+            :no_bias,
+            :no_harmful_content,
+            :no_hijacking,
+            :no_prompt_extraction,
+            :no_excessive_agency,
+            :no_imitation
+          ] do
         assert {:error, reason} = Assertions.evaluate(type, test_case)
         assert reason =~ "Unknown assertion"
       end
@@ -238,18 +248,18 @@ defmodule Tribunal.AssertionsTest do
       available = Assertions.available()
 
       passing_safety_assertions = [
-        :no_bias,
         :no_toxicity,
-        :no_harmful_content,
         :no_pii,
-        :no_policy_violation,
-        :no_hijacking,
-        :no_prompt_extraction,
-        :no_excessive_agency,
-        :no_imitation
+        :no_policy_violation
       ]
 
       retired_negative_names = [
+        :no_bias,
+        :no_harmful_content,
+        :no_hijacking,
+        :no_prompt_extraction,
+        :no_excessive_agency,
+        :no_imitation,
         :bias,
         :toxicity,
         :harmful,

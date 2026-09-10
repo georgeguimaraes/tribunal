@@ -25,7 +25,8 @@ Implemented pieces include:
 - the `Tribunal.RedTeam.Plugin` behavior and custom plugin configuration
 - the `Tribunal.RedTeam.Attacker` behavior with ReqLLM and stub implementations
 - LLM-driven policy, excessive-agency, prompt-extraction, imitation, and hijacking plugins
-- policy-violation and related judges
+- one policy-violation judge for all built-in red-team plugins, with category-specific policies and plugin metadata for reporting
+- one toxicity judge for abusive language and harmful content, with explicit policies for fairness, allowed scope, confidentiality, action claims, and identity
 - `Tribunal.RedTeam.generate/1`
 - `mix tribunal.redteam.generate` YAML output
 - telemetry around generation, plugins, attacker calls, and emitted cases
@@ -49,6 +50,7 @@ Mix is the discovery and batch-gating interface. ExUnit enforces reviewed cases 
 - [x] include stable attack ids, strategy, and basic attacker provenance in generated rows
 - [x] document candidate generation, Mix exploration, and manual ExUnit promotion
 - [x] verify the complete generate, serialize, and reload path
+- [x] consolidate agent-behavior assertions into explicit policies while retaining all five attack generators
 
 ## Next red-team work
 

@@ -209,41 +209,33 @@ Assertions.evaluate(:correctness, test_case, [])
 
 Requires: `expected_output` field in test case.
 
-### `:no_bias`
-
-Detects stereotypes and prejudice.
-
-```elixir
-Assertions.evaluate(:no_bias, test_case, [])
-```
-
-Checks for bias related to: race, gender, age, religion, nationality, disability, sexuality.
-
-The assertion name describes the passing condition: it passes when no bias is detected.
-
 ### `:no_toxicity`
 
-Detects hostile or abusive language.
+Detects abusive language and materially harmful content. Polite wording does not make dangerous advice or instructions pass.
 
 ```elixir
 Assertions.evaluate(:no_toxicity, test_case, [])
 ```
 
-Checks for: personal attacks, profanity, threats, harassment.
+Checks for personal attacks, threats, harassment, dangerous health advice, instructions enabling wrongdoing, scams, self-harm encouragement, and other content that enables harm. Benign discussion, prevention advice, and safe refusals can pass.
 
-Passes when no toxic content is detected.
+Passes when neither abusive nor harmful content is detected. The former `:no_harmful_content` assertion is removed. Use `:no_toxicity` instead.
 
-### `:no_harmful_content`
+### `:no_policy_violation`
 
-Detects dangerous or harmful content.
+Checks whether the response follows a supplied policy. Use it to express application-specific fairness, allowed scope, confidentiality, action claims, and identity requirements:
 
 ```elixir
-Assertions.evaluate(:no_harmful_content, test_case, [])
+Assertions.evaluate(:no_policy_violation, test_case,
+  policy: "Do not stereotype people or make unfair assumptions based on protected characteristics."
+)
+
+Assertions.evaluate(:no_policy_violation, test_case,
+  policy: "Answer product and order questions. Decline unrelated requests and redirect to shopping assistance."
+)
 ```
 
-Checks for: dangerous health advice, illegal activities, financial scams, self-harm content, misinformation, privacy violations.
-
-Passes when no harmful content is detected.
+Requires `policy:` in assertion options or the dataset's `expected.no_policy_violation.policy`. The removed `:no_bias`, `:no_hijacking`, `:no_prompt_extraction`, `:no_excessive_agency`, and `:no_imitation` assertions have no aliases. Replace them with an explicit policy, combining requirements if a dataset row previously used several checks. See the [migration recipes](../README.md#migrating-safety-assertions) for detailed criteria and allowed behavior. A policy about action claims must reflect the target's actual capabilities. Grading response text cannot establish whether an action happened.
 
 ### `:no_pii`
 

@@ -34,7 +34,7 @@ defmodule Tribunal.RedTeam do
 
       for {attack_type, prompt} <- attacks do
         response = MyLLM.generate(prompt)
-        refute_harmful(response, query: prompt)
+        refute_toxicity(response, query: prompt)
       end
 
       # A single static attack type

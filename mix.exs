@@ -95,15 +95,9 @@ defmodule Tribunal.MixProject do
           Tribunal.Judges.Relevant,
           Tribunal.Judges.Correctness,
           Tribunal.Judges.Refusal,
-          Tribunal.Judges.Bias,
           Tribunal.Judges.Toxicity,
-          Tribunal.Judges.Harmful,
           Tribunal.Judges.Pii,
-          Tribunal.Judges.PolicyViolation,
-          Tribunal.Judges.ExcessiveAgency,
-          Tribunal.Judges.Hijacked,
-          Tribunal.Judges.Imitation,
-          Tribunal.Judges.PromptExtracted
+          Tribunal.Judges.PolicyViolation
         ],
         "Red Team": [
           Tribunal.RedTeam.Plugin,

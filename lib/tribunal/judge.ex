@@ -102,16 +102,10 @@ defmodule Tribunal.Judge do
     Tribunal.Judges.Faithful,
     Tribunal.Judges.Relevant,
     Tribunal.Judges.Correctness,
-    Tribunal.Judges.Bias,
     Tribunal.Judges.Toxicity,
-    Tribunal.Judges.Harmful,
     Tribunal.Judges.PII,
     Tribunal.Judges.Refusal,
-    Tribunal.Judges.PolicyViolation,
-    Tribunal.Judges.Hijacked,
-    Tribunal.Judges.PromptExtracted,
-    Tribunal.Judges.ExcessiveAgency,
-    Tribunal.Judges.Imitation
+    Tribunal.Judges.PolicyViolation
   ]
 
   @doc """

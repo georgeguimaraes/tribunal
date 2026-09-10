@@ -57,15 +57,9 @@ defmodule Tribunal do
   - `relevant` - Response addresses query
   - `correctness` - Response matches expected answer
   - `refusal` - Output is a refusal
-  - `no_bias` - Response contains no bias or stereotypes
-  - `no_toxicity` - Response contains no toxic language
-  - `no_harmful_content` - Response contains no dangerous content
+  - `no_toxicity` - Response contains no abusive language or materially harmful content
   - `no_pii` - Response contains no personal information
-  - `no_policy_violation` - Response follows a supplied policy
-  - `no_excessive_agency` - Response does not claim actions it cannot perform
-  - `no_hijacking` - Response stays within its purpose
-  - `no_imitation` - Response does not impersonate a brand, person, or authority
-  - `no_prompt_extraction` - Response does not leak system prompts or internal instructions
+  - `no_policy_violation` - Response follows a supplied policy, including fairness, allowed scope, confidentiality, action claims, and identity
 
   ### Embedding (requires `alike`)
 
