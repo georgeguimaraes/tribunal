@@ -184,7 +184,7 @@ Failed Cases
 
 `use Tribunal.ExUnit` imports two evaluation macros and the direct assertion macros below. A direct assertion grades an output you already computed. `tribunal_assert` calls your application for every sample, while `tribunal_dataset` creates one ExUnit test for every dataset row.
 
-Use native ExUnit for substring, equality, regex, prefix, suffix, and length checks:
+Use native ExUnit for ordinary text and JSON checks:
 
 ```elixir
 assert output =~ "30 days"
@@ -194,6 +194,11 @@ assert String.starts_with?(output, "Hello")
 assert String.ends_with?(output, ".")
 assert String.length(output) >= 20
 assert String.length(output) <= 500
+assert String.contains?(output, alternatives)
+assert Enum.all?(required, &String.contains?(output, &1))
+refute String.contains?(output, forbidden)
+assert {:ok, _} = JSON.decode(output)
+assert length(String.split(output, ~r/\s+/, trim: true)) <= 100
 ```
 
 Tribunal provides named dataset assertions for these checks because JSON and YAML cannot contain ExUnit expressions. For URL and email validation, use your application's validation rules or `:regex` for a specific format check.
@@ -247,29 +252,23 @@ tribunal_dataset "test/evals/safety.yaml",
 
 `provider:` is required and must be a `{Module, :function}` pair. Tribunal invokes it as `module.function(test_case.input)`, and it follows the same return contract as `tribunal_assert`. `defaults:`, `repeat:`, and `pass_rule:` work the same way as above. `timeout:` sets the native ExUnit timeout for every generated test. Each dataset row needs `input` and a nonempty `expected` collection.
 
-### Deterministic assertion macros
+### Deterministic assertions
 
-These macros are immediate and need no optional dependency.
-
-| Macro | Passes when | Dataset assertion |
-|---|---|---|
-| `refute_contains(output, value_or_values)` | None of the supplied substrings occur | `not_contains` |
-| `assert_contains_any(output, values)` | At least one supplied substring occurs | `contains_any` |
-| `assert_contains_all(output, values)` | Every supplied substring occurs | `contains_all` |
-| `assert_json(output)` | The complete output decodes as JSON | `is_json` |
-| `assert_word_count(output, opts)` | The whitespace-separated word count satisfies `min:` and/or `max:` | `word_count` |
-| `assert_levenshtein(output, target, opts)` | Edit distance is within `max_distance:`, which defaults to `3` | `levenshtein` |
+`assert_levenshtein(output, target, opts)` checks whether edit distance is within `max_distance:`, which defaults to `3`. It requires no optional dependency. Its dataset assertion is `levenshtein`.
 
 These deterministic assertions are dataset-only:
 
 - `contains` checks one substring and requires a string `value:`. Use `contains_all` with `values:` for every substring in a list, or `contains_any` for alternatives.
+- `not_contains` rejects any supplied substring, using `value:` for one or `values:` for a list.
+- `is_json` checks whether the complete output decodes as JSON.
+- `word_count` checks whitespace-separated word count against `min:` and/or `max:`.
 - `equals` is the dataset equivalent of `assert output == expected` and accepts `value:`.
 - `regex` matches a regular expression supplied as `pattern:` or `value:`.
 - `starts_with` and `ends_with` check a prefix or suffix supplied as `value:`.
 - `min_length` and `max_length` check grapheme length against `min:` or `max:`.
 - `latency_ms` compares `actual:` with `max:`, whose default is `5000` milliseconds.
 
-For example:
+These names configure the underlying checks in datasets and `tribunal_assert`. They remain available even when a direct ExUnit macro is unnecessary. For example:
 
 ```yaml
 expected:
