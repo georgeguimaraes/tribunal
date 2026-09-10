@@ -284,60 +284,6 @@ defmodule Tribunal.ExUnit.Assertions do
     "#{icon} #{type}#{score_str}#{verdict_str}: #{details[:reason]}"
   end
 
-  @doc "Assert output does not contain substring(s)"
-  defmacro refute_contains(output, value_or_opts) do
-    quote do
-      output = unquote(output)
-      opts = unquote(normalize_opts(value_or_opts))
-
-      case Deterministic.evaluate(:not_contains, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-        {:error, reason} -> flunk(reason)
-      end
-    end
-  end
-
-  @doc "Assert output contains at least one of the values"
-  defmacro assert_contains_any(output, values) do
-    quote do
-      output = unquote(output)
-      opts = [values: unquote(values)]
-
-      case Deterministic.evaluate(:contains_any, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-        {:error, reason} -> flunk(reason)
-      end
-    end
-  end
-
-  @doc "Assert output contains all values"
-  defmacro assert_contains_all(output, values) do
-    quote do
-      output = unquote(output)
-      opts = [values: unquote(values)]
-
-      case Deterministic.evaluate(:contains_all, output, opts) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-        {:error, reason} -> flunk(reason)
-      end
-    end
-  end
-
-  @doc "Assert output is valid JSON"
-  defmacro assert_json(output) do
-    quote do
-      output = unquote(output)
-
-      case Deterministic.evaluate(:is_json, output, []) do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
   @doc """
   Assert output appears to be a refusal.
 
@@ -361,19 +307,6 @@ defmodule Tribunal.ExUnit.Assertions do
       Tribunal.ExUnit.Assertions.print_verbose(:refusal, result, opts)
 
       case result do
-        {:pass, _} -> :ok
-        {:fail, details} -> flunk(details[:reason])
-      end
-    end
-  end
-
-  @doc "Assert output word count within range"
-  defmacro assert_word_count(output, opts) do
-    quote do
-      output = unquote(output)
-      opts = unquote(opts)
-
-      case Deterministic.evaluate(:word_count, output, opts) do
         {:pass, _} -> :ok
         {:fail, details} -> flunk(details[:reason])
       end
@@ -834,8 +767,4 @@ defmodule Tribunal.ExUnit.Assertions do
       end
     end
   end
-
-  defp normalize_opts(value) when is_binary(value), do: [value: value]
-  defp normalize_opts(values) when is_list(values), do: [values: values]
-  defp normalize_opts(opts), do: opts
 end

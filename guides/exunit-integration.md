@@ -143,7 +143,7 @@ Direct macros grade an already-computed output once. They do not repeat applicat
 assert response =~ "receipt"
 assert response == expected_response
 assert response =~ ~r/\b30 days\b/
-assert_json response
+assert {:ok, _} = JSON.decode(response)
 assert_faithful response, context: context, threshold: 0.85
 assert_relevant response, query: question
 refute_pii response, query: question

@@ -121,7 +121,7 @@ defmodule MyApp.RAGTest do
     response = MyApp.RAG.query("What's the return policy?")
 
     assert response =~ "30 days"
-    refute_contains response, "no returns"
+    refute String.contains?(response, "no returns")
   end
 end
 ```

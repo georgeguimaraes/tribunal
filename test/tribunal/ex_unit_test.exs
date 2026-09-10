@@ -9,6 +9,11 @@ defmodule Tribunal.ExUnitTest do
   end
 
   test "does not export removed assertions" do
+    refute macro_exported?(Tribunal.ExUnit.Assertions, :refute_contains, 2)
+    refute macro_exported?(Tribunal.ExUnit.Assertions, :assert_contains_any, 2)
+    refute macro_exported?(Tribunal.ExUnit.Assertions, :assert_contains_all, 2)
+    refute macro_exported?(Tribunal.ExUnit.Assertions, :assert_json, 1)
+    refute macro_exported?(Tribunal.ExUnit.Assertions, :assert_word_count, 2)
     refute macro_exported?(Tribunal.ExUnit.Assertions, :refute_hallucination, 2)
     refute macro_exported?(Tribunal.ExUnit.Assertions, :refute_hallucinated, 2)
     refute macro_exported?(Tribunal.ExUnit.Assertions, :refute_toxic, 1)
@@ -162,81 +167,6 @@ defmodule Tribunal.ExUnitTest do
         )
 
       assert result.input == %{"query" => "returned"}
-    end
-  end
-
-  describe "refute_contains/2" do
-    test "passes when substring not found" do
-      refute_contains("Hello world", "foo")
-    end
-
-    test "fails when substring found" do
-      assert_raise ExUnit.AssertionError, fn ->
-        refute_contains("Hello world", "world")
-      end
-    end
-
-    test "reports invalid configuration as an assertion failure" do
-      error =
-        assert_raise ExUnit.AssertionError, fn ->
-          refute_contains("Hello world", [])
-        end
-
-      assert Exception.message(error) =~ "not_contains requires :value or :values"
-    end
-  end
-
-  describe "assert_contains_any/2" do
-    test "passes when at least one found" do
-      assert_contains_any("Hello world", ["foo", "world", "bar"])
-    end
-
-    test "fails when none found" do
-      assert_raise ExUnit.AssertionError, fn ->
-        assert_contains_any("Hello world", ["foo", "bar"])
-      end
-    end
-
-    test "reports invalid configuration as an assertion failure" do
-      error =
-        assert_raise ExUnit.AssertionError, fn ->
-          assert_contains_any("Hello world", [])
-        end
-
-      assert Exception.message(error) =~ "contains_any requires :value or :values"
-    end
-  end
-
-  describe "assert_contains_all/2" do
-    test "passes when all found" do
-      assert_contains_all("Hello world", ["Hello", "world"])
-    end
-
-    test "fails when some missing" do
-      assert_raise ExUnit.AssertionError, fn ->
-        assert_contains_all("Hello world", ["Hello", "foo"])
-      end
-    end
-
-    test "reports invalid configuration as an assertion failure" do
-      error =
-        assert_raise ExUnit.AssertionError, fn ->
-          assert_contains_all("Hello world", [])
-        end
-
-      assert Exception.message(error) =~ "contains_all requires :value or :values"
-    end
-  end
-
-  describe "assert_json/1" do
-    test "passes with valid JSON" do
-      assert_json(~s({"name": "test"}))
-    end
-
-    test "fails with invalid JSON" do
-      assert_raise ExUnit.AssertionError, fn ->
-        assert_json("not json")
-      end
     end
   end
 
@@ -395,24 +325,6 @@ defmodule Tribunal.ExUnitTest do
         refute_pii("John Smith's SSN is 123-45-6789 and his email is john@example.com",
           model: "zai:glm-4.5-flash"
         )
-      end
-    end
-  end
-
-  describe "assert_word_count/2" do
-    test "passes when within range" do
-      assert_word_count("one two three", min: 2, max: 5)
-    end
-
-    test "fails when below minimum" do
-      assert_raise ExUnit.AssertionError, fn ->
-        assert_word_count("one", min: 2)
-      end
-    end
-
-    test "fails when above maximum" do
-      assert_raise ExUnit.AssertionError, fn ->
-        assert_word_count("one two three four", max: 2)
       end
     end
   end
