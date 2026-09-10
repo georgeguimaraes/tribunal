@@ -129,6 +129,66 @@ defmodule Tribunal.ReporterTest do
     ]
   }
 
+  describe "batch gate status labels" do
+    setup do
+      cases =
+        for index <- 1..10 do
+          category = if index <= 2, do: "account-safety", else: "product-support"
+
+          %Tribunal.TestCase{
+            input: "case #{index}",
+            actual_output: if(index == 2, do: "bad", else: "ok")
+          }
+          |> Tribunal.Evaluator.evaluate(contains: [value: "ok"])
+          |> Map.put(:group, %{by: "category", value: category})
+        end
+
+      %{report: Tribunal.Batch.Report.build(cases, System.monotonic_time(:millisecond))}
+    end
+
+    test "labels combined and group-only outcomes as batch gates", %{report: report} do
+      for overall <- [0.9, nil], {group_rate, passed?} <- [{0.8, false}, {0.5, true}] do
+        assert {gated, ^passed?} =
+                 Tribunal.Batch.Report.apply_gates(report, %{
+                   overall: overall,
+                   groups: %{by: "category", pass_rate: group_rate}
+                 })
+
+        gated = put_in(gated, [:summary, :threshold], overall)
+        status = if passed?, do: "PASSED", else: "FAILED"
+
+        for reporter <- [Console, Text, HTML] do
+          output = reporter.format(gated)
+          assert output =~ "#{status} (batch gates)"
+          refute output =~ "(threshold: 90%)"
+          assert output =~ "category=account-safety: 50% observed"
+
+          if overall do
+            assert output =~ "overall: 90% observed, 90% required, passed"
+          end
+        end
+      end
+    end
+
+    test "keeps overall-only threshold and strict labels", %{report: report} do
+      for {threshold, strict, label} <- [
+            {0.9, false, "PASSED (threshold: 90%)"},
+            {1.0, true, "FAILED (strict mode)"}
+          ] do
+        {gated, _passed?} = Tribunal.Batch.Report.apply_gates(report, %{overall: threshold})
+
+        gated =
+          gated
+          |> put_in([:summary, :threshold], threshold)
+          |> put_in([:summary, :strict], strict)
+
+        for reporter <- [Console, Text, HTML] do
+          assert reporter.format(gated) =~ label
+        end
+      end
+    end
+  end
+
   describe "Console.format/1" do
     test "includes header" do
       output = Console.format(@sample_results)

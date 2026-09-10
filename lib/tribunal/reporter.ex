@@ -64,6 +64,16 @@ defmodule Tribunal.Reporter.Format do
 
   def gates(_gates), do: []
 
+  def gate_label(%{gates: %{groups: groups}}) when is_map(groups), do: " (batch gates)"
+
+  def gate_label(%{summary: summary}) do
+    cond do
+      Map.get(summary, :strict) -> " (strict mode)"
+      threshold = Map.get(summary, :threshold) -> " (threshold: #{round(threshold * 100)}%)"
+      true -> ""
+    end
+  end
+
   defp overall_gate(nil), do: nil
 
   defp overall_gate(gate) do
@@ -105,7 +115,7 @@ defmodule Tribunal.Reporter.Console do
       gates_section(Map.get(results, :gates)),
       metrics_section(results.metrics),
       outcomes_section(results.cases),
-      footer(results.summary)
+      footer(results)
     ]
     |> Enum.join("\n")
   end
@@ -208,7 +218,7 @@ defmodule Tribunal.Reporter.Console do
     """
   end
 
-  defp footer(summary) do
+  defp footer(%{summary: summary} = results) do
     status =
       case Map.get(summary, :gate_status) do
         status when status in [:error, :failed] -> "❌ FAILED"
@@ -217,12 +227,7 @@ defmodule Tribunal.Reporter.Console do
         _ -> legacy_console_status(summary)
       end
 
-    threshold_info =
-      cond do
-        Map.get(summary, :strict) -> " (strict mode)"
-        threshold = Map.get(summary, :threshold) -> " (threshold: #{round(threshold * 100)}%)"
-        true -> ""
-      end
+    threshold_info = Format.gate_label(results)
 
     """
     ───────────────────────────────────────────────────────────────
@@ -270,7 +275,7 @@ defmodule Tribunal.Reporter.Text do
       gates_section(Map.get(results, :gates)),
       metrics_section(results.metrics),
       outcomes_section(results.cases),
-      footer(results.summary)
+      footer(results)
     ]
     |> Enum.join("\n")
   end
@@ -373,7 +378,7 @@ defmodule Tribunal.Reporter.Text do
     """
   end
 
-  defp footer(summary) do
+  defp footer(%{summary: summary} = results) do
     status =
       case Map.get(summary, :gate_status) do
         status when status in [:error, :failed] -> "FAILED"
@@ -382,12 +387,7 @@ defmodule Tribunal.Reporter.Text do
         _ -> legacy_text_status(summary)
       end
 
-    threshold_info =
-      cond do
-        Map.get(summary, :strict) -> " (strict mode)"
-        threshold = Map.get(summary, :threshold) -> " (threshold: #{round(threshold * 100)}%)"
-        true -> ""
-      end
+    threshold_info = Format.gate_label(results)
 
     """
     -------------------------------------------------------------------
@@ -651,7 +651,7 @@ defmodule Tribunal.Reporter.HTML do
     <body>
       <div class="container">
         <h1>Tribunal Evaluation Report</h1>
-        #{summary_section(results.summary)}
+        #{summary_section(results)}
         #{gates_section(Map.get(results, :gates))}
         #{metrics_section(results.metrics)}
         #{outcomes_section(results.cases)}
@@ -662,7 +662,7 @@ defmodule Tribunal.Reporter.HTML do
     """
   end
 
-  defp summary_section(summary) do
+  defp summary_section(%{summary: summary} = results) do
     %{failures: failures, errors: errors} = Format.outcome_counts(summary)
 
     {status_class, status_text} =
@@ -673,12 +673,7 @@ defmodule Tribunal.Reporter.HTML do
         _ -> legacy_html_status(summary)
       end
 
-    threshold_info =
-      cond do
-        Map.get(summary, :strict) -> " (strict mode)"
-        threshold = Map.get(summary, :threshold) -> " (threshold: #{round(threshold * 100)}%)"
-        true -> ""
-      end
+    threshold_info = Format.gate_label(results)
 
     """
     <div class="summary">
