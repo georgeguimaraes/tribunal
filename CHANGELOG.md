@@ -1,12 +1,69 @@
 # Changelog
 
-## Unreleased
+## [3.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v3.0.0) (2026-09-10)
 
-### Changed
+Tribunal 3.0 brings a smaller assertion API, shared evaluation semantics across ExUnit and the CLI, and reviewable red-team datasets. This is a breaking release. Start with the migration notes below before updating an existing suite.
 
-- `mix tribunal.eval` shows live completed-attempt progress, including errors and timeouts. Progress and loading messages go to stderr so they stay separate from reports. Concurrent completions appear immediately while final reports preserve dataset order.
+### A smaller assertion API
 
-- ExUnit assertion failures no longer emit duplicate verbose logs. ExUnit still shows the failure reason, and structured evaluation results retain scores and verdicts. Verbose logs for passing assertions are unchanged.
+Use native ExUnit assertions for ordinary string, equality, length, regex, and JSON checks. Tribunal keeps the checks that need evaluation-specific behavior: faithfulness, relevance, correctness, refusal, PII, toxicity, explicit policies, semantic similarity, and Levenshtein distance.
+
+Safety checks now state the condition required to pass. Dataset keys use `no_pii`, `no_toxicity`, and `no_policy_violation`. Toxicity covers both abusive language and materially harmful content, including politely worded dangerous advice. Fairness, scope, confidentiality, action claims, and identity are enforced through explicit policies.
+
+### One evaluation model, two workflows
+
+`tribunal_assert` evaluates a callback inside a normal ExUnit test. `tribunal_dataset` generates a native test for each dataset row. Both support fresh repeated attempts with `repeat:` and `pass_rule:`: all, any, majority, or a required pass rate.
+
+`mix tribunal.eval` runs datasets with concurrency, limits, offsets, repeated sampling, and versioned YAML policies. Gates can require an overall pass rate and a minimum rate within each metadata group. Assertion verdicts, per-case sampling rules, and batch gates remain separate decisions.
+
+Structured inputs and `evaluation_input` let applications retain their original payload while giving judges a text projection. JSON reports use schema version 3 and retain actual outputs, ordered attempts, sampling evidence, and gate results. Console, text, HTML, JUnit, and GitHub formats use the same evaluation results.
+
+### Red-team generation
+
+Five LLM-driven plugins generate one-shot attack candidates: `policy`, `hijacking`, `prompt_extraction`, `excessive_agency`, and `imitation`. Each produces a regular dataset case with an explicit `no_policy_violation` policy, a stable attack ID, and generation metadata.
+
+Generation validates plugin options, attack counts, duplicate prompts, and emitted YAML. The `hallucination` plugin has been removed. For grounding regressions, curate cases with source context and evaluate them with `faithful`. Static attack templates remain available. Generating a candidate does not evaluate the target or prove an attack succeeds. Review candidates and promote useful cases into regression datasets.
+
+### Clearer CLI and test output
+
+The CLI shows completed-attempt progress as work finishes, including failures and timeouts. Loading messages and progress go to stderr, separate from reports on stdout or in output files. Final reports preserve dataset and attempt order even when concurrent work finishes out of order.
+
+Grouped outcomes are labeled as batch gates. Failed evaluations still exit nonzero, without a redundant Mix exception after the report. Without a quality gate, ordinary quality failures remain report-only. Operational errors and empty runs always fail.
+
+ExUnit shows failed assertions through its normal failure output without a duplicate verbose warning. Passing verbose logs are unchanged. Structured results retain judge scores, verdicts, and reasons.
+
+### Migration notes
+
+There are no compatibility aliases for removed assertions.
+
+| Previous usage | Replacement |
+|---|---|
+| Text, equality, regex, JSON, and length assertion macros | Native ExUnit checks. Their deterministic dataset assertions remain available. |
+| `assert_url`, `assert_email`, dataset `is_url` or `is_email` | Removed. Use application validation, or a dataset `regex` check where a pattern is sufficient. |
+| `assert_max_tokens` or dataset `max_tokens` | Removed. The word-count estimate was not a token count. Use tokenizer or provider usage data for token budgets. |
+| `refute_toxic` or `refute_harmful` | `refute_toxicity`. In datasets, use `no_toxicity`. |
+| Hallucination/confabulation checks | `assert_faithful` with source context, or `faithful` in datasets. Ground-truth-free `hallucinated` checks require adding source context, not just renaming. |
+| `refute_jailbreak` or dataset `jailbreak` | Toxicity checks for harmful content, or explicit policy checks for scope and persona boundaries. |
+| Bias, hijacking, prompt extraction, excessive agency, or imitation checks | `refute_policy_violation` or `no_policy_violation`, with a nonempty policy defining the boundary. |
+| Dataset `pii` or `toxicity` | `no_pii` or `no_toxicity`. |
+| List-valued dataset `contains` | `contains_all` or `contains_any`. `contains` accepts one substring. |
+
+Judge thresholds decide `partial` verdicts. Definitive `yes` and `no` verdicts decide the result directly, with negative checks reversing their polarity. Custom judges must return supported verdicts.
+
+If upgrading from the published 1.x releases, also account for these changes:
+
+- Replace `Tribunal.EvalCase` with `Tribunal.ExUnit` and `tribunal_eval` with `tribunal_dataset`.
+- `Tribunal.evaluate/2` returns a complete case result. Per-assertion results live under `result.results`; `result.evaluations` preserves order and duplicate assertions. Update report consumers for JSON schema version 3.
+- Invalid dataset inputs, malformed assertion options, missing outputs, and empty assertion sets fail closed. `--strict` and `--threshold` cannot be combined.
+- Embedding checks require `alike >= 0.4.0 and < 0.5.0`. The default judge is now `anthropic:claude-haiku-4-5-20251001`; configure `:tribunal, :llm` to pin your own model.
+
+The repository's earlier 2.0.0 entry was not published as a GitHub release or tag.
+
+See the [assertions guide](guides/assertions.md), [ExUnit integration guide](guides/exunit-integration.md), [reporters guide](guides/reporters.md), and [red-team guide](guides/red-team-testing.md) for the current contracts and examples.
+
+### Dependencies
+
+The lockfile now includes ReqLLM 1.22.0, LLM DB 2026.9.1, Mint 1.10.0, and ExDoc 0.40.4.
 
 ## [2.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v2.0.0) (2026-08-28)
 
