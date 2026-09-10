@@ -7,6 +7,39 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
   @moduletag :tmp_dir
 
+  test "CLI exits quietly after a failed report but keeps configuration errors visible", %{
+    tmp_dir: tmp_dir
+  } do
+    path = Path.join(tmp_dir, "quality_failure.json")
+
+    File.write!(
+      path,
+      ~s([{"input":"hello","actual_output":"wrong","expected":{"contains":"hello"}}])
+    )
+
+    {output, status} =
+      System.cmd("elixir", ["-S", "mix", "tribunal.eval", path, "--strict"],
+        stderr_to_stdout: true,
+        env: [{"MIX_ENV", "test"}]
+      )
+
+    assert status == 1
+    assert output =~ "FAILED (strict mode)"
+    assert output =~ "contains:"
+    refute output =~ "** (Mix)"
+    refute output =~ "Evaluation failed"
+
+    {output, status} =
+      System.cmd("elixir", ["-S", "mix", "tribunal.eval", path, "--threshold", "2.0"],
+        stderr_to_stdout: true,
+        env: [{"MIX_ENV", "test"}]
+      )
+
+    assert status == 1
+    assert output =~ "** (Mix)"
+    assert output =~ "--threshold must be between 0.0 and 1.0"
+  end
+
   test "reports a missing output as an error", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "missing_output.json")
 
@@ -20,9 +53,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     output =
       capture_io(fn ->
-        assert_raise Mix.Error, "Evaluation failed", fn ->
-          Eval.run([path, "--format", "text"])
-        end
+        assert catch_exit(Eval.run([path, "--format", "text"])) == {:shutdown, 1}
       end)
 
     assert output =~ "Failed:    0"
@@ -45,15 +76,15 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     output =
       capture_io(fn ->
-        assert_raise Mix.Error, "Evaluation failed", fn ->
-          Eval.run([
-            path,
-            "--format",
-            "text",
-            "--provider",
-            "Mix.Tasks.TribunalEvalIntegrationTest.failing_provider"
-          ])
-        end
+        assert catch_exit(
+                 Eval.run([
+                   path,
+                   "--format",
+                   "text",
+                   "--provider",
+                   "Mix.Tasks.TribunalEvalIntegrationTest.failing_provider"
+                 ])
+               ) == {:shutdown, 1}
       end)
 
     assert output =~ "Failed:    0"
@@ -71,9 +102,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     Mix.Task.reenable("app.start")
 
     capture_io(fn ->
-      assert_raise Mix.Error, "Evaluation failed", fn ->
-        Eval.run([path, "--format", "json", "--output", report_path])
-      end
+      assert catch_exit(Eval.run([path, "--format", "json", "--output", report_path])) ==
+               {:shutdown, 1}
     end)
 
     report = report_path |> File.read!() |> JSON.decode!()
@@ -316,9 +346,7 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     output =
       capture_io(fn ->
-        assert_raise Mix.Error, "Evaluation failed", fn ->
-          Eval.run([path, "--format", "text"])
-        end
+        assert catch_exit(Eval.run([path, "--format", "text"])) == {:shutdown, 1}
       end)
 
     assert output =~ "Total:     0 test cases"
@@ -338,9 +366,8 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     output =
       capture_io(fn ->
-        assert_raise Mix.Error, "Evaluation failed", fn ->
-          Eval.run([path, "--format", "text", "--offset", "1"])
-        end
+        assert catch_exit(Eval.run([path, "--format", "text", "--offset", "1"])) ==
+                 {:shutdown, 1}
       end)
 
     assert output =~ "Total:     0 test cases"
@@ -383,15 +410,15 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
     output =
       capture_io(fn ->
-        assert_raise Mix.Error, "Evaluation failed", fn ->
-          Eval.run([
-            path,
-            "--format",
-            "text",
-            "--provider",
-            "Mix.Tasks.TribunalEvalIntegrationTest.killing_provider"
-          ])
-        end
+        assert catch_exit(
+                 Eval.run([
+                   path,
+                   "--format",
+                   "text",
+                   "--provider",
+                   "Mix.Tasks.TribunalEvalIntegrationTest.killing_provider"
+                 ])
+               ) == {:shutdown, 1}
       end)
 
     assert output =~ "Failed:    0"
@@ -435,17 +462,17 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     Mix.Task.reenable("app.start")
 
     capture_io(fn ->
-      assert_raise Mix.Error, "Evaluation failed", fn ->
-        Eval.run([
-          path,
-          "--format",
-          "text",
-          "--concurrency",
-          "2",
-          "--provider",
-          "Mix.Tasks.TribunalEvalIntegrationTest.#{provider}"
-        ])
-      end
+      assert catch_exit(
+               Eval.run([
+                 path,
+                 "--format",
+                 "text",
+                 "--concurrency",
+                 "2",
+                 "--provider",
+                 "Mix.Tasks.TribunalEvalIntegrationTest.#{provider}"
+               ])
+             ) == {:shutdown, 1}
     end)
   end
 

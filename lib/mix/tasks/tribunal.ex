@@ -118,7 +118,7 @@ defmodule Mix.Tasks.Tribunal.Eval do
     formatted = format_results(results, settings.format)
     write_results(formatted, settings.output)
 
-    unless passed, do: Mix.raise("Evaluation failed")
+    unless passed, do: exit({:shutdown, 1})
   end
 
   defp parse_args(args) do
