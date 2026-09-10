@@ -20,6 +20,8 @@ end
 
 These are native ExUnit tests. ExUnit owns setup, tags, filtering, async scheduling, timeouts, and failure presentation.
 
+Failed assertion macros show the judge's reason in ExUnit's failure output without a separate log message, even with `verbose: true`. Verbose mode logs passing assertions only. Structured evaluation results retain judge scores and verdicts for debugging.
+
 ## Evaluating a user-owned callback
 
 Use `tribunal_assert` when each sample must call your application again:

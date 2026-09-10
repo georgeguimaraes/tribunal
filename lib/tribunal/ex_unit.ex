@@ -250,38 +250,30 @@ defmodule Tribunal.ExUnit.Assertions do
   alias Tribunal.TestCase
 
   @doc """
-  Logs verbose output for judge assertions.
+  Logs verbose output for passing assertions.
 
   Verbose mode is enabled when:
   - `verbose: true` is passed to the assertion, OR
   - `config :tribunal, verbose: true` is set in config
 
-  Uses Logger.info for passes and Logger.warning for failures,
-  which integrates properly with ExUnit's output capture.
+  Uses Logger.info for passes. Failures are left to ExUnit's assertion output
+  so the reason appears only once.
   """
-  def print_verbose(assertion_type, result, opts) do
+  def print_verbose(assertion_type, {:pass, details}, opts) do
     verbose = Keyword.get(opts, :verbose, Application.get_env(:tribunal, :verbose, false))
 
     if verbose do
-      case result do
-        {:pass, details} ->
-          Logger.info(format_verbose(:pass, assertion_type, details))
-
-        {:fail, details} ->
-          Logger.warning(format_verbose(:fail, assertion_type, details))
-
-        _ ->
-          :ok
-      end
+      Logger.info(format_verbose(assertion_type, details))
     end
   end
 
-  defp format_verbose(status, type, details) do
-    icon = if status == :pass, do: "✓", else: "✗"
+  def print_verbose(_assertion_type, _result, _opts), do: :ok
+
+  defp format_verbose(type, details) do
     score_str = if details[:score], do: " (score: #{Float.round(details[:score], 2)})", else: ""
     verdict_str = if details[:verdict], do: " [#{details[:verdict]}]", else: ""
 
-    "#{icon} #{type}#{score_str}#{verdict_str}: #{details[:reason]}"
+    "✓ #{type}#{score_str}#{verdict_str}: #{details[:reason]}"
   end
 
   @doc """
@@ -349,7 +341,7 @@ defmodule Tribunal.ExUnit.Assertions do
 
     * `:query` - Optional context about the input
     * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:verbose` - When true, logs score reasoning for passes (default: false)
     * `:model` - LLM model to use for judging
 
   ## Examples
@@ -397,7 +389,7 @@ defmodule Tribunal.ExUnit.Assertions do
 
     * `:context` - Required. The context to check faithfulness against.
     * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:verbose` - When true, logs score reasoning for passes (default: false)
     * `:model` - LLM model to use for judging
 
   ## Examples
@@ -430,7 +422,7 @@ defmodule Tribunal.ExUnit.Assertions do
 
     * `:query` - Required. The query to check relevance against.
     * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:verbose` - When true, logs score reasoning for passes (default: false)
     * `:model` - LLM model to use for judging
   """
   defmacro assert_relevant(output, opts) do
@@ -462,7 +454,7 @@ defmodule Tribunal.ExUnit.Assertions do
 
     * `:query` - The query/input.
     * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:verbose` - When true, logs score reasoning for passes (default: false)
     * `:model` - LLM model to use for judging
   """
   defmacro refute_toxicity(output, opts \\ []) do
@@ -495,7 +487,7 @@ defmodule Tribunal.ExUnit.Assertions do
     * `:policy` - Required. The policy text the response is graded against.
     * `:query` - Optional context about the input.
     * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:verbose` - When true, logs score reasoning for passes (default: false)
     * `:model` - LLM model to use for judging
 
   ## Examples
@@ -531,7 +523,7 @@ defmodule Tribunal.ExUnit.Assertions do
     * `:query` - The query/input.
     * `:expected` - Required. The expected output.
     * `:threshold` - Score threshold (default: 0.8)
-    * `:verbose` - When true, prints score reasoning (default: false)
+    * `:verbose` - When true, logs score reasoning for passes (default: false)
     * `:model` - LLM model to use for judging
   """
   defmacro assert_correctness(output, opts) do
@@ -562,7 +554,7 @@ defmodule Tribunal.ExUnit.Assertions do
 
     * `:expected` - Required. The expected output to compare against.
     * `:threshold` - Similarity threshold (default: 0.7)
-    * `:verbose` - When true, prints similarity score (default: false)
+    * `:verbose` - When true, logs similarity score for passes (default: false)
   """
   defmacro assert_similar(output, opts) do
     quote do

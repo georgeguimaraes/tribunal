@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `mix tribunal.eval` shows live completed-attempt progress, including errors and timeouts. Progress and loading messages go to stderr so they stay separate from reports. Concurrent completions appear immediately while final reports preserve dataset order.
+
+- ExUnit assertion failures no longer emit duplicate verbose logs. ExUnit still shows the failure reason, and structured evaluation results retain scores and verdicts. Verbose logs for passing assertions are unchanged.
+
 ## [2.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v2.0.0) (2026-08-28)
 
 Tribunal 2.0 gives ExUnit and `mix tribunal.eval` one shared evaluation model while keeping each workflow native. ExUnit owns focused tests and hard requirements. The Mix task owns batch execution, aggregate gates, and reports.

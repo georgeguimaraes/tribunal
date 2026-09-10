@@ -2,6 +2,10 @@
 
 `mix tribunal.eval` builds one report and formats it as console, text, JSON, HTML, GitHub annotations, or JUnit XML.
 
+While evaluations run, stderr shows the selected case count and completed attempts, including passed, failed, and errored attempts. Progress starts at zero and updates as each attempt finishes, even when an earlier case is still running. With `--repeat`, the total is selected cases multiplied by repeats. Final reports keep dataset and attempt order.
+
+Loading messages and progress stay on stderr, separate from the report on stdout or in `--output`. Progress contains case and attempt numbers, not prompts or responses.
+
 | Format | Option | Use |
 |---|---|---|
 | Console | `--format console` | Local interactive output, default |

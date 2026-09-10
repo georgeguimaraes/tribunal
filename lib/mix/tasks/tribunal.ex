@@ -3,6 +3,9 @@ defmodule Mix.Tasks.Tribunal.Eval do
   @moduledoc """
   Runs LLM evaluations from dataset files.
 
+  Loading messages and live attempt progress go to stderr. The final report
+  goes to stdout or the file selected with `--output`.
+
   ## Usage
 
       mix tribunal.eval [options] [files...]
@@ -274,40 +277,65 @@ defmodule Mix.Tasks.Tribunal.Eval do
   end
 
   defp load_dataset(path) do
-    Mix.shell().info("Loading #{path}...")
+    IO.puts(:stderr, "Loading #{path}...")
     Tribunal.Dataset.load_with_assertions!(path)
   end
 
   defp run_cases(cases, provider, concurrency, repeat, pass_rule, group_by, group_values) do
     timeout = Application.get_env(:tribunal, :eval_timeout, 120_000)
     jobs = expand_attempts(cases, repeat, group_values)
+    total = length(jobs)
+
+    IO.puts(
+      :stderr,
+      "Evaluating #{length(cases)} cases (repeat: #{repeat}, concurrency: #{concurrency})"
+    )
+
+    IO.puts(:stderr, "Progress: 0/#{total} attempts completed")
 
     task_results =
       Task.Supervisor.async_stream_nolink(
         Tribunal.TaskSupervisor,
         jobs,
-        fn {_case_index, _attempt_index, test_case, assertions, _group_value} ->
-          run_case(test_case, assertions, provider)
+        fn {_case_index, _attempt_index, test_case, assertions, _group_value} = job ->
+          {job, run_case(test_case, assertions, provider)}
         end,
         max_concurrency: concurrency,
         timeout: timeout,
-        on_timeout: :kill_task
+        on_timeout: :kill_task,
+        ordered: false,
+        zip_input_on_exit: true
       )
 
-    jobs
-    |> Enum.zip(task_results)
-    |> Enum.map(fn
-      {{case_index, attempt_index, _test_case, _assertions, group_value}, {:ok, result}} ->
-        {case_index, attempt_index, group_value, result}
+    task_results
+    |> Stream.with_index(1)
+    |> Enum.map(fn {task_result, completed} ->
+      {job, result} =
+        case task_result do
+          {:ok, {job, result}} ->
+            {job, result}
 
-      {{case_index, attempt_index, test_case, assertions, group_value}, {:exit, reason}} ->
-        result =
-          Tribunal.Evaluator.error(test_case, "Evaluation task failed: #{inspect(reason)}",
-            assertions: assertions,
-            duration_ms: task_error_duration(reason, timeout)
-          )
+          {:exit,
+           {{_case_index, _attempt_index, test_case, assertions, _group_value} = job, reason}} ->
+            result =
+              Tribunal.Evaluator.error(test_case, "Evaluation task failed: #{inspect(reason)}",
+                assertions: assertions,
+                duration_ms: task_error_duration(reason, timeout)
+              )
 
-        {case_index, attempt_index, group_value, result}
+            {job, result}
+        end
+
+      {case_index, attempt_index, _test_case, _assertions, group_value} = job
+      status = if result.execution_error, do: :error, else: result.status
+
+      IO.puts(
+        :stderr,
+        "Progress: #{completed}/#{total} attempts completed " <>
+          "(case #{case_index + 1}, attempt #{attempt_index + 1}: #{status})"
+      )
+
+      {case_index, attempt_index, group_value, result}
     end)
     |> Enum.group_by(&elem(&1, 0), & &1)
     |> Enum.sort_by(&elem(&1, 0))

@@ -130,6 +130,8 @@ mix tribunal.eval --format github  # GitHub Actions annotations
 
 CLI values override policy values, policy values override defaults, and positional dataset files replace policy datasets. Quality failures are report-only without a host-owned overall or group gate. Operational errors and zero-case runs always exit nonzero.
 
+The task shows completed-attempt progress on stderr while it runs. With `--repeat 3`, each selected case contributes three attempts to the counter. Concurrent attempts update progress as they finish, while the final report keeps dataset order. Loading messages also use stderr, keeping them separate from the report on stdout or in `--output`.
+
 A version 1 policy looks like this:
 
 ```yaml
@@ -288,7 +290,7 @@ expected:
 
 ### LLM-as-judge assertion macros
 
-These macros require `req_llm`. They ask a judge model to return a verdict, score, and reason. `threshold:` defaults to `0.8` and decides whether a `partial` verdict passes. `yes` and `no` verdicts are decisive. `model:` overrides the configured model, `verbose: true` logs the evidence, and `temperature:` and `max_tokens:` are forwarded to ReqLLM. `llm:` and `llm_client:` provide an injectable three-argument client hook, mainly for tests.
+These macros require `req_llm`. They ask a judge model to return a verdict, score, and reason. `threshold:` defaults to `0.8` and decides whether a `partial` verdict passes. `yes` and `no` verdicts are decisive. `model:` overrides the configured model, `verbose: true` logs evidence for passing assertions, and `temperature:` and `max_tokens:` are forwarded to ReqLLM. Failures show the reason through ExUnit without a duplicate log. Structured evaluation results retain scores and verdicts. `llm:` and `llm_client:` provide an injectable three-argument client hook, mainly for tests.
 
 | Macro | Passing contract and specific options | Dataset assertion |
 |---|---|---|
@@ -386,7 +388,7 @@ Reports now record harmful-content results under `no_toxicity`, and the consolid
 
 ### Embedding assertion
 
-`assert_similar(output, opts)` requires `alike` and compares semantic meaning instead of exact text. `expected:` is required, `threshold:` defaults to `0.7`, `verbose: true` logs the score, and `alike_fn:` injects a custom similarity function.
+`assert_similar(output, opts)` requires `alike` and compares semantic meaning instead of exact text. `expected:` is required, `threshold:` defaults to `0.7`, `verbose: true` logs the score for passing assertions, and `alike_fn:` injects a custom similarity function.
 
 The dataset assertion is `similar`, with the comparison text in the row's top-level `expected_output`:
 

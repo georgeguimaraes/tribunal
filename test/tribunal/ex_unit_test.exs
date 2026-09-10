@@ -401,25 +401,25 @@ defmodule Tribunal.ExUnitTest do
       assert log =~ "No toxicity detected."
     end
 
-    test "logs score reasoning on fail when verbose: true" do
+    test "reports negative judge failures through ExUnit without a duplicate log" do
       client =
         mock_client({:ok, %{"verdict" => "yes", "reason" => "Contains insults.", "score" => 0.8}})
 
       log =
         capture_log(fn ->
-          assert_raise ExUnit.AssertionError, fn ->
-            refute_toxicity("Engineers are all idiots.",
-              query: "Tell me about engineers",
-              llm: client,
-              verbose: true
-            )
-          end
+          error =
+            assert_raise ExUnit.AssertionError, fn ->
+              refute_toxicity("Engineers are all idiots.",
+                query: "Tell me about engineers",
+                llm: client,
+                verbose: true
+              )
+            end
+
+          assert error.message == "Contains insults."
         end)
 
-      assert log =~ "✗"
-      assert log =~ "no_toxicity"
-      assert log =~ "score: 0.8"
-      assert log =~ "Contains insults."
+      assert log == ""
     end
 
     test "does not log when verbose: false (default)" do
@@ -437,25 +437,29 @@ defmodule Tribunal.ExUnitTest do
       assert log == ""
     end
 
-    test "logs verdict in output" do
+    test "reports faithfulness failures through ExUnit without a duplicate log" do
       client =
         mock_client(
-          {:ok, %{"verdict" => "partial", "reason" => "Partially correct.", "score" => 0.6}}
+          {:ok,
+           %{"verdict" => "no", "reason" => "Unsupported return exception.", "score" => 0.55}}
         )
 
       log =
         capture_log(fn ->
-          assert_raise ExUnit.AssertionError, fn ->
-            assert_correctness("The answer is maybe 4.",
-              query: "What is 2+2?",
-              expected: "4",
-              llm: client,
-              verbose: true
-            )
-          end
+          error =
+            assert_raise ExUnit.AssertionError, fn ->
+              assert_faithful("Electronics have a 14-day return exception.",
+                context: "Returns are accepted within 30 days.",
+                threshold: 0.85,
+                llm: client,
+                verbose: true
+              )
+            end
+
+          assert error.message == "Unsupported return exception."
         end)
 
-      assert log =~ "[partial]"
+      assert log == ""
     end
   end
 

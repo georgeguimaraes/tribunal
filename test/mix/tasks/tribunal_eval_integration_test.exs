@@ -7,6 +7,57 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
 
   @moduletag :tmp_dir
 
+  test "shows completed attempts before a blocked case finishes and keeps JSON ordered", %{
+    tmp_dir: tmp_dir
+  } do
+    path = Path.join(tmp_dir, "progress.json")
+
+    File.write!(
+      path,
+      JSON.encode!([
+        %{input: "blocked", expected: %{contains: "ok"}},
+        %{input: "fast", expected: %{contains: "ok"}}
+      ])
+    )
+
+    Process.register(self(), Tribunal.ProgressTestOwner)
+    Mix.Task.reenable("app.start")
+
+    progress =
+      capture_io(:stderr, fn ->
+        task =
+          Task.async(fn ->
+            capture_io(fn ->
+              Eval.run([
+                path,
+                "--format",
+                "json",
+                "--concurrency",
+                "2",
+                "--provider",
+                "Mix.Tasks.TribunalEvalIntegrationTest.progress_provider"
+              ])
+            end)
+          end)
+
+        assert_receive {:provider_blocked, provider}, 1_000
+
+        try do
+          assert await_progress("case 2, attempt 1: passed", 100) =~
+                   "Progress: 1/2 attempts completed (case 2, attempt 1: passed)"
+        after
+          send(provider, :release)
+        end
+
+        report = task |> Task.await() |> JSON.decode!()
+        assert [%{"input" => "blocked"}, %{"input" => "fast"}] = report["cases"]
+        assert report["summary"]["passed"] == 2
+      end)
+
+    assert progress =~ "Progress: 0/2 attempts completed"
+    assert progress =~ "Progress: 2/2 attempts completed (case 1, attempt 1: passed)"
+  end
+
   test "CLI exits quietly after a failed report but keeps configuration errors visible", %{
     tmp_dir: tmp_dir
   } do
@@ -150,23 +201,31 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
     Mix.Task.reenable("tribunal.eval")
     Mix.Task.reenable("app.start")
 
-    capture_io(fn ->
-      Eval.run([
-        path,
-        "--format",
-        "json",
-        "--output",
-        report_path,
-        "--repeat",
-        "3",
-        "--pass-rule",
-        "any",
-        "--threshold",
-        "1.0",
-        "--provider",
-        "Mix.Tasks.TribunalEvalIntegrationTest.sampled_provider"
-      ])
-    end)
+    progress =
+      capture_io(:stderr, fn ->
+        capture_io(fn ->
+          Eval.run([
+            path,
+            "--format",
+            "json",
+            "--output",
+            report_path,
+            "--repeat",
+            "3",
+            "--pass-rule",
+            "any",
+            "--threshold",
+            "1.0",
+            "--provider",
+            "Mix.Tasks.TribunalEvalIntegrationTest.sampled_provider"
+          ])
+        end)
+      end)
+
+    assert progress =~ "Progress: 0/3 attempts completed"
+    assert progress =~ "Progress: 1/3 attempts completed (case 1, attempt 1: failed)"
+    assert progress =~ "Progress: 2/3 attempts completed (case 1, attempt 2: passed)"
+    assert progress =~ "Progress: 3/3 attempts completed (case 1, attempt 3: failed)"
 
     report = report_path |> File.read!() |> JSON.decode!()
     assert Agent.get(Tribunal.SampledProviderCounter, & &1) == 3
@@ -449,12 +508,18 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
       end
     end)
 
-    output = run_eval(path, "slow_provider")
+    progress =
+      capture_io(:stderr, fn ->
+        output = run_eval(path, "slow_provider")
 
-    assert output =~ "Passed:    1"
-    assert output =~ "Failed:    0"
-    assert output =~ "Errors:    1"
-    assert output =~ "Evaluation task failed: :timeout"
+        assert output =~ "Passed:    1"
+        assert output =~ "Failed:    0"
+        assert output =~ "Errors:    1"
+        assert output =~ "Evaluation task failed: :timeout"
+      end)
+
+    assert progress =~ "Progress: 1/2 attempts completed (case 2, attempt 1: passed)"
+    assert progress =~ "Progress: 2/2 attempts completed (case 1, attempt 1: error)"
   end
 
   defp run_eval(path, provider) do
@@ -477,6 +542,28 @@ defmodule Mix.Tasks.TribunalEvalIntegrationTest do
   end
 
   def failing_provider(_test_case), do: raise("provider exploded")
+
+  def progress_provider(%Tribunal.TestCase{input: "blocked"}) do
+    send(Tribunal.ProgressTestOwner, {:provider_blocked, self()})
+
+    receive do
+      :release -> "ok"
+    end
+  end
+
+  def progress_provider(%Tribunal.TestCase{input: "fast"}), do: "ok"
+
+  defp await_progress(expected, retries) do
+    {_input, output} = StringIO.contents(Process.whereis(:standard_error))
+
+    if output =~ expected or retries == 0 do
+      output
+    else
+      Process.sleep(10)
+      await_progress(expected, retries - 1)
+    end
+  end
+
   def wrong_provider(_test_case), do: "wrong answer"
 
   def sampled_provider(_test_case) do
