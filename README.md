@@ -466,19 +466,18 @@ Run candidate datasets with `mix tribunal.eval`, inspect the evidence, then copy
 
 ## Roadmap
 
-- [x] Core evaluation pipeline
-- [x] Faithfulness metric (RAGAS-style)
-- [x] LLM-as-judge with configurable models
-- [x] ExUnit integration for test assertions
-- [x] User-owned and dataset-driven repeated sampling
-- [x] Structured inputs and evaluation input projection
-- [x] Versioned batch policies, overall gates, and metadata group gates
-- [x] Schema v3 reports with ordered attempt evidence
-- [x] Red team attack generators (static templates)
-- [x] LLM-driven red team plugin system
-- [ ] Red team strategies (crescendo, iterative jailbreak)
-- [ ] Dataset template variables
-- [ ] Classified infrastructure retries and caching
+Next up:
+
+- [ ] Curated red-team datasets with source and license metadata, plus optional LLM retargeting.
+- [ ] Multi-turn red-team strategies such as crescendo and iterative jailbreaks, prototyped in a host application before defining a reusable API.
+
+Deferred work:
+
+- [ ] Classified infrastructure retries, caching, and resuming partial batch runs.
+- [ ] Usage and cost budgets.
+- [ ] Confidence-interval gates, per-group thresholds, and required-group checks.
+
+See [ROADMAP.md](ROADMAP.md) for the current foundation, implementation boundaries, and design constraints. These items aren't implemented yet.
 
 ## License
 
