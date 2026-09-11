@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/georgeguimaraes/tribunal/compare/v3.0.0...v3.0.1) (2026-09-11)
+
+
+### Documentation
+
+* Clarify next steps and deferred roadmap work ([0d28828](https://github.com/georgeguimaraes/tribunal/commit/0d288288e38686cf2ee3bcc3588855b7269e9775))
+
 ## [3.0.0](https://github.com/georgeguimaraes/tribunal/compare/v1.4.0...v3.0.0) (2026-09-10)
 
 Tribunal 3.0 brings a smaller assertion API, shared evaluation semantics across ExUnit and the CLI, and reviewable red-team datasets. This is a breaking release. Start with the migration notes below before updating an existing suite.
