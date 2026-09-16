@@ -33,7 +33,7 @@ Tribunal offers two modes for different use cases:
 ```elixir
 def deps do
   [
-    {:tribunal, "~> 2.0"},
+    {:tribunal, "~> 3.0"},
 
     # Optional: for LLM-as-judge evaluations
     {:req_llm, ">= 1.2.0 and < 2.0.0"},
