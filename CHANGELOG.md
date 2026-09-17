@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.2](https://github.com/georgeguimaraes/tribunal/compare/v3.0.1...v3.0.2) (2026-09-17)
+
+
+### Miscellaneous
+
+* Pin Dependabot commit prefix to chore(deps) ([de0a341](https://github.com/georgeguimaraes/tribunal/commit/de0a34132112aef3a68d27e1d442c51c79d7be9c))
+
+
+### Documentation
+
+* Point the install snippet at the current release ([3e1df4f](https://github.com/georgeguimaraes/tribunal/commit/3e1df4fe197df98282520d84d42451687978d5f2))
+
 ## [3.0.1](https://github.com/georgeguimaraes/tribunal/compare/v3.0.0...v3.0.1) (2026-09-15)
 
 
