@@ -65,9 +65,29 @@ defmodule Tribunal.Assertions.JudgeSchemaTest do
     end
   end
 
+  defmodule CitedVerdict do
+    @behaviour Tribunal.Judge
+
+    @impl true
+    def name, do: :cited_verdict
+
+    @impl true
+    def prompt(test_case, _opts), do: "Is this response accurate? #{test_case.actual_output}"
+
+    @impl true
+    def schema(_opts) do
+      [
+        verdict: [type: :string, required: true],
+        reason: [type: :string, required: true],
+        score: [type: :float],
+        quotes: [type: {:list, :string}, required: true]
+      ]
+    end
+  end
+
   setup do
     previous = Application.get_env(:tribunal, :custom_judges, [])
-    Application.put_env(:tribunal, :custom_judges, [Rubric])
+    Application.put_env(:tribunal, :custom_judges, [Rubric, CitedVerdict])
     on_exit(fn -> Application.put_env(:tribunal, :custom_judges, previous) end)
 
     %{test_case: %TestCase{input: "How do I reset my password?", actual_output: "Answer"}}
@@ -157,6 +177,26 @@ defmodule Tribunal.Assertions.JudgeSchemaTest do
       assert details["reason"] == "Unmet criteria: accuracy"
       assert_in_delta details["score"], 2 / 3, 0.001
       assert details["criteria"]["accuracy"]["rating"] == "no"
+    end
+  end
+
+  describe "judges with a custom schema and the default interpretation" do
+    test "keep the verdict instructions and verdict logic", %{test_case: test_case} do
+      client = fn _model, messages, opts ->
+        send(self(), {:judge_request, messages, opts[:schema]})
+
+        {:ok,
+         %{"verdict" => "partial", "reason" => "Mostly", "score" => 0.9, "quotes" => ["Answer"]}}
+      end
+
+      assert {:pass, details} = Judge.evaluate(:cited_verdict, test_case, llm: client)
+      assert details == %{verdict: "partial", reason: "Mostly", score: 0.9}
+      assert_received {:judge_request, messages, schema}
+
+      assert Keyword.has_key?(schema, :quotes)
+      system_prompt = Enum.find(messages, &(&1.role == "system")).content
+      assert system_prompt =~ ~s(verdict: "yes", "no", or "partial")
+      assert system_prompt =~ "any other fields the requested schema defines"
     end
   end
 
