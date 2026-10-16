@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.1.0](https://github.com/georgeguimaraes/tribunal/compare/v3.0.1...v3.1.0) (2026-10-16)
+
+
+### Features
+
+* Let custom judges declare an output schema ([#70](https://github.com/georgeguimaraes/tribunal/issues/70)) ([f428545](https://github.com/georgeguimaraes/tribunal/commit/f428545e3817518abd4856113df1f7035f6e1eef))
+
+
+### Miscellaneous
+
+* **deps:** bump alike from 0.4.3 to 0.4.4 ([#64](https://github.com/georgeguimaraes/tribunal/issues/64)) ([609e087](https://github.com/georgeguimaraes/tribunal/commit/609e08798c30e1a93befde1a1f6714a025383aee))
+* **deps:** bump req_llm from 1.23.0 to 1.24.0 ([#65](https://github.com/georgeguimaraes/tribunal/issues/65)) ([7c7685f](https://github.com/georgeguimaraes/tribunal/commit/7c7685f8ad7e582bafa92c1141980c2853ac8b9a))
+* **deps:** bump req_llm from 1.24.0 to 1.28.0 ([#69](https://github.com/georgeguimaraes/tribunal/issues/69)) ([8de9081](https://github.com/georgeguimaraes/tribunal/commit/8de908136a647861ff9645ceca2b6a7677cdb7b8))
+* Pin Dependabot commit prefix to chore(deps) ([de0a341](https://github.com/georgeguimaraes/tribunal/commit/de0a34132112aef3a68d27e1d442c51c79d7be9c))
+
+
+### Documentation
+
+* Point the install snippet at the current release ([3e1df4f](https://github.com/georgeguimaraes/tribunal/commit/3e1df4fe197df98282520d84d42451687978d5f2))
+
 ## [3.0.1](https://github.com/georgeguimaraes/tribunal/compare/v3.0.0...v3.0.1) (2026-09-15)
 
 
