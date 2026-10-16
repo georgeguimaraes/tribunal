@@ -66,6 +66,8 @@ defmodule Tribunal.Judge do
   - `verdict`: "yes", "no", or "partial"
   - `reason`: explanation for the verdict
   - `score`: confidence score 0.0-1.0
+
+  Judges that implement `c:schema/1` should describe their own fields instead.
   """
   @callback prompt(test_case :: TestCase.t(), opts :: keyword()) :: String.t()
 
@@ -86,16 +88,35 @@ defmodule Tribunal.Judge do
   @callback negative_metric?() :: boolean()
 
   @doc """
+  Optional: returns the structured output schema for the judge model.
+
+  By default, the judge model returns `verdict`, `reason`, and `score`.
+  Implement this callback when one judge call should return more, such as a
+  result for each criterion of a rubric. Receives the options passed to the
+  assertion. The schema is passed to `ReqLLM.generate_object/4`, so it can be
+  a keyword list of field specs or a JSON Schema map.
+
+  The decoded object is passed to `c:evaluate_result/2`. Without that
+  callback, the object must still contain `verdict`, `reason`, and optionally
+  `score`.
+  """
+  @callback schema(opts :: keyword()) :: keyword() | map()
+
+  @doc """
   Optional: customize how the LLM result is interpreted.
 
   By default, uses verdict and threshold logic. Override for custom pass/fail logic.
+  Receives the decoded object with string keys, including any fields declared
+  by `c:schema/1`.
 
-  Should return `{:pass, details}` or `{:fail, details}`.
+  Should return `{:pass, details}` or `{:fail, details}`. Include `:reason` in
+  details so failures explain themselves, and `:verdict` and `:score` when
+  available.
   """
   @callback evaluate_result(result :: map(), opts :: keyword()) ::
               {:pass, map()} | {:fail, map()}
 
-  @optional_callbacks [validate: 1, negative_metric?: 0, evaluate_result: 2]
+  @optional_callbacks [validate: 1, negative_metric?: 0, schema: 1, evaluate_result: 2]
 
   # Built-in judges
   @builtin_judges [

@@ -244,6 +244,8 @@ test "faithful assertion" do
 end
 ```
 
+The client receives the requested output schema in `opts[:schema]`.
+
 ## Performance Considerations
 
 LLM-as-judge evaluations involve API calls:
@@ -282,6 +284,7 @@ The behaviour defines these callbacks:
 # Optional callbacks
 @callback validate(test_case :: TestCase.t()) :: :ok | {:error, String.t()}
 @callback negative_metric?() :: boolean()
+@callback schema(opts :: keyword()) :: keyword() | map()
 @callback evaluate_result(result :: map(), opts :: keyword()) :: {:pass, map()} | {:fail, map()}
 ```
 
@@ -289,6 +292,7 @@ The behaviour defines these callbacks:
 - `prompt/2`: Builds the evaluation prompt for the LLM
 - `validate/1`: Validates the test case has required fields (e.g., context for faithfulness)
 - `negative_metric?/0`: When `true`, "yes" verdict = fail (for detecting bad things like toxicity)
+- `schema/1`: Structured output schema for the judge model, replacing the default `verdict`, `reason`, and `score`
 - `evaluate_result/2`: Custom pass/fail logic based on the LLM response
 
 ### Basic Example
@@ -409,6 +413,82 @@ defmodule MyApp.Judges.StrictCompliance do
   end
 end
 ```
+
+### Custom Output Schema
+
+By default, the judge model returns `verdict`, `reason`, and `score`. Implement `schema/1` when one call should return more. For example, a rubric judge can rate several criteria and treat some of them as not applicable to the response.
+
+`schema/1` receives the assertion options and returns a schema for `ReqLLM.generate_object/4`: a keyword list of field specs or a JSON Schema map. Tribunal passes the decoded object, with string keys, to `evaluate_result/2`, which decides pass or fail:
+
+```elixir
+defmodule MyApp.Judges.Rubric do
+  @behaviour Tribunal.Judge
+
+  @criteria ["accuracy", "completeness", "tone"]
+  @ratings ["yes", "partial", "no", "not_applicable"]
+
+  @impl true
+  def name, do: :rubric
+
+  @impl true
+  def prompt(test_case, _opts) do
+    """
+    Rate the response against each criterion:
+
+    - accuracy: the facts are correct
+    - completeness: the response answers every part of the query
+    - tone: the response is polite and professional
+
+    Use "not_applicable" when a criterion does not apply to this query.
+
+    Query: #{Tribunal.TestCase.evaluation_input(test_case)}
+
+    Response to evaluate:
+    #{test_case.actual_output}
+    """
+  end
+
+  @impl true
+  def schema(_opts) do
+    criterion =
+      {:map,
+       [
+         rating: [type: {:in, @ratings}, required: true],
+         reason: [type: :string, required: true]
+       ]}
+
+    Enum.map(@criteria, &{String.to_atom(&1), [type: criterion, required: true]})
+  end
+
+  @impl true
+  def evaluate_result(response, _opts) do
+    applicable =
+      @criteria
+      |> Enum.map(&{&1, get_in(response, [&1, "rating"])})
+      |> Enum.reject(fn {_criterion, rating} -> rating == "not_applicable" end)
+
+    unmet = for {criterion, rating} <- applicable, rating != "yes", do: criterion
+
+    details = %{
+      verdict: if(applicable != [] and unmet == [], do: "yes", else: "no"),
+      reason: reason(applicable, unmet),
+      score: score(applicable, unmet),
+      criteria: response
+    }
+
+    if details.verdict == "yes", do: {:pass, details}, else: {:fail, details}
+  end
+
+  defp reason([], _unmet), do: "No criterion applies"
+  defp reason(_applicable, []), do: "All applicable criteria are met"
+  defp reason(_applicable, unmet), do: "Unmet criteria: #{Enum.join(unmet, ", ")}"
+
+  defp score([], _unmet), do: 0.0
+  defp score(applicable, unmet), do: (length(applicable) - length(unmet)) / length(applicable)
+end
+```
+
+Return `:reason` in the details so failures explain themselves, and `:verdict` and `:score` so verbose output and reports keep them. Other keys, such as `:criteria` above, also appear in JSON reports. A judge with a custom schema but no `evaluate_result/2` uses the default verdict logic, so its schema must still include `verdict`, `reason`, and optionally `score`.
 
 ### Registration
 
