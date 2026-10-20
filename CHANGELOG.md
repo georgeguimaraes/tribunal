@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.1](https://github.com/georgeguimaraes/tribunal/compare/v3.1.0...v3.1.1) (2026-10-20)
+
+
+### Miscellaneous
+
+* **ci:** Pin georgeguimaraes/workflows to v1.0.1 ([2942d3e](https://github.com/georgeguimaraes/tribunal/commit/2942d3ec4b82cf774254be45ba78ecb0777eafa5))
+* **ci:** Pin GitHub Actions to commit SHAs ([c938fb1](https://github.com/georgeguimaraes/tribunal/commit/c938fb1744a9fe2dd8631051d528031f3279afcc))
+
 ## [3.1.0](https://github.com/georgeguimaraes/tribunal/compare/v3.0.1...v3.1.0) (2026-10-16)
 
 
