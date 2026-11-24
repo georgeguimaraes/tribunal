@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.1](https://github.com/georgeguimaraes/tribunal/compare/v3.1.0...v3.1.1) (2026-11-24)
+
+
+### Miscellaneous
+
+* **ci:** Pin georgeguimaraes/workflows to v1.0.1 ([2942d3e](https://github.com/georgeguimaraes/tribunal/commit/2942d3ec4b82cf774254be45ba78ecb0777eafa5))
+* **ci:** Pin GitHub Actions to commit SHAs ([c938fb1](https://github.com/georgeguimaraes/tribunal/commit/c938fb1744a9fe2dd8631051d528031f3279afcc))
+* **ci:** Publish to Hex with a workload identity instead of an API key ([5fc0e45](https://github.com/georgeguimaraes/tribunal/commit/5fc0e45b390f7f56d704a4fe310b7f29a216ee4f))
+* **deps:** Bump all dependencies ([549722e](https://github.com/georgeguimaraes/tribunal/commit/549722ef20d89fd3331156a239093fd283351340))
+* **deps:** bump req_llm from 1.28.0 to 1.29.0 ([#72](https://github.com/georgeguimaraes/tribunal/issues/72)) ([f1024fa](https://github.com/georgeguimaraes/tribunal/commit/f1024fa1bd53068f7ec3af9494e5deaa9fbce60e))
+* **deps:** drop the stale decimal lock entry ([b424784](https://github.com/georgeguimaraes/tribunal/commit/b4247844727c7bb6a97e6d7bb468b9ae5b1ac79b))
+
 ## [3.1.0](https://github.com/georgeguimaraes/tribunal/compare/v3.0.1...v3.1.0) (2026-10-16)
 
 
